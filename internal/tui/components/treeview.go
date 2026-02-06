@@ -24,6 +24,9 @@ type TreeViewKeyMap struct {
 	PageUp   key.Binding
 	PageDown key.Binding
 	Refresh  key.Binding
+	New      key.Binding
+	Edit     key.Binding
+	Delete   key.Binding
 }
 
 // DefaultTreeViewKeyMap returns the default key bindings
@@ -73,8 +76,37 @@ func DefaultTreeViewKeyMap() TreeViewKeyMap {
 			key.WithKeys("r", "ctrl+r"),
 			key.WithHelp("r", "refresh"),
 		),
+		New: key.NewBinding(
+			key.WithKeys("n"),
+			key.WithHelp("n", "new"),
+		),
+		Edit: key.NewBinding(
+			key.WithKeys("e"),
+			key.WithHelp("e", "edit"),
+		),
+		Delete: key.NewBinding(
+			key.WithKeys("d", "delete"),
+			key.WithHelp("d", "delete"),
+		),
 	}
 }
+
+// CRUD action messages
+type (
+	// TreeNewMsg is sent when user wants to create a new item
+	TreeNewMsg struct {
+		Node     *models.TreeNode
+		NodeType models.NodeType
+	}
+	// TreeEditMsg is sent when user wants to edit an item
+	TreeEditMsg struct {
+		Node *models.TreeNode
+	}
+	// TreeDeleteMsg is sent when user wants to delete an item
+	TreeDeleteMsg struct {
+		Node *models.TreeNode
+	}
+)
 
 // FlatNode represents a flattened tree node for display
 type FlatNode struct {
@@ -220,10 +252,92 @@ func (tv *TreeView) Update(msg tea.Msg) (*TreeView, tea.Cmd) {
 				tv.cursor = 0
 			}
 			tv.ensureVisible()
+
+		case key.Matches(msg, tv.keyMap.New):
+			// Determine what type of item to create based on selection
+			if len(tv.flatNodes) > 0 && tv.cursor < len(tv.flatNodes) {
+				node := tv.flatNodes[tv.cursor].Node
+				newType := tv.getNewItemType(node)
+				if newType != models.NodeTypeRoot {
+					return tv, func() tea.Msg {
+						return TreeNewMsg{Node: node, NodeType: newType}
+					}
+				}
+			} else if tv.connected {
+				// No selection but connected - create workspace
+				return tv, func() tea.Msg {
+					return TreeNewMsg{Node: nil, NodeType: models.NodeTypeWorkspace}
+				}
+			}
+
+		case key.Matches(msg, tv.keyMap.Edit):
+			if len(tv.flatNodes) > 0 && tv.cursor < len(tv.flatNodes) {
+				node := tv.flatNodes[tv.cursor].Node
+				if tv.canEdit(node) {
+					return tv, func() tea.Msg {
+						return TreeEditMsg{Node: node}
+					}
+				}
+			}
+
+		case key.Matches(msg, tv.keyMap.Delete):
+			if len(tv.flatNodes) > 0 && tv.cursor < len(tv.flatNodes) {
+				node := tv.flatNodes[tv.cursor].Node
+				if tv.canDelete(node) {
+					return tv, func() tea.Msg {
+						return TreeDeleteMsg{Node: node}
+					}
+				}
+			}
 		}
 	}
 
 	return tv, nil
+}
+
+// getNewItemType determines what type of item to create based on the selected node
+func (tv *TreeView) getNewItemType(node *models.TreeNode) models.NodeType {
+	if node == nil {
+		return models.NodeTypeWorkspace
+	}
+
+	switch node.Type {
+	case models.NodeTypeRoot:
+		return models.NodeTypeWorkspace
+	case models.NodeTypeWorkspace:
+		return models.NodeTypeWorkspace // Create sibling workspace
+	case models.NodeTypeDataStores:
+		return models.NodeTypeDataStore
+	case models.NodeTypeCoverageStores:
+		return models.NodeTypeCoverageStore
+	case models.NodeTypeDataStore:
+		return models.NodeTypeDataStore // Create sibling
+	case models.NodeTypeCoverageStore:
+		return models.NodeTypeCoverageStore // Create sibling
+	default:
+		return models.NodeTypeRoot // Not a valid new target
+	}
+}
+
+// canEdit returns true if the node can be edited
+func (tv *TreeView) canEdit(node *models.TreeNode) bool {
+	switch node.Type {
+	case models.NodeTypeWorkspace, models.NodeTypeDataStore, models.NodeTypeCoverageStore:
+		return true
+	default:
+		return false
+	}
+}
+
+// canDelete returns true if the node can be deleted
+func (tv *TreeView) canDelete(node *models.TreeNode) bool {
+	switch node.Type {
+	case models.NodeTypeWorkspace, models.NodeTypeDataStore, models.NodeTypeCoverageStore,
+		models.NodeTypeLayer, models.NodeTypeStyle, models.NodeTypeLayerGroup:
+		return true
+	default:
+		return false
+	}
 }
 
 // canLoadChildren returns true if the node type can have children loaded dynamically

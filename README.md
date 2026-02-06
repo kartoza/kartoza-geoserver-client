@@ -12,6 +12,8 @@ A Midnight Commander-style TUI (Terminal User Interface) for managing GeoServer 
 - **Geospatial file detection** - Automatically identifies Shapefiles, GeoPackage, GeoTIFF, GeoJSON, SLD, and CSS files
 - **GeoServer hierarchy browser** - Navigate workspaces, data stores, coverage stores, layers, styles, and layer groups
 - **Upload support** - Upload local files to GeoServer and publish as services
+- **CRUD operations** - Create, edit, and delete workspaces, data stores, and coverage stores
+- **Animated dialogs** - Smooth spring-based animations using Harmonica physics
 - **Vim-style navigation** - Use familiar j/k keys for navigation
 
 ## Installation
@@ -76,6 +78,13 @@ go run .     # Run the application
 | `t` | Test connection |
 | `Enter` | Connect to selected |
 
+#### GeoServer Tree (CRUD Operations)
+| Key | Action |
+|-----|--------|
+| `n` | Create new item (workspace, store) |
+| `e` | Edit/rename selected item |
+| `d` | Delete selected item |
+
 #### Form Editing (vim-style)
 | Key | Action |
 |-----|--------|
@@ -136,4 +145,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) - A powerful TUI framework
 - Styled with [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Style definitions for terminal apps
+- Animated with [Harmonica](https://github.com/charmbracelet/harmonica) - Physics-based animations
 - Inspired by [Midnight Commander](https://midnight-commander.org/)

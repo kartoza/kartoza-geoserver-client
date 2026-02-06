@@ -704,3 +704,118 @@ func (c *Client) DeleteLayerGroup(workspace, name string) error {
 
 	return nil
 }
+
+// UpdateWorkspace updates a workspace name
+func (c *Client) UpdateWorkspace(oldName, newName string) error {
+	body := map[string]interface{}{
+		"workspace": map[string]string{
+			"name": newName,
+		},
+	}
+
+	resp, err := c.doJSONRequest("PUT", fmt.Sprintf("/workspaces/%s", oldName), body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update workspace: %s", string(bodyBytes))
+	}
+
+	return nil
+}
+
+// CreateDataStore creates a new data store
+func (c *Client) CreateDataStore(workspace string, name string, storeType string, connectionParams map[string]string) error {
+	body := map[string]interface{}{
+		"dataStore": map[string]interface{}{
+			"name":                 name,
+			"type":                 storeType,
+			"connectionParameters": connectionParams,
+		},
+	}
+
+	resp, err := c.doJSONRequest("POST", fmt.Sprintf("/workspaces/%s/datastores", workspace), body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to create datastore: %s", string(bodyBytes))
+	}
+
+	return nil
+}
+
+// UpdateDataStore updates a data store
+func (c *Client) UpdateDataStore(workspace, oldName, newName string) error {
+	body := map[string]interface{}{
+		"dataStore": map[string]string{
+			"name": newName,
+		},
+	}
+
+	resp, err := c.doJSONRequest("PUT", fmt.Sprintf("/workspaces/%s/datastores/%s", workspace, oldName), body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update datastore: %s", string(bodyBytes))
+	}
+
+	return nil
+}
+
+// CreateCoverageStore creates a new coverage store
+func (c *Client) CreateCoverageStore(workspace string, name string, storeType string, url string) error {
+	body := map[string]interface{}{
+		"coverageStore": map[string]interface{}{
+			"name":    name,
+			"type":    storeType,
+			"enabled": true,
+			"url":     url,
+		},
+	}
+
+	resp, err := c.doJSONRequest("POST", fmt.Sprintf("/workspaces/%s/coveragestores", workspace), body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to create coverage store: %s", string(bodyBytes))
+	}
+
+	return nil
+}
+
+// UpdateCoverageStore updates a coverage store
+func (c *Client) UpdateCoverageStore(workspace, oldName, newName string) error {
+	body := map[string]interface{}{
+		"coverageStore": map[string]string{
+			"name": newName,
+		},
+	}
+
+	resp, err := c.doJSONRequest("PUT", fmt.Sprintf("/workspaces/%s/coveragestores/%s", workspace, oldName), body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update coverage store: %s", string(bodyBytes))
+	}
+
+	return nil
+}

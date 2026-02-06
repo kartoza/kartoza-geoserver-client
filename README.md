@@ -11,8 +11,9 @@ A Midnight Commander-style TUI (Terminal User Interface) for managing GeoServer 
 - **Connection manager** - Store and manage multiple GeoServer connections with credentials
 - **Geospatial file detection** - Automatically identifies Shapefiles, GeoPackage, GeoTIFF, GeoJSON, SLD, and CSS files
 - **GeoServer hierarchy browser** - Navigate workspaces, data stores, coverage stores, layers, styles, and layer groups
-- **Upload support** - Upload local files to GeoServer and publish as services
+- **Upload support** - Upload local files to GeoServer and publish as services with progress tracking
 - **CRUD operations** - Create, edit, and delete workspaces, data stores, and coverage stores
+- **Layer preview** - Built-in MapLibre web viewer with WMS/WFS support, attribute viewing, and metadata display
 - **Animated dialogs** - Smooth spring-based animations using Harmonica physics
 - **Vim-style navigation** - Use familiar j/k keys for navigation
 
@@ -65,6 +66,7 @@ go run .     # Run the application
 | Key | Action |
 |-----|--------|
 | `Space` | Select file |
+| `i` | View resource information |
 | `c` | Open connection manager |
 | `u` | Upload selected files |
 | `r` | Refresh current view |
@@ -84,6 +86,7 @@ go run .     # Run the application
 | `n` | Create new item (workspace, store) |
 | `e` | Edit/rename selected item |
 | `d` | Delete selected item |
+| `o` | Preview layer in browser |
 
 #### Store Creation Wizard
 When creating a data store or coverage store, a wizard guides you through:
@@ -111,6 +114,14 @@ Supported Coverage Store Types (Raster):
 | `Enter` | Edit field / Accept value |
 | `Esc` | Cancel edit / Go back |
 | `Ctrl+S` | Save form |
+
+#### Layer Preview
+Press `o` on any layer in the GeoServer tree to open an interactive map preview in your browser. The preview includes:
+- **MapLibre GL** - Hardware-accelerated WebGL map rendering with OpenStreetMap basemap
+- **WMS layer overlay** - Displays the layer via GeoServer's WMS service
+- **Feature query** - Click on vector layers to view feature attributes
+- **Metadata panel** - View layer details, workspace, and service endpoints
+- **Attributes table** - Browse feature attributes for vector layers
 
 ## Configuration
 
@@ -165,4 +176,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) - A powerful TUI framework
 - Styled with [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Style definitions for terminal apps
 - Animated with [Harmonica](https://github.com/charmbracelet/harmonica) - Physics-based animations
+- Map preview with [MapLibre GL JS](https://maplibre.org/) - Open-source WebGL map library
 - Inspired by [Midnight Commander](https://midnight-commander.org/)

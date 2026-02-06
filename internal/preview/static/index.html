@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layer Preview - Kartoza GeoServer Client</title>
+
+    <!-- MapLibre GL -->
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+    <!-- React -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --success: #3fb950;
+            --warning: #d29922;
+            --error: #f85149;
+            --border: #30363d;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 380px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .sidebar-header .subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .info-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .info-item {
+            background: var(--bg-tertiary);
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 12px;
+            text-transform: uppercase;
+        }
+
+        .badge-vector {
+            background: rgba(88, 166, 255, 0.15);
+            color: var(--accent);
+        }
+
+        .badge-raster {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--success);
+        }
+
+        .attributes-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .attributes-table th,
+        .attributes-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .attributes-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .attributes-table tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: var(--bg-secondary);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            z-index: 1000;
+        }
+
+        .map-overlay .layer-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .map-overlay .workspace {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .map-overlay .status {
+            font-size: 11px;
+            color: var(--success);
+            margin-top: 6px;
+        }
+
+        .map-overlay .status.loading {
+            color: var(--warning);
+        }
+
+        .map-overlay .status.error {
+            color: var(--error);
+        }
+
+        .feature-popup {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            max-width: 300px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .feature-popup h3 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--accent);
+        }
+
+        .feature-popup .prop {
+            margin-bottom: 6px;
+        }
+
+        .feature-popup .prop-name {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .feature-popup .prop-value {
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .maplibregl-popup-content {
+            background: var(--bg-secondary) !important;
+            padding: 0 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        .maplibregl-popup-tip {
+            border-top-color: var(--bg-secondary) !important;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .coords-display {
+            position: absolute;
+            bottom: 30px;
+            left: 16px;
+            background: var(--bg-secondary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            color: var(--text-secondary);
+            z-index: 1000;
+        }
+
+        .opacity-control {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .opacity-control label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .opacity-control input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .opacity-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function App() {
+            const [layer, setLayer] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [activeTab, setActiveTab] = useState('info');
+            const [features, setFeatures] = useState([]);
+            const [coords, setCoords] = useState({ lng: 0, lat: 0 });
+            const [layerStatus, setLayerStatus] = useState('loading');
+            const [layerBounds, setLayerBounds] = useState(null);
+            const [opacity, setOpacity] = useState(0.85);
+            const mapRef = useRef(null);
+            const mapInstanceRef = useRef(null);
+
+            useEffect(() => {
+                fetchLayerInfo();
+            }, []);
+
+            useEffect(() => {
+                if (layer && mapRef.current && !mapInstanceRef.current) {
+                    initializeMap();
+                }
+            }, [layer]);
+
+            const fetchLayerInfo = async () => {
+                try {
+                    const response = await fetch('/api/layer');
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch layer info');
+                    }
+                    const data = await response.json();
+                    setLayer(data);
+                    setLoading(false);
+                } catch (err) {
+                    setError(err.message);
+                    setLoading(false);
+                }
+            };
+
+            const initializeMap = () => {
+                const map = new maplibregl.Map({
+                    container: mapRef.current,
+                    style: {
+                        version: 8,
+                        sources: {
+                            'osm': {
+                                type: 'raster',
+                                tiles: [
+                                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+                                ],
+                                tileSize: 256,
+                                attribution: '&copy; OpenStreetMap contributors'
+                            }
+                        },
+                        layers: [
+                            {
+                                id: 'osm-layer',
+                                type: 'raster',
+                                source: 'osm',
+                                minzoom: 0,
+                                maxzoom: 19
+                            }
+                        ]
+                    },
+                    center: [0, 0],
+                    zoom: 2
+                });
+
+                map.addControl(new maplibregl.NavigationControl(), 'top-right');
+                map.addControl(new maplibregl.ScaleControl(), 'bottom-right');
+
+                map.on('mousemove', (e) => {
+                    setCoords({ lng: e.lngLat.lng.toFixed(5), lat: e.lngLat.lat.toFixed(5) });
+                });
+
+                map.on('load', () => {
+                    addGeoServerLayer(map);
+                    fetchLayerBounds(map);
+                });
+
+                mapInstanceRef.current = map;
+            };
+
+            const addGeoServerLayer = (map) => {
+                if (!layer) return;
+
+                const wmsUrl = `${layer.geoserver_url}/${layer.workspace}/wms`;
+                const layerName = `${layer.workspace}:${layer.name}`;
+
+                // Add WMS source with proper parameters
+                map.addSource('geoserver-layer', {
+                    type: 'raster',
+                    tiles: [
+                        `${wmsUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=${encodeURIComponent(layerName)}&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`
+                    ],
+                    tileSize: 256
+                });
+
+                map.addLayer({
+                    id: 'geoserver-wms',
+                    type: 'raster',
+                    source: 'geoserver-layer',
+                    paint: {
+                        'raster-opacity': opacity
+                    }
+                });
+
+                setLayerStatus('loaded');
+
+                // Add click handler for GetFeatureInfo (vector layers only)
+                map.on('click', async (e) => {
+                    if (layer.type !== 'vector') return;
+
+                    const point = map.project(e.lngLat);
+                    const bbox = map.getBounds();
+                    const width = map.getCanvas().width;
+                    const height = map.getCanvas().height;
+
+                    try {
+                        const infoUrl = `${wmsUrl}?` + new URLSearchParams({
+                            SERVICE: 'WMS',
+                            VERSION: '1.1.1',
+                            REQUEST: 'GetFeatureInfo',
+                            LAYERS: layerName,
+                            QUERY_LAYERS: layerName,
+                            INFO_FORMAT: 'application/json',
+                            X: Math.round(point.x),
+                            Y: Math.round(point.y),
+                            WIDTH: width,
+                            HEIGHT: height,
+                            BBOX: `${bbox.getWest()},${bbox.getSouth()},${bbox.getEast()},${bbox.getNorth()}`,
+                            SRS: 'EPSG:4326'
+                        });
+
+                        const response = await fetch(infoUrl);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.features && data.features.length > 0) {
+                                showPopup(map, e.lngLat, data.features[0]);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('GetFeatureInfo failed:', err);
+                    }
+                });
+            };
+
+            const fetchLayerBounds = async (map) => {
+                if (!layer) return;
+
+                setLayerStatus('loading');
+                const layerName = `${layer.workspace}:${layer.name}`;
+
+                // Try WMS GetCapabilities first to get the layer bounding box
+                try {
+                    const wmsUrl = `${layer.geoserver_url}/${layer.workspace}/wms`;
+                    const capsUrl = `${wmsUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities`;
+
+                    const response = await fetch(capsUrl);
+                    if (response.ok) {
+                        const text = await response.text();
+                        const parser = new DOMParser();
+                        const xml = parser.parseFromString(text, 'text/xml');
+
+                        // Find the layer in capabilities
+                        const layers = xml.querySelectorAll('Layer');
+                        for (const layerEl of layers) {
+                            const nameEl = layerEl.querySelector('Name');
+                            if (nameEl && (nameEl.textContent === layer.name || nameEl.textContent === layerName)) {
+                                // Try LatLonBoundingBox first (WMS 1.1.1)
+                                const latLonBbox = layerEl.querySelector('LatLonBoundingBox');
+                                if (latLonBbox) {
+                                    const bounds = [
+                                        [parseFloat(latLonBbox.getAttribute('minx')), parseFloat(latLonBbox.getAttribute('miny'))],
+                                        [parseFloat(latLonBbox.getAttribute('maxx')), parseFloat(latLonBbox.getAttribute('maxy'))]
+                                    ];
+                                    setLayerBounds(bounds);
+                                    map.fitBounds(bounds, { padding: 50, maxZoom: 18 });
+                                    setLayerStatus('loaded');
+                                    return;
+                                }
+
+                                // Try BoundingBox with CRS:84 or EPSG:4326
+                                const bboxes = layerEl.querySelectorAll('BoundingBox');
+                                for (const bbox of bboxes) {
+                                    const srs = bbox.getAttribute('SRS') || bbox.getAttribute('CRS');
+                                    if (srs === 'EPSG:4326' || srs === 'CRS:84') {
+                                        const bounds = [
+                                            [parseFloat(bbox.getAttribute('minx')), parseFloat(bbox.getAttribute('miny'))],
+                                            [parseFloat(bbox.getAttribute('maxx')), parseFloat(bbox.getAttribute('maxy'))]
+                                        ];
+                                        setLayerBounds(bounds);
+                                        map.fitBounds(bounds, { padding: 50, maxZoom: 18 });
+                                        setLayerStatus('loaded');
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch WMS capabilities:', err);
+                }
+
+                // Fallback: try WFS for vector layers
+                if (layer.type === 'vector') {
+                    try {
+                        const wfsUrl = `${layer.geoserver_url}/${layer.workspace}/wfs`;
+                        const response = await fetch(
+                            `${wfsUrl}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=${encodeURIComponent(layerName)}&COUNT=100&OUTPUTFORMAT=application/json`
+                        );
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.features) {
+                                setFeatures(data.features);
+
+                                if (data.bbox) {
+                                    const bounds = [
+                                        [data.bbox[0], data.bbox[1]],
+                                        [data.bbox[2], data.bbox[3]]
+                                    ];
+                                    setLayerBounds(bounds);
+                                    map.fitBounds(bounds, { padding: 50, maxZoom: 18 });
+                                } else if (data.features.length > 0) {
+                                    const bounds = new maplibregl.LngLatBounds();
+                                    data.features.forEach(f => {
+                                        if (f.geometry && f.geometry.coordinates) {
+                                            addCoordsTobound(bounds, f.geometry);
+                                        }
+                                    });
+                                    if (!bounds.isEmpty()) {
+                                        setLayerBounds([[bounds.getWest(), bounds.getSouth()], [bounds.getEast(), bounds.getNorth()]]);
+                                        map.fitBounds(bounds, { padding: 50, maxZoom: 18 });
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Failed to fetch WFS features:', err);
+                    }
+                }
+
+                setLayerStatus('loaded');
+            };
+
+            const addCoordsTobound = (bounds, geometry) => {
+                const processCoords = (coords) => {
+                    if (typeof coords[0] === 'number' && coords.length >= 2) {
+                        bounds.extend([coords[0], coords[1]]);
+                    } else if (Array.isArray(coords)) {
+                        coords.forEach(processCoords);
+                    }
+                };
+                if (geometry.coordinates) {
+                    processCoords(geometry.coordinates);
+                }
+            };
+
+            const showPopup = (map, lngLat, feature) => {
+                new maplibregl.Popup({ closeOnClick: true })
+                    .setLngLat(lngLat)
+                    .setHTML(createPopupContent(feature))
+                    .addTo(map);
+            };
+
+            const createPopupContent = (feature) => {
+                let html = '<div class="feature-popup">';
+                html += `<h3>Feature ${feature.id || ''}</h3>`;
+
+                if (feature.properties) {
+                    Object.entries(feature.properties).forEach(([key, value]) => {
+                        html += `<div class="prop">`;
+                        html += `<div class="prop-name">${key}</div>`;
+                        html += `<div class="prop-value">${value ?? 'null'}</div>`;
+                        html += `</div>`;
+                    });
+                }
+
+                html += '</div>';
+                return html;
+            };
+
+            const handleOpacityChange = (e) => {
+                const newOpacity = parseFloat(e.target.value);
+                setOpacity(newOpacity);
+                if (mapInstanceRef.current && mapInstanceRef.current.getLayer('geoserver-wms')) {
+                    mapInstanceRef.current.setPaintProperty('geoserver-wms', 'raster-opacity', newOpacity);
+                }
+            };
+
+            const zoomToLayer = () => {
+                if (layerBounds && mapInstanceRef.current) {
+                    mapInstanceRef.current.fitBounds(layerBounds, { padding: 50, maxZoom: 18 });
+                }
+            };
+
+            if (loading) {
+                return (
+                    <div className="app-container">
+                        <div className="map-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div className="loading-spinner">
+                                <div className="spinner"></div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="app-container">
+                        <div className="map-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div className="error-message">{error}</div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="app-container">
+                    <div className="map-container">
+                        <div ref={mapRef} id="map"></div>
+                        {layer && (
+                            <div className="map-overlay">
+                                <div className="layer-name">{layer.name}</div>
+                                <div className="workspace">{layer.workspace}</div>
+                                <div className={`status ${layerStatus}`}>
+                                    {layerStatus === 'loading' ? 'Loading layer...' : 'Layer loaded'}
+                                </div>
+                                <div className="opacity-control">
+                                    <label>Layer Opacity: {Math.round(opacity * 100)}%</label>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.05"
+                                        value={opacity}
+                                        onChange={handleOpacityChange}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        <div className="coords-display">
+                            {coords.lng}, {coords.lat}
+                        </div>
+                    </div>
+
+                    <div className="sidebar">
+                        <div className="sidebar-header">
+                            <h1>Layer Preview</h1>
+                            <div className="subtitle">Kartoza GeoServer Client</div>
+                        </div>
+
+                        <div className="tabs">
+                            <button
+                                className={`tab ${activeTab === 'info' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('info')}
+                            >
+                                Metadata
+                            </button>
+                            <button
+                                className={`tab ${activeTab === 'attributes' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('attributes')}
+                            >
+                                Attributes
+                            </button>
+                        </div>
+
+                        <div className="sidebar-content">
+                            {activeTab === 'info' && layer && (
+                                <div>
+                                    <div className="section">
+                                        <div className="section-title">Layer Information</div>
+                                        <div className="info-grid">
+                                            <div className="info-item">
+                                                <div className="info-label">Name</div>
+                                                <div className="info-value">{layer.name}</div>
+                                            </div>
+                                            <div className="info-item">
+                                                <div className="info-label">Workspace</div>
+                                                <div className="info-value">{layer.workspace}</div>
+                                            </div>
+                                            <div className="info-item">
+                                                <div className="info-label">Store</div>
+                                                <div className="info-value">{layer.store_name || 'N/A'}</div>
+                                            </div>
+                                            <div className="info-item">
+                                                <div className="info-label">Type</div>
+                                                <div className="info-value">
+                                                    <span className={`badge ${layer.type === 'vector' ? 'badge-vector' : 'badge-raster'}`}>
+                                                        {layer.type}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {layerBounds && (
+                                                <div className="info-item">
+                                                    <div className="info-label">Bounding Box</div>
+                                                    <div className="info-value" style={{ fontSize: '12px' }}>
+                                                        {layerBounds[0][0].toFixed(4)}, {layerBounds[0][1].toFixed(4)}<br/>
+                                                        {layerBounds[1][0].toFixed(4)}, {layerBounds[1][1].toFixed(4)}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {layerBounds && (
+                                            <button
+                                                onClick={zoomToLayer}
+                                                style={{
+                                                    marginTop: '12px',
+                                                    padding: '8px 16px',
+                                                    background: 'var(--accent)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '13px',
+                                                    width: '100%'
+                                                }}
+                                            >
+                                                Zoom to Layer Extent
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="section">
+                                        <div className="section-title">GeoServer Connection</div>
+                                        <div className="info-grid">
+                                            <div className="info-item">
+                                                <div className="info-label">URL</div>
+                                                <div className="info-value">{layer.geoserver_url}</div>
+                                            </div>
+                                            <div className="info-item">
+                                                <div className="info-label">WMS Endpoint</div>
+                                                <div className="info-value">{layer.geoserver_url}/{layer.workspace}/wms</div>
+                                            </div>
+                                            {layer.type === 'vector' && (
+                                                <div className="info-item">
+                                                    <div className="info-label">WFS Endpoint</div>
+                                                    <div className="info-value">{layer.geoserver_url}/{layer.workspace}/wfs</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'attributes' && (
+                                <div>
+                                    {features.length > 0 ? (
+                                        <div>
+                                            <div className="section-title">
+                                                Features ({features.length}{features.length === 100 ? '+' : ''})
+                                            </div>
+                                            <div style={{ overflowX: 'auto' }}>
+                                                <table className="attributes-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>ID</th>
+                                                            {features[0]?.properties && Object.keys(features[0].properties).slice(0, 3).map(key => (
+                                                                <th key={key}>{key}</th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {features.slice(0, 50).map((feature, idx) => (
+                                                            <tr key={idx}>
+                                                                <td>{feature.id || idx + 1}</td>
+                                                                {feature.properties && Object.keys(features[0].properties).slice(0, 3).map(key => (
+                                                                    <td key={key}>{String(feature.properties[key] ?? '')}</td>
+                                                                ))}
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="empty-state">
+                                            <div className="empty-state-icon">📋</div>
+                                            <div>No features loaded</div>
+                                            <div style={{ fontSize: '12px', marginTop: '8px' }}>
+                                                {layer?.type === 'raster'
+                                                    ? 'Raster layers do not have attributes'
+                                                    : 'Click on the map to query features'}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>

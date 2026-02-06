@@ -36,6 +36,11 @@ func NewClient(conn *config.Connection) *Client {
 	}
 }
 
+// BaseURL returns the base URL of the GeoServer
+func (c *Client) BaseURL() string {
+	return c.baseURL
+}
+
 // doRequest performs an HTTP request with authentication
 func (c *Client) doRequest(method, path string, body io.Reader, contentType string) (*http.Response, error) {
 	url := c.baseURL + "/rest" + path

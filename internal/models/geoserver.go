@@ -111,6 +111,7 @@ type TreeNode struct {
 	Parent     *TreeNode
 	Workspace  string // The workspace this node belongs to
 	StoreName  string // The store name (for layers)
+	StoreType  string // The store type ("datastore" or "coveragestore")
 	IsLoading  bool
 	IsLoaded   bool
 	HasError   bool

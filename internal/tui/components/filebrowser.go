@@ -25,6 +25,12 @@ type FileBrowserKeyMap struct {
 	End      key.Binding
 	PageUp   key.Binding
 	PageDown key.Binding
+	Info     key.Binding
+}
+
+// FileInfoMsg is sent when user wants to view info about a file
+type FileInfoMsg struct {
+	File *models.LocalFile
 }
 
 // DefaultFileBrowserKeyMap returns the default key bindings
@@ -65,6 +71,10 @@ func DefaultFileBrowserKeyMap() FileBrowserKeyMap {
 		PageDown: key.NewBinding(
 			key.WithKeys("pgdown", "ctrl+d"),
 			key.WithHelp("pgdown", "page down"),
+		),
+		Info: key.NewBinding(
+			key.WithKeys("i"),
+			key.WithHelp("i", "info"),
 		),
 	}
 }
@@ -251,6 +261,14 @@ func (fb *FileBrowser) Update(msg tea.Msg) (*FileBrowser, tea.Cmd) {
 				fb.cursor = len(fb.files) - 1
 			}
 			fb.ensureVisible()
+
+		case key.Matches(msg, fb.keyMap.Info):
+			if len(fb.files) > 0 && fb.cursor < len(fb.files) {
+				file := fb.files[fb.cursor]
+				return fb, func() tea.Msg {
+					return FileInfoMsg{File: &file}
+				}
+			}
 		}
 	}
 

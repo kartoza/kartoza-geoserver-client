@@ -27,6 +27,8 @@ type TreeViewKeyMap struct {
 	New      key.Binding
 	Edit     key.Binding
 	Delete   key.Binding
+	Info     key.Binding
+	Preview  key.Binding
 }
 
 // DefaultTreeViewKeyMap returns the default key bindings
@@ -88,6 +90,14 @@ func DefaultTreeViewKeyMap() TreeViewKeyMap {
 			key.WithKeys("d", "delete"),
 			key.WithHelp("d", "delete"),
 		),
+		Info: key.NewBinding(
+			key.WithKeys("i"),
+			key.WithHelp("i", "info"),
+		),
+		Preview: key.NewBinding(
+			key.WithKeys("o"),
+			key.WithHelp("o", "preview"),
+		),
 	}
 }
 
@@ -104,6 +114,14 @@ type (
 	}
 	// TreeDeleteMsg is sent when user wants to delete an item
 	TreeDeleteMsg struct {
+		Node *models.TreeNode
+	}
+	// TreeInfoMsg is sent when user wants to view info about an item
+	TreeInfoMsg struct {
+		Node *models.TreeNode
+	}
+	// TreePreviewMsg is sent when user wants to preview a layer
+	TreePreviewMsg struct {
 		Node *models.TreeNode
 	}
 )
@@ -286,6 +304,27 @@ func (tv *TreeView) Update(msg tea.Msg) (*TreeView, tea.Cmd) {
 				if tv.canDelete(node) {
 					return tv, func() tea.Msg {
 						return TreeDeleteMsg{Node: node}
+					}
+				}
+			}
+
+		case key.Matches(msg, tv.keyMap.Info):
+			if len(tv.flatNodes) > 0 && tv.cursor < len(tv.flatNodes) {
+				node := tv.flatNodes[tv.cursor].Node
+				return tv, func() tea.Msg {
+					return TreeInfoMsg{Node: node}
+				}
+			}
+
+		case key.Matches(msg, tv.keyMap.Preview):
+			if len(tv.flatNodes) > 0 && tv.cursor < len(tv.flatNodes) {
+				node := tv.flatNodes[tv.cursor].Node
+				// Allow preview for layers, layer groups, data stores, and coverage stores
+				switch node.Type {
+				case models.NodeTypeLayer, models.NodeTypeLayerGroup,
+					models.NodeTypeDataStore, models.NodeTypeCoverageStore:
+					return tv, func() tea.Msg {
+						return TreePreviewMsg{Node: node}
 					}
 				}
 			}
@@ -570,4 +609,170 @@ func (tv *TreeView) Clear() {
 	tv.flatNodes = []FlatNode{}
 	tv.cursor = 0
 	tv.offset = 0
+}
+
+// TreeState holds the state of the tree for restoration
+type TreeState struct {
+	CursorPath     string   // Path of the currently selected node
+	ExpandedPaths  []string // Paths of all expanded nodes
+}
+
+// SaveState saves the current tree state (cursor position and expanded nodes)
+func (tv *TreeView) SaveState() TreeState {
+	state := TreeState{
+		ExpandedPaths: make([]string, 0),
+	}
+
+	// Save cursor position
+	if len(tv.flatNodes) > 0 && tv.cursor < len(tv.flatNodes) {
+		state.CursorPath = tv.flatNodes[tv.cursor].Node.Path()
+	}
+
+	// Save expanded nodes
+	tv.collectExpandedPaths(tv.root, &state.ExpandedPaths)
+
+	return state
+}
+
+// collectExpandedPaths recursively collects paths of expanded nodes
+func (tv *TreeView) collectExpandedPaths(node *models.TreeNode, paths *[]string) {
+	if node == nil {
+		return
+	}
+
+	if node.Expanded && node.Type != models.NodeTypeRoot {
+		*paths = append(*paths, node.Path())
+	}
+
+	for _, child := range node.Children {
+		tv.collectExpandedPaths(child, paths)
+	}
+}
+
+// RestoreState restores the tree state (expands nodes and sets cursor)
+func (tv *TreeView) RestoreState(state TreeState) {
+	// First expand all previously expanded nodes
+	for _, path := range state.ExpandedPaths {
+		tv.expandByPath(tv.root, path)
+	}
+
+	// Rebuild flat list after expanding
+	tv.flattenTree()
+
+	// Restore cursor position
+	if state.CursorPath != "" {
+		for i, fn := range tv.flatNodes {
+			if fn.Node.Path() == state.CursorPath {
+				tv.cursor = i
+				tv.ensureVisible()
+				return
+			}
+		}
+	}
+
+	// If exact path not found, try to find closest match (parent)
+	if state.CursorPath != "" {
+		bestMatch := -1
+		bestMatchLen := 0
+		for i, fn := range tv.flatNodes {
+			nodePath := fn.Node.Path()
+			if len(nodePath) <= len(state.CursorPath) &&
+			   state.CursorPath[:len(nodePath)] == nodePath &&
+			   len(nodePath) > bestMatchLen {
+				bestMatch = i
+				bestMatchLen = len(nodePath)
+			}
+		}
+		if bestMatch >= 0 {
+			tv.cursor = bestMatch
+			tv.ensureVisible()
+		}
+	}
+}
+
+// expandByPath expands a node matching the given path
+func (tv *TreeView) expandByPath(node *models.TreeNode, path string) bool {
+	if node == nil {
+		return false
+	}
+
+	nodePath := node.Path()
+	if nodePath == path {
+		node.Expanded = true
+		return true
+	}
+
+	// Check if path starts with this node's path (it's a parent)
+	if node.Type != models.NodeTypeRoot {
+		if len(path) > len(nodePath) && path[:len(nodePath)] == nodePath {
+			node.Expanded = true
+		}
+	}
+
+	for _, child := range node.Children {
+		if tv.expandByPath(child, path) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// NavigateToPath expands the tree to show the given path and sets cursor on it
+func (tv *TreeView) NavigateToPath(path string) {
+	// First, expand all parent nodes to make the path visible
+	tv.expandParentsForPath(tv.root, path)
+
+	// Rebuild flat list after expanding
+	tv.flattenTree()
+
+	// Find and select the node with the matching path
+	for i, fn := range tv.flatNodes {
+		if fn.Node.Path() == path {
+			tv.cursor = i
+			tv.ensureVisible()
+			return
+		}
+	}
+
+	// If exact path not found, try to find the closest parent
+	bestMatch := -1
+	bestMatchLen := 0
+	for i, fn := range tv.flatNodes {
+		nodePath := fn.Node.Path()
+		if len(nodePath) <= len(path) && strings.HasPrefix(path, nodePath) && len(nodePath) > bestMatchLen {
+			bestMatch = i
+			bestMatchLen = len(nodePath)
+		}
+	}
+	if bestMatch >= 0 {
+		tv.cursor = bestMatch
+		tv.ensureVisible()
+	}
+}
+
+// expandParentsForPath expands all parent nodes needed to show a path
+func (tv *TreeView) expandParentsForPath(node *models.TreeNode, targetPath string) bool {
+	if node == nil {
+		return false
+	}
+
+	nodePath := node.Path()
+
+	// If this is the target node, we're done
+	if nodePath == targetPath {
+		return true
+	}
+
+	// If target path starts with this node's path, expand this node and recurse
+	if node.Type == models.NodeTypeRoot || strings.HasPrefix(targetPath, nodePath+"/") {
+		for _, child := range node.Children {
+			if tv.expandParentsForPath(child, targetPath) {
+				node.Expanded = true
+				return true
+			}
+		}
+	}
+
+	return false
 }

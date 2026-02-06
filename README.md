@@ -85,6 +85,22 @@ go run .     # Run the application
 | `e` | Edit/rename selected item |
 | `d` | Delete selected item |
 
+#### Store Creation Wizard
+When creating a data store or coverage store, a wizard guides you through:
+1. **Type Selection** - Choose the store type (PostGIS, Shapefile Directory, GeoPackage, etc.)
+2. **Configuration** - Enter the required connection parameters for your chosen type
+
+Supported Data Store Types:
+- **PostGIS** - Connect to PostgreSQL/PostGIS databases
+- **Directory of Shapefiles** - Reference a folder containing shapefiles
+- **GeoPackage** - Connect to GeoPackage files
+- **Web Feature Service (WFS)** - Connect to external WFS services
+
+Supported Coverage Store Types:
+- **GeoTIFF** - Single GeoTIFF raster file
+- **World Image** - PNG/JPEG/GIF with world file
+- **Image Mosaic** - Directory of images forming a mosaic
+
 #### Form Editing (vim-style)
 | Key | Action |
 |-----|--------|

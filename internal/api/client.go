@@ -727,13 +727,37 @@ func (c *Client) UpdateWorkspace(oldName, newName string) error {
 	return nil
 }
 
-// CreateDataStore creates a new data store
-func (c *Client) CreateDataStore(workspace string, name string, storeType string, connectionParams map[string]string) error {
+// CreateDataStore creates a new data store with connection parameters
+func (c *Client) CreateDataStore(workspace string, name string, storeType models.DataStoreType, params map[string]string) error {
+	// Build connection parameters in the format GeoServer expects
+	// GeoServer JSON format uses "entry" array with "@key" and "$" fields
+	entries := make([]map[string]string, 0)
+
+	// Add dbtype for database stores
+	if storeType == models.DataStoreTypePostGIS || storeType == models.DataStoreTypeGeoPackage {
+		entries = append(entries, map[string]string{
+			"@key": "dbtype",
+			"$":    storeType.DBType(),
+		})
+	}
+
+	// Add all provided parameters
+	for key, value := range params {
+		if key != "name" && value != "" { // Skip name as it's set separately
+			entries = append(entries, map[string]string{
+				"@key": key,
+				"$":    value,
+			})
+		}
+	}
+
 	body := map[string]interface{}{
 		"dataStore": map[string]interface{}{
-			"name":                 name,
-			"type":                 storeType,
-			"connectionParameters": connectionParams,
+			"name":    name,
+			"enabled": true,
+			"connectionParameters": map[string]interface{}{
+				"entry": entries,
+			},
 		},
 	}
 
@@ -774,11 +798,11 @@ func (c *Client) UpdateDataStore(workspace, oldName, newName string) error {
 }
 
 // CreateCoverageStore creates a new coverage store
-func (c *Client) CreateCoverageStore(workspace string, name string, storeType string, url string) error {
+func (c *Client) CreateCoverageStore(workspace string, name string, storeType models.CoverageStoreType, url string) error {
 	body := map[string]interface{}{
 		"coverageStore": map[string]interface{}{
 			"name":    name,
-			"type":    storeType,
+			"type":    storeType.Type(),
 			"enabled": true,
 			"url":     url,
 		},

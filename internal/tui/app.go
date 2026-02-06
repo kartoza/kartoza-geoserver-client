@@ -129,6 +129,9 @@ type App struct {
 	crudOperation CRUDOperation
 	crudNode      *models.TreeNode
 	crudNodeType  models.NodeType
+
+	// Store wizard state
+	storeWizard *components.StoreWizard
 }
 
 // NewApp creates a new TUI application
@@ -188,6 +191,20 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyMsg:
+		// If we have a store wizard open, forward keys there first
+		if a.storeWizard != nil && a.storeWizard.IsVisible() {
+			var cmd tea.Cmd
+			a.storeWizard, cmd = a.storeWizard.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			// Check if wizard was closed
+			if !a.storeWizard.IsVisible() {
+				a.storeWizard = nil
+			}
+			return a, tea.Batch(cmds...)
+		}
+
 		// If we have a CRUD dialog open, forward keys there first
 		if a.crudDialog != nil && a.crudDialog.IsVisible() {
 			var cmd tea.Cmd
@@ -441,6 +458,20 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	case components.StoreWizardAnimationMsg:
+		// Forward to wizard if we have one
+		if a.storeWizard != nil && a.storeWizard.IsVisible() {
+			var cmd tea.Cmd
+			a.storeWizard, cmd = a.storeWizard.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			// Check if wizard was closed during animation
+			if !a.storeWizard.IsVisible() {
+				a.storeWizard = nil
+			}
+		}
+
 	case errMsg:
 		a.loading = false
 		a.errorMsg = msg.err.Error()
@@ -476,6 +507,12 @@ func (a *App) View() string {
 	if a.crudDialog != nil && a.crudDialog.IsVisible() {
 		a.crudDialog.SetSize(a.width, a.height)
 		content = a.crudDialog.View()
+	}
+
+	// Render store wizard overlay
+	if a.storeWizard != nil && a.storeWizard.IsVisible() {
+		a.storeWizard.SetSize(a.width, a.height)
+		content = a.storeWizard.View()
 	}
 
 	return content
@@ -855,52 +892,78 @@ func (a *App) showCreateDialog(contextNode *models.TreeNode, nodeType models.Nod
 		return nil
 	}
 
-	var title string
-	var fields []components.DialogField
+	// Get workspace from context
+	workspace := ""
+	if contextNode != nil {
+		workspace = contextNode.Workspace
+	}
 
 	switch nodeType {
 	case models.NodeTypeWorkspace:
-		title = "Create Workspace"
-		fields = []components.DialogField{
+		// Use simple dialog for workspace (just needs a name)
+		fields := []components.DialogField{
 			{Name: "name", Label: "Name", Placeholder: "workspace-name"},
 		}
+		a.crudDialog = components.NewInputDialog("Create Workspace", fields)
+		a.crudDialog.SetSize(a.width, a.height)
+		a.crudOperation = CRUDCreate
+		a.crudNode = contextNode
+		a.crudNodeType = nodeType
+
+		a.crudDialog.SetCallbacks(
+			func(result components.DialogResult) {
+				if result.Confirmed {
+					a.executeCRUDCreate(result.Values)
+				}
+			},
+			func() {},
+		)
+		return a.crudDialog.Init()
 
 	case models.NodeTypeDataStore:
-		title = "Create Data Store"
-		fields = []components.DialogField{
-			{Name: "name", Label: "Name", Placeholder: "datastore-name"},
+		// Use wizard for data store (needs type selection + configuration)
+		if workspace == "" {
+			a.errorMsg = "Select a workspace first"
+			return nil
 		}
+		a.storeWizard = components.NewDataStoreWizard(workspace)
+		a.storeWizard.SetSize(a.width, a.height)
+		a.crudNode = contextNode
+
+		a.storeWizard.SetCallbacks(
+			func(result components.StoreWizardResult) {
+				if result.Confirmed {
+					a.executeDataStoreCreate(workspace, result)
+				}
+			},
+			func() {},
+		)
+		return a.storeWizard.Init()
 
 	case models.NodeTypeCoverageStore:
-		title = "Create Coverage Store"
-		fields = []components.DialogField{
-			{Name: "name", Label: "Name", Placeholder: "coveragestore-name"},
+		// Use wizard for coverage store
+		if workspace == "" {
+			a.errorMsg = "Select a workspace first"
+			return nil
 		}
+		a.storeWizard = components.NewCoverageStoreWizard(workspace)
+		a.storeWizard.SetSize(a.width, a.height)
+		a.crudNode = contextNode
+
+		a.storeWizard.SetCallbacks(
+			func(result components.StoreWizardResult) {
+				if result.Confirmed {
+					a.executeCoverageStoreCreate(workspace, result)
+				}
+			},
+			func() {},
+		)
+		return a.storeWizard.Init()
 
 	default:
 		a.errorMsg = "Cannot create this type of item"
 		return nil
 	}
-
-	a.crudDialog = components.NewInputDialog(title, fields)
-	a.crudDialog.SetSize(a.width, a.height)
-	a.crudOperation = CRUDCreate
-	a.crudNode = contextNode
-	a.crudNodeType = nodeType
-
-	// Set callbacks
-	a.crudDialog.SetCallbacks(
-		func(result components.DialogResult) {
-			if result.Confirmed {
-				a.executeCRUDCreate(result.Values)
-			}
-		},
-		func() {
-			// Cancel - dialog will close automatically
-		},
-	)
-
-	return a.crudDialog.Init()
 }
 
 // showEditDialog shows a dialog to edit an item
@@ -989,7 +1052,7 @@ func (a *App) showDeleteDialog(node *models.TreeNode) tea.Cmd {
 	return a.crudDialog.Init()
 }
 
-// executeCRUDCreate executes the create operation
+// executeCRUDCreate executes the create operation for workspaces
 func (a *App) executeCRUDCreate(values map[string]string) {
 	name := strings.TrimSpace(values["name"])
 	if name == "" {
@@ -1000,51 +1063,62 @@ func (a *App) executeCRUDCreate(values map[string]string) {
 	a.loading = true
 	go func() {
 		var err error
-		var operation string
+		operation := "Create workspace"
+		err = a.client.CreateWorkspace(name)
 
-		switch a.crudNodeType {
-		case models.NodeTypeWorkspace:
-			operation = "Create workspace"
-			err = a.client.CreateWorkspace(name)
-
-		case models.NodeTypeDataStore:
-			operation = "Create data store"
-			workspace := ""
-			if a.crudNode != nil {
-				workspace = a.crudNode.Workspace
-			}
-			if workspace == "" {
-				a.errorMsg = "No workspace context"
-				return
-			}
-			// Create an empty directory-based datastore
-			err = a.client.CreateDataStore(workspace, name, "Directory", map[string]string{
-				"url": "file:data/" + name,
-			})
-
-		case models.NodeTypeCoverageStore:
-			operation = "Create coverage store"
-			workspace := ""
-			if a.crudNode != nil {
-				workspace = a.crudNode.Workspace
-			}
-			if workspace == "" {
-				a.errorMsg = "No workspace context"
-				return
-			}
-			err = a.client.CreateCoverageStore(workspace, name, "GeoTIFF", "file:data/"+name)
-		}
-
-		// We need to send a message back - but since we're in a goroutine,
-		// we can't return a cmd. The result will be handled via a channel or polling.
-		// For simplicity, we'll set the status directly
 		a.loading = false
 		if err != nil {
 			a.errorMsg = fmt.Sprintf("%s failed: %v", operation, err)
 		} else {
 			a.statusMsg = operation + " completed successfully"
-			// Need to trigger refresh - this is a limitation of the callback approach
-			// The tree will be stale until user presses 'r'
+		}
+	}()
+}
+
+// executeDataStoreCreate executes the data store creation
+func (a *App) executeDataStoreCreate(workspace string, result components.StoreWizardResult) {
+	name := strings.TrimSpace(result.Values["name"])
+	if name == "" {
+		a.errorMsg = "Store name is required"
+		return
+	}
+
+	a.loading = true
+	go func() {
+		err := a.client.CreateDataStore(workspace, name, result.DataStoreType, result.Values)
+
+		a.loading = false
+		if err != nil {
+			a.errorMsg = fmt.Sprintf("Create data store failed: %v", err)
+		} else {
+			a.statusMsg = fmt.Sprintf("Data store '%s' created successfully", name)
+		}
+	}()
+}
+
+// executeCoverageStoreCreate executes the coverage store creation
+func (a *App) executeCoverageStoreCreate(workspace string, result components.StoreWizardResult) {
+	name := strings.TrimSpace(result.Values["name"])
+	if name == "" {
+		a.errorMsg = "Store name is required"
+		return
+	}
+
+	url := result.Values["url"]
+	if url == "" {
+		a.errorMsg = "File path is required"
+		return
+	}
+
+	a.loading = true
+	go func() {
+		err := a.client.CreateCoverageStore(workspace, name, result.CoverageStoreType, url)
+
+		a.loading = false
+		if err != nil {
+			a.errorMsg = fmt.Sprintf("Create coverage store failed: %v", err)
+		} else {
+			a.statusMsg = fmt.Sprintf("Coverage store '%s' created successfully", name)
 		}
 	}()
 }

@@ -288,3 +288,181 @@ type LocalFile struct {
 	IsDir    bool
 	Selected bool
 }
+
+// DataStoreType represents the type of data store
+type DataStoreType int
+
+const (
+	DataStoreTypePostGIS DataStoreType = iota
+	DataStoreTypeShapefileDir
+	DataStoreTypeGeoPackage
+	DataStoreTypeWFS
+)
+
+// String returns the display name for the data store type
+func (d DataStoreType) String() string {
+	switch d {
+	case DataStoreTypePostGIS:
+		return "PostGIS"
+	case DataStoreTypeShapefileDir:
+		return "Directory of Shapefiles"
+	case DataStoreTypeGeoPackage:
+		return "GeoPackage"
+	case DataStoreTypeWFS:
+		return "Web Feature Service (WFS)"
+	default:
+		return "Unknown"
+	}
+}
+
+// DBType returns the GeoServer dbtype value
+func (d DataStoreType) DBType() string {
+	switch d {
+	case DataStoreTypePostGIS:
+		return "postgis"
+	case DataStoreTypeShapefileDir:
+		return "Directory of spatial files (shapefiles)"
+	case DataStoreTypeGeoPackage:
+		return "geopkg"
+	case DataStoreTypeWFS:
+		return "wfs"
+	default:
+		return ""
+	}
+}
+
+// DataStoreField represents a field in the data store configuration
+type DataStoreField struct {
+	Name        string
+	Label       string
+	Placeholder string
+	Required    bool
+	Password    bool
+	Default     string
+}
+
+// GetDataStoreFields returns the configuration fields for a data store type
+func GetDataStoreFields(storeType DataStoreType) []DataStoreField {
+	switch storeType {
+	case DataStoreTypePostGIS:
+		return []DataStoreField{
+			{Name: "name", Label: "Store Name", Placeholder: "my-postgis-store", Required: true},
+			{Name: "host", Label: "Host", Placeholder: "localhost", Required: true, Default: "localhost"},
+			{Name: "port", Label: "Port", Placeholder: "5432", Required: true, Default: "5432"},
+			{Name: "database", Label: "Database", Placeholder: "geodata", Required: true},
+			{Name: "schema", Label: "Schema", Placeholder: "public", Required: false, Default: "public"},
+			{Name: "user", Label: "Username", Placeholder: "postgres", Required: true},
+			{Name: "passwd", Label: "Password", Placeholder: "password", Required: true, Password: true},
+		}
+	case DataStoreTypeShapefileDir:
+		return []DataStoreField{
+			{Name: "name", Label: "Store Name", Placeholder: "my-shapefile-store", Required: true},
+			{Name: "url", Label: "Directory Path", Placeholder: "file:data/shapefiles", Required: true},
+		}
+	case DataStoreTypeGeoPackage:
+		return []DataStoreField{
+			{Name: "name", Label: "Store Name", Placeholder: "my-geopackage-store", Required: true},
+			{Name: "database", Label: "GeoPackage Path", Placeholder: "file:data/mydata.gpkg", Required: true},
+		}
+	case DataStoreTypeWFS:
+		return []DataStoreField{
+			{Name: "name", Label: "Store Name", Placeholder: "my-wfs-store", Required: true},
+			{Name: "WFSDataStoreFactory:GET_CAPABILITIES_URL", Label: "WFS URL", Placeholder: "https://example.com/wfs?service=WFS&request=GetCapabilities", Required: true},
+			{Name: "WFSDataStoreFactory:USERNAME", Label: "Username", Placeholder: "user", Required: false},
+			{Name: "WFSDataStoreFactory:PASSWORD", Label: "Password", Placeholder: "password", Required: false, Password: true},
+		}
+	default:
+		return []DataStoreField{
+			{Name: "name", Label: "Store Name", Placeholder: "store-name", Required: true},
+		}
+	}
+}
+
+// GetAllDataStoreTypes returns all available data store types
+func GetAllDataStoreTypes() []DataStoreType {
+	return []DataStoreType{
+		DataStoreTypePostGIS,
+		DataStoreTypeShapefileDir,
+		DataStoreTypeGeoPackage,
+		DataStoreTypeWFS,
+	}
+}
+
+// CoverageStoreType represents the type of coverage store
+type CoverageStoreType int
+
+const (
+	CoverageStoreTypeGeoTIFF CoverageStoreType = iota
+	CoverageStoreTypeWorldImage
+	CoverageStoreTypeImageMosaic
+)
+
+// String returns the display name for the coverage store type
+func (c CoverageStoreType) String() string {
+	switch c {
+	case CoverageStoreTypeGeoTIFF:
+		return "GeoTIFF"
+	case CoverageStoreTypeWorldImage:
+		return "World Image (PNG/JPEG/GIF)"
+	case CoverageStoreTypeImageMosaic:
+		return "Image Mosaic"
+	default:
+		return "Unknown"
+	}
+}
+
+// Type returns the GeoServer type value
+func (c CoverageStoreType) Type() string {
+	switch c {
+	case CoverageStoreTypeGeoTIFF:
+		return "GeoTIFF"
+	case CoverageStoreTypeWorldImage:
+		return "WorldImage"
+	case CoverageStoreTypeImageMosaic:
+		return "ImageMosaic"
+	default:
+		return ""
+	}
+}
+
+// CoverageStoreField represents a field in the coverage store configuration
+type CoverageStoreField struct {
+	Name        string
+	Label       string
+	Placeholder string
+	Required    bool
+}
+
+// GetCoverageStoreFields returns the configuration fields for a coverage store type
+func GetCoverageStoreFields(storeType CoverageStoreType) []CoverageStoreField {
+	switch storeType {
+	case CoverageStoreTypeGeoTIFF:
+		return []CoverageStoreField{
+			{Name: "name", Label: "Store Name", Placeholder: "my-geotiff-store", Required: true},
+			{Name: "url", Label: "File Path", Placeholder: "file:data/raster.tif", Required: true},
+		}
+	case CoverageStoreTypeWorldImage:
+		return []CoverageStoreField{
+			{Name: "name", Label: "Store Name", Placeholder: "my-image-store", Required: true},
+			{Name: "url", Label: "File Path", Placeholder: "file:data/image.png", Required: true},
+		}
+	case CoverageStoreTypeImageMosaic:
+		return []CoverageStoreField{
+			{Name: "name", Label: "Store Name", Placeholder: "my-mosaic-store", Required: true},
+			{Name: "url", Label: "Directory Path", Placeholder: "file:data/mosaic", Required: true},
+		}
+	default:
+		return []CoverageStoreField{
+			{Name: "name", Label: "Store Name", Placeholder: "store-name", Required: true},
+		}
+	}
+}
+
+// GetAllCoverageStoreTypes returns all available coverage store types
+func GetAllCoverageStoreTypes() []CoverageStoreType {
+	return []CoverageStoreType{
+		CoverageStoreTypeGeoTIFF,
+		CoverageStoreTypeWorldImage,
+		CoverageStoreTypeImageMosaic,
+	}
+}

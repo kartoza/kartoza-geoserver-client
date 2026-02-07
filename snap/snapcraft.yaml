@@ -1,0 +1,52 @@
+name: kartoza-geoserver-client
+version: '0.1.0'
+summary: TUI for managing GeoServer instances
+description: |
+  A Midnight Commander-style Terminal User Interface (TUI) for managing
+  GeoServer instances. Browse local geospatial files and upload them to
+  GeoServer with ease.
+
+  **Features:**
+  - Dual-panel interface with local files and GeoServer resources
+  - Multiple GeoServer connection support
+  - Upload Shapefiles, GeoPackage, GeoTIFF, and styles
+  - Create, edit, and delete workspaces, stores, and layers
+  - Interactive layer preview with MapLibre GL
+  - Vim-style keyboard navigation
+
+  **Keyboard Shortcuts:**
+  - Tab: Switch panels
+  - j/k: Navigate up/down
+  - Enter: Select/expand
+  - Space: Toggle file selection
+  - u: Upload files
+  - c: Connection manager
+  - i: View info
+  - ?: Help
+
+base: core22
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on: amd64
+  - build-on: arm64
+
+apps:
+  kartoza-geoserver-client:
+    command: bin/kartoza-geoserver-client
+    plugs:
+      - home
+      - network
+      - network-bind
+
+parts:
+  kartoza-geoserver-client:
+    plugin: go
+    source: .
+    build-snaps:
+      - go/1.23/stable
+    build-environment:
+      - CGO_ENABLED: "0"
+    override-build: |
+      go build -ldflags="-s -w -X main.version=0.1.0" -o $CRAFT_PART_INSTALL/bin/kartoza-geoserver-client .

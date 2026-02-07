@@ -7,7 +7,11 @@ import (
 	"github.com/kartoza/kartoza-geoserver-client/cmd"
 )
 
-var version = "dev"
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 func main() {
 	if err := cmd.Execute(version); err != nil {

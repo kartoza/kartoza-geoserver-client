@@ -1,0 +1,36 @@
+name: kartoza-geoserver-client
+arch: "${ARCH}"
+platform: linux
+version: "${VERSION}"
+section: utils
+priority: optional
+maintainer: Tim Sutton <tim@kartoza.com>
+description: |
+  A Midnight Commander-style TUI for managing GeoServer instances.
+  Browse local geospatial files and upload them to GeoServer with ease.
+vendor: Kartoza
+homepage: https://github.com/kartoza/kartoza-geoserver-client
+license: MIT
+
+contents:
+  - src: ./dist/kartoza-geoserver-client_linux_${ARCH}
+    dst: /usr/bin/kartoza-geoserver-client
+    file_info:
+      mode: 0755
+
+  - src: ./README.md
+    dst: /usr/share/doc/kartoza-geoserver-client/README.md
+
+  - src: ./LICENSE
+    dst: /usr/share/doc/kartoza-geoserver-client/LICENSE
+
+  - src: ./SPECIFICATION.md
+    dst: /usr/share/doc/kartoza-geoserver-client/SPECIFICATION.md
+
+overrides:
+  deb:
+    depends:
+      - libc6
+  rpm:
+    depends:
+      - glibc

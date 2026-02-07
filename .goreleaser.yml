@@ -1,0 +1,158 @@
+version: 2
+
+project_name: kartoza-geoserver-client
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: kartoza-geoserver-client
+    binary: kartoza-geoserver-client
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - SPECIFICATION.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: kartoza
+    name: kartoza-geoserver-client
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Kartoza GeoServer Client {{ .Version }}
+
+    A Midnight Commander-style TUI for managing GeoServer instances.
+
+  footer: |
+    ---
+
+    **Full Changelog**: https://github.com/kartoza/kartoza-geoserver-client/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ### Installation
+
+    #### Quick Install (Linux/macOS)
+    ```bash
+    # Using curl
+    curl -sSL https://github.com/kartoza/kartoza-geoserver-client/releases/download/{{ .Tag }}/kartoza-geoserver-client_{{ .Version }}_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
+
+    # Move to PATH
+    sudo mv kartoza-geoserver-client /usr/local/bin/
+    ```
+
+    #### Using Nix
+    ```bash
+    nix run github:kartoza/kartoza-geoserver-client
+    ```
+
+    #### Package Managers
+    - **Debian/Ubuntu**: Download `.deb` package below
+    - **Fedora/RHEL**: Download `.rpm` package below
+    - **Snap**: `snap install kartoza-geoserver-client` (coming soon)
+    - **Flatpak**: Download `.flatpak` below
+
+brews:
+  - name: kartoza-geoserver-client
+    repository:
+      owner: kartoza
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: Kartoza Bot
+      email: bot@kartoza.com
+    directory: Formula
+    homepage: https://github.com/kartoza/kartoza-geoserver-client
+    description: "Midnight Commander-style TUI for managing GeoServer instances"
+    license: MIT
+    skip_upload: auto
+
+nfpms:
+  - id: packages
+    package_name: kartoza-geoserver-client
+    vendor: Kartoza
+    homepage: https://github.com/kartoza/kartoza-geoserver-client
+    maintainer: Tim Sutton <tim@kartoza.com>
+    description: "A Midnight Commander-style TUI for managing GeoServer instances"
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: README.md
+        dst: /usr/share/doc/kartoza-geoserver-client/README.md
+      - src: LICENSE
+        dst: /usr/share/doc/kartoza-geoserver-client/LICENSE
+
+snapcrafts:
+  - id: snap
+    name: kartoza-geoserver-client
+    publish: false
+    summary: "TUI for managing GeoServer instances"
+    description: |
+      A Midnight Commander-style Terminal User Interface (TUI) for managing
+      GeoServer instances. Browse local geospatial files and upload them to
+      GeoServer with ease.
+
+      Features:
+      - Dual-panel interface with local files and GeoServer resources
+      - Multiple GeoServer connection support
+      - Upload Shapefiles, GeoPackage, GeoTIFF, and styles
+      - Create, edit, and delete workspaces, stores, and layers
+      - Interactive layer preview with MapLibre GL
+    license: MIT
+    grade: stable
+    confinement: strict
+    base: core22
+    apps:
+      kartoza-geoserver-client:
+        command: kartoza-geoserver-client
+        plugs:
+          - home
+          - network
+          - network-bind

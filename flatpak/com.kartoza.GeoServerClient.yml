@@ -1,0 +1,18 @@
+app-id: com.kartoza.GeoServerClient
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: kartoza-geoserver-client
+
+finish-args:
+  - --share=network
+  - --filesystem=home
+
+modules:
+  - name: kartoza-geoserver-client
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 kartoza-geoserver-client /app/bin/kartoza-geoserver-client
+    sources:
+      - type: file
+        path: ../kartoza-geoserver-client

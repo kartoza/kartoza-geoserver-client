@@ -88,12 +88,6 @@ Manage multiple GeoServer instances simultaneously. Each connection appears as a
 
 Download the appropriate package for your system from the assets below.
 
-### Using Nix
-
-```bash
-nix run github:kartoza/kartoza-geoserver-client
-```
-
 ### Linux (Debian/Ubuntu)
 
 ```bash
@@ -118,6 +112,73 @@ sudo mv kartoza-geoserver-client /usr/local/bin/
 1. Download the `.zip` file
 2. Extract to a folder
 3. Add to PATH or run directly
+
+---
+
+## Nix Installation
+
+### Run directly (no install)
+
+```bash
+nix run github:kartoza/kartoza-geoserver-client
+```
+
+### Install to profile
+
+```bash
+nix profile install github:kartoza/kartoza-geoserver-client
+```
+
+### Add to flake.nix
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    kartoza-geoserver-client.url = "github:kartoza/kartoza-geoserver-client";
+  };
+
+  outputs = { self, nixpkgs, kartoza-geoserver-client, ... }: {
+    # Option 1: Use the overlay
+    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ({ pkgs, ... }: {
+          nixpkgs.overlays = [ kartoza-geoserver-client.overlays.default ];
+          environment.systemPackages = [ pkgs.kartoza-geoserver-client ];
+        })
+      ];
+    };
+
+    # Option 2: Reference package directly
+    # environment.systemPackages = [ kartoza-geoserver-client.packages.x86_64-linux.default ];
+  };
+}
+```
+
+### Add to configuration.nix (non-flake)
+
+```nix
+{ config, pkgs, ... }:
+let
+  kartoza-geoserver-client = (builtins.getFlake "github:kartoza/kartoza-geoserver-client").packages.${pkgs.system}.default;
+in
+{
+  environment.systemPackages = [ kartoza-geoserver-client ];
+}
+```
+
+### Add to home-manager
+
+```nix
+{ pkgs, ... }:
+let
+  kartoza-geoserver-client = (builtins.getFlake "github:kartoza/kartoza-geoserver-client").packages.${pkgs.system}.default;
+in
+{
+  home.packages = [ kartoza-geoserver-client ];
+}
+```
 
 ---
 

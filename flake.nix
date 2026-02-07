@@ -7,10 +7,46 @@
   };
 
   outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
+    let
+      version = "0.1.0";
+
+      # Overlay that can be imported by other flakes
+      overlay = final: prev: {
+        kartoza-geoserver-client = final.buildGoModule {
+          pname = "kartoza-geoserver-client";
+          inherit version;
+          src = self;
+
+          vendorHash = null;
+
+          ldflags = [
+            "-s"
+            "-w"
+            "-X main.version=${version}"
+          ];
+
+          meta = with final.lib; {
+            description = "Dual-panel TUI for managing GeoServer instances";
+            homepage = "https://github.com/kartoza/kartoza-geoserver-client";
+            license = licenses.mit;
+            maintainers = [ ];
+            mainProgram = "kartoza-geoserver-client";
+            platforms = platforms.unix ++ platforms.windows;
+          };
+        };
+      };
+    in
+    {
+      # Export overlay for use in other flakes
+      overlays.default = overlay;
+      overlays.kartoza-geoserver-client = overlay;
+
+    } // flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
-        version = "0.1.0";
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ overlay ];
+        };
 
         # MkDocs with Material theme for documentation
         mkdocsEnv = pkgs.python3.withPackages (ps: with ps; [
@@ -30,29 +66,8 @@
       in
       {
         packages = {
-          default = pkgs.buildGoModule {
-            pname = "kartoza-geoserver-client";
-            inherit version;
-            src = ./.;
-
-            vendorHash = null;
-
-            ldflags = [
-              "-s"
-              "-w"
-              "-X main.version=${version}"
-            ];
-
-            meta = with pkgs.lib; {
-              description = "Dual-panel TUI for managing GeoServer instances";
-              homepage = "https://github.com/kartoza/kartoza-geoserver-client";
-              license = licenses.mit;
-              maintainers = [ ];
-              platforms = platforms.unix;
-            };
-          };
-
-          kartoza-geoserver-client = self.packages.${system}.default;
+          default = pkgs.kartoza-geoserver-client;
+          kartoza-geoserver-client = pkgs.kartoza-geoserver-client;
         };
 
         devShells.default = pkgs.mkShell {

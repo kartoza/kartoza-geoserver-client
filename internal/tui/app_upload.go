@@ -375,7 +375,7 @@ func (a *App) openLayerPreview(node *models.TreeNode) tea.Cmd {
 		var storeType string
 
 		switch node.Type {
-		case models.NodeTypeLayer, models.NodeTypeLayerGroup:
+		case models.NodeTypeLayer:
 			layerName = node.Name
 			storeName = node.StoreName
 			storeType = node.StoreType
@@ -383,6 +383,9 @@ func (a *App) openLayerPreview(node *models.TreeNode) tea.Cmd {
 			if node.StoreType == "coveragestore" {
 				layerType = "raster"
 			}
+		case models.NodeTypeLayerGroup:
+			layerName = node.Name
+			layerType = "group"
 		case models.NodeTypeDataStore:
 			// For data stores, use the store name as layer name (GeoServer convention)
 			layerName = node.Name

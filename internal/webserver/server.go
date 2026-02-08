@@ -72,6 +72,9 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	// API routes - layers
 	mux.HandleFunc("/api/layers/", s.handleLayers)
 
+	// API routes - layer metadata (comprehensive)
+	mux.HandleFunc("/api/layermetadata/", s.handleLayerMetadata)
+
 	// API routes - styles
 	mux.HandleFunc("/api/styles/", s.handleStyles)
 
@@ -91,6 +94,16 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/preview", s.handlePreview)
 	mux.HandleFunc("/api/layer", s.handleLayerInfo)
 	mux.HandleFunc("/api/metadata", s.handleMetadata)
+
+	// API routes - GeoWebCache (GWC)
+	mux.HandleFunc("/api/gwc/layers/", s.handleGWCLayers)
+	mux.HandleFunc("/api/gwc/seed/", s.handleGWCSeed)
+	mux.HandleFunc("/api/gwc/truncate/", s.handleGWCTruncate)
+	mux.HandleFunc("/api/gwc/gridsets/", s.handleGWCGridSets)
+	mux.HandleFunc("/api/gwc/diskquota/", s.handleGWCDiskQuota)
+
+	// API routes - Settings
+	mux.HandleFunc("/api/settings/", s.handleSettings)
 
 	// Serve static files (React app)
 	mux.HandleFunc("/", s.serveStatic)

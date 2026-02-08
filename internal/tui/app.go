@@ -103,6 +103,18 @@ type (
 	errMsg                  struct{ err error }
 	// CRUD operation messages
 	crudCompleteMsg struct{ success bool; err error; operation string }
+	// Settings loaded message
+	settingsLoadedMsg struct {
+		contact      *models.GeoServerContact
+		connectionID string
+		connName     string
+		err          error
+	}
+	// Settings saved message
+	settingsSavedMsg struct {
+		success bool
+		err     error
+	}
 	// Connection workspaces loaded message (for multi-connection tree)
 	connectionWorkspacesLoadedMsg struct {
 		node       *models.TreeNode
@@ -172,6 +184,12 @@ type App struct {
 
 	// Preview server for layer preview
 	previewServer *preview.Server
+
+	// Cache wizard state
+	cacheWizard *components.CacheWizard
+
+	// Settings wizard state
+	settingsWizard *components.SettingsWizard
 }
 
 // NewApp creates a new TUI application
@@ -314,6 +332,34 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, a.pendingCRUDCmd)
 					a.pendingCRUDCmd = nil
 				}
+			}
+			return a, tea.Batch(cmds...)
+		}
+
+		// If we have a cache wizard open, forward keys there first
+		if a.cacheWizard != nil && a.cacheWizard.IsVisible() {
+			var cmd tea.Cmd
+			a.cacheWizard, cmd = a.cacheWizard.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			// Check if wizard was closed
+			if !a.cacheWizard.IsVisible() {
+				a.cacheWizard = nil
+			}
+			return a, tea.Batch(cmds...)
+		}
+
+		// If we have a settings wizard open, forward keys there first
+		if a.settingsWizard != nil && a.settingsWizard.IsVisible() {
+			var cmd tea.Cmd
+			a.settingsWizard, cmd = a.settingsWizard.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			// Check if wizard was closed
+			if !a.settingsWizard.IsVisible() {
+				a.settingsWizard = nil
 			}
 			return a, tea.Batch(cmds...)
 		}
@@ -859,6 +905,80 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Publish a layer from a store
 		return a, a.publishLayerFromStore(msg.Node)
 
+	case components.TreeCacheMsg:
+		// Show cache management wizard
+		return a, a.showCacheWizard(msg.Node)
+
+	case components.TreeSettingsMsg:
+		// Show settings wizard for the connection
+		return a, a.showSettingsWizard(msg.Node)
+
+	case components.CacheWizardAnimationMsg:
+		// Forward to cache wizard if we have one
+		if a.cacheWizard != nil && a.cacheWizard.IsVisible() {
+			var cmd tea.Cmd
+			a.cacheWizard, cmd = a.cacheWizard.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			// Check if wizard was closed during animation
+			if !a.cacheWizard.IsVisible() {
+				a.cacheWizard = nil
+			}
+		}
+
+	case components.SettingsWizardAnimationMsg:
+		// Forward to settings wizard if we have one
+		if a.settingsWizard != nil && a.settingsWizard.IsVisible() {
+			var cmd tea.Cmd
+			a.settingsWizard, cmd = a.settingsWizard.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			// Check if wizard was closed during animation
+			if !a.settingsWizard.IsVisible() {
+				a.settingsWizard = nil
+			}
+		}
+
+	case settingsLoadedMsg:
+		a.loading = false
+		if msg.err != nil {
+			a.errorMsg = fmt.Sprintf("Failed to load settings: %v", msg.err)
+			return a, nil
+		}
+		// Show the settings wizard with loaded contact data
+		a.settingsWizard = components.NewSettingsWizard(msg.connectionID, msg.connName, msg.contact)
+		a.settingsWizard.SetSize(a.width, a.height)
+		a.settingsWizard.SetCallbacks(
+			func(result components.SettingsWizardResult) {
+				if result.Confirmed && result.Contact != nil {
+					// Save settings
+					a.pendingCRUDCmd = a.saveSettings(result.ConnectionID, result.Contact)
+				}
+			},
+			func() {},
+		)
+		return a, a.settingsWizard.Init()
+
+	case settingsSavedMsg:
+		a.loading = false
+		if msg.success {
+			a.statusMsg = "Settings saved successfully"
+			a.errorMsg = ""
+		} else {
+			a.errorMsg = fmt.Sprintf("Failed to save settings: %v", msg.err)
+		}
+
+	case cacheOperationCompleteMsg:
+		a.loading = false
+		if msg.success {
+			a.statusMsg = fmt.Sprintf("%s operation started for %s", msg.operation, msg.layerName)
+			a.errorMsg = ""
+		} else {
+			a.errorMsg = fmt.Sprintf("%s failed: %v", msg.operation, msg.err)
+		}
+
 	case errMsg:
 		a.loading = false
 		a.errorMsg = msg.err.Error()
@@ -918,6 +1038,18 @@ func (a *App) View() string {
 	if a.infoDialog != nil && a.infoDialog.IsVisible() {
 		a.infoDialog.SetSize(a.width, a.height)
 		content = a.infoDialog.View()
+	}
+
+	// Render cache wizard overlay
+	if a.cacheWizard != nil && a.cacheWizard.IsVisible() {
+		a.cacheWizard.SetSize(a.width, a.height)
+		content = a.cacheWizard.View()
+	}
+
+	// Render settings wizard overlay
+	if a.settingsWizard != nil && a.settingsWizard.IsVisible() {
+		a.settingsWizard.SetSize(a.width, a.height)
+		content = a.settingsWizard.View()
 	}
 
 	// Render progress dialog overlay (highest priority)
@@ -1000,11 +1132,14 @@ func (a *App) renderHelpBar() string {
 		items = append(items, styles.RenderHelpKey("n", "new"))
 		items = append(items, styles.RenderHelpKey("e", "edit"))
 		items = append(items, styles.RenderHelpKey("d", "delete"))
-		// Show preview and publish options for layers and stores
+		// Show context-specific options
 		if node := a.treeView.SelectedNode(); node != nil {
 			switch node.Type {
+			case models.NodeTypeConnection:
+				items = append(items, styles.RenderHelpKey("s", "settings"))
 			case models.NodeTypeLayer, models.NodeTypeLayerGroup:
 				items = append(items, styles.RenderHelpKey("o", "preview"))
+				items = append(items, styles.RenderHelpKey("t", "cache"))
 			case models.NodeTypeDataStore, models.NodeTypeCoverageStore:
 				items = append(items, styles.RenderHelpKey("o", "preview"))
 				items = append(items, styles.RenderHelpKey("p", "publish"))
@@ -1112,4 +1247,58 @@ func (a *App) updateSizes() {
 
 	a.fileBrowser.SetSize(panelWidth, panelHeight)
 	a.treeView.SetSize(panelWidth, panelHeight)
+}
+
+// showSettingsWizard shows the settings wizard for a connection
+func (a *App) showSettingsWizard(node *models.TreeNode) tea.Cmd {
+	if node == nil || node.Type != models.NodeTypeConnection {
+		return nil
+	}
+
+	// Get the client for this connection
+	client := a.clients[node.ConnectionID]
+	if client == nil {
+		a.errorMsg = "Connection not found"
+		return nil
+	}
+
+	// Get connection name
+	connName := node.Name
+
+	a.loading = true
+	a.statusMsg = "Loading settings..."
+
+	return func() tea.Msg {
+		contact, err := client.GetContact()
+		return settingsLoadedMsg{
+			contact:      contact,
+			connectionID: node.ConnectionID,
+			connName:     connName,
+			err:          err,
+		}
+	}
+}
+
+// saveSettings saves the settings for a connection
+func (a *App) saveSettings(connectionID string, contact *models.GeoServerContact) tea.Cmd {
+	client := a.clients[connectionID]
+	if client == nil {
+		return func() tea.Msg {
+			return settingsSavedMsg{
+				success: false,
+				err:     fmt.Errorf("connection not found"),
+			}
+		}
+	}
+
+	a.loading = true
+	a.statusMsg = "Saving settings..."
+
+	return func() tea.Msg {
+		err := client.UpdateContact(contact)
+		return settingsSavedMsg{
+			success: err == nil,
+			err:     err,
+		}
+	}
 }

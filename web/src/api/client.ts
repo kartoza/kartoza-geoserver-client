@@ -11,12 +11,23 @@ import type {
   CoverageStoreCreate,
   Layer,
   LayerUpdate,
+  LayerMetadata,
+  LayerMetadataUpdate,
   Style,
   LayerGroup,
+  LayerGroupCreate,
+  LayerGroupDetails,
+  LayerGroupUpdate,
   FeatureType,
   Coverage,
   UploadResult,
   PreviewRequest,
+  GWCLayer,
+  GWCSeedRequest,
+  GWCSeedTask,
+  GWCGridSet,
+  GWCDiskQuota,
+  GeoServerContact,
 } from '../types'
 
 const API_BASE = '/api'
@@ -200,6 +211,26 @@ export async function deleteLayer(connId: string, workspace: string, name: strin
   return handleResponse<void>(response)
 }
 
+// Layer Metadata API (comprehensive metadata)
+export async function getLayerFullMetadata(connId: string, workspace: string, name: string): Promise<LayerMetadata> {
+  const response = await fetch(`${API_BASE}/layermetadata/${connId}/${workspace}/${name}`)
+  return handleResponse<LayerMetadata>(response)
+}
+
+export async function updateLayerMetadata(
+  connId: string,
+  workspace: string,
+  name: string,
+  update: LayerMetadataUpdate
+): Promise<LayerMetadata> {
+  const response = await fetch(`${API_BASE}/layermetadata/${connId}/${workspace}/${name}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
+  })
+  return handleResponse<LayerMetadata>(response)
+}
+
 // Style API
 export async function getStyles(connId: string, workspace: string): Promise<Style[]> {
   const response = await fetch(`${API_BASE}/styles/${connId}/${workspace}`)
@@ -218,6 +249,42 @@ export async function deleteStyle(connId: string, workspace: string, name: strin
 export async function getLayerGroups(connId: string, workspace: string): Promise<LayerGroup[]> {
   const response = await fetch(`${API_BASE}/layergroups/${connId}/${workspace}`)
   return handleResponse<LayerGroup[]>(response)
+}
+
+export async function createLayerGroup(
+  connId: string,
+  workspace: string,
+  config: LayerGroupCreate
+): Promise<LayerGroup> {
+  const response = await fetch(`${API_BASE}/layergroups/${connId}/${workspace}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  return handleResponse<LayerGroup>(response)
+}
+
+export async function getLayerGroup(
+  connId: string,
+  workspace: string,
+  name: string
+): Promise<LayerGroupDetails> {
+  const response = await fetch(`${API_BASE}/layergroups/${connId}/${workspace}/${name}`)
+  return handleResponse<LayerGroupDetails>(response)
+}
+
+export async function updateLayerGroup(
+  connId: string,
+  workspace: string,
+  name: string,
+  update: LayerGroupUpdate
+): Promise<LayerGroupDetails> {
+  const response = await fetch(`${API_BASE}/layergroups/${connId}/${workspace}/${name}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
+  })
+  return handleResponse<LayerGroupDetails>(response)
 }
 
 export async function deleteLayerGroup(connId: string, workspace: string, name: string): Promise<void> {
@@ -312,4 +379,135 @@ export async function getLayerInfo(): Promise<PreviewRequest> {
 export async function getLayerMetadata(): Promise<{ bounds: number[] }> {
   const response = await fetch(`${API_BASE}/metadata`)
   return handleResponse<{ bounds: number[] }>(response)
+}
+
+// ============================================================================
+// GeoWebCache (GWC) API
+// ============================================================================
+
+// Get all cached layers
+export async function getGWCLayers(connId: string): Promise<GWCLayer[]> {
+  const response = await fetch(`${API_BASE}/gwc/layers/${connId}`)
+  return handleResponse<GWCLayer[]>(response)
+}
+
+// Get details for a specific cached layer
+export async function getGWCLayer(connId: string, layerName: string): Promise<GWCLayer> {
+  const response = await fetch(`${API_BASE}/gwc/layers/${connId}/${layerName}`)
+  return handleResponse<GWCLayer>(response)
+}
+
+// Get seed status for a layer
+export async function getGWCSeedStatus(connId: string, layerName: string): Promise<GWCSeedTask[]> {
+  const response = await fetch(`${API_BASE}/gwc/seed/${connId}/${layerName}`)
+  return handleResponse<GWCSeedTask[]>(response)
+}
+
+// Start a seed/reseed/truncate operation
+export async function seedLayer(
+  connId: string,
+  layerName: string,
+  request: GWCSeedRequest
+): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/gwc/seed/${connId}/${layerName}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  return handleResponse<{ success: boolean; message: string }>(response)
+}
+
+// Terminate seed tasks for a specific layer
+export async function terminateLayerSeed(
+  connId: string,
+  layerName: string
+): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/gwc/seed/${connId}/${layerName}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<{ success: boolean; message: string }>(response)
+}
+
+// Terminate all seed tasks
+export async function terminateAllSeeds(
+  connId: string,
+  killType: 'running' | 'pending' | 'all' = 'all'
+): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/gwc/seed/${connId}?type=${killType}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<{ success: boolean; message: string }>(response)
+}
+
+// Truncate all cached tiles for a layer
+export async function truncateLayer(
+  connId: string,
+  layerName: string,
+  options?: {
+    gridSetId?: string
+    format?: string
+    zoomStart?: number
+    zoomStop?: number
+  }
+): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/gwc/truncate/${connId}/${layerName}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options || {}),
+  })
+  return handleResponse<{ success: boolean; message: string }>(response)
+}
+
+// Get all available grid sets
+export async function getGWCGridSets(connId: string): Promise<GWCGridSet[]> {
+  const response = await fetch(`${API_BASE}/gwc/gridsets/${connId}`)
+  return handleResponse<GWCGridSet[]>(response)
+}
+
+// Get details for a specific grid set
+export async function getGWCGridSet(connId: string, name: string): Promise<GWCGridSet> {
+  const response = await fetch(`${API_BASE}/gwc/gridsets/${connId}/${name}`)
+  return handleResponse<GWCGridSet>(response)
+}
+
+// Get disk quota configuration
+export async function getGWCDiskQuota(connId: string): Promise<GWCDiskQuota> {
+  const response = await fetch(`${API_BASE}/gwc/diskquota/${connId}`)
+  return handleResponse<GWCDiskQuota>(response)
+}
+
+// Update disk quota configuration
+export async function updateGWCDiskQuota(
+  connId: string,
+  quota: Partial<GWCDiskQuota>
+): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/gwc/diskquota/${connId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(quota),
+  })
+  return handleResponse<{ success: boolean; message: string }>(response)
+}
+
+// ============================================================================
+// GeoServer Settings/Contact API
+// ============================================================================
+
+// Get GeoServer contact information
+export async function getContact(connId: string): Promise<GeoServerContact> {
+  const response = await fetch(`${API_BASE}/settings/${connId}`)
+  return handleResponse<GeoServerContact>(response)
+}
+
+// Update GeoServer contact information
+export async function updateContact(
+  connId: string,
+  contact: GeoServerContact
+): Promise<GeoServerContact> {
+  const response = await fetch(`${API_BASE}/settings/${connId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(contact),
+  })
+  return handleResponse<GeoServerContact>(response)
 }

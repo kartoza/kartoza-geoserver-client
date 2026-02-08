@@ -94,6 +94,62 @@ export interface LayerUpdate {
   queryable: boolean
 }
 
+// Bounding Box type
+export interface BoundingBox {
+  minx: number
+  miny: number
+  maxx: number
+  maxy: number
+  crs?: string
+}
+
+// Metadata Link type
+export interface MetadataLink {
+  type: string
+  metadataType: string
+  content: string
+}
+
+// Comprehensive Layer Metadata
+export interface LayerMetadata {
+  name: string
+  nativeName?: string
+  workspace: string
+  store: string
+  storeType: 'datastore' | 'coveragestore'
+  title?: string
+  abstract?: string
+  keywords?: string[]
+  nativeCRS?: string
+  srs?: string
+  enabled: boolean
+  advertised: boolean
+  queryable: boolean
+  nativeBoundingBox?: BoundingBox
+  latLonBoundingBox?: BoundingBox
+  attributionTitle?: string
+  attributionHref?: string
+  attributionLogo?: string
+  metadataLinks?: MetadataLink[]
+  defaultStyle?: string
+  maxFeatures?: number
+  numDecimals?: number
+}
+
+// Layer Metadata Update Request
+export interface LayerMetadataUpdate {
+  title?: string
+  abstract?: string
+  keywords?: string[]
+  srs?: string
+  enabled?: boolean
+  advertised?: boolean
+  queryable?: boolean
+  attributionTitle?: string
+  attributionHref?: string
+  metadataLinks?: MetadataLink[]
+}
+
 // Style types
 export interface Style {
   name: string
@@ -106,6 +162,46 @@ export interface LayerGroup {
   name: string
   workspace: string
   mode?: string
+}
+
+export interface LayerGroupCreate {
+  name: string
+  title?: string
+  mode?: 'SINGLE' | 'NAMED' | 'CONTAINER' | 'EO'
+  layers: string[] // Layer names in workspace:layer format
+}
+
+export interface LayerGroupDetails {
+  name: string
+  workspace: string
+  mode: string
+  title?: string
+  abstract?: string
+  layers: LayerGroupItem[]
+  bounds?: Bounds
+  enabled: boolean
+  advertised: boolean
+}
+
+export interface LayerGroupItem {
+  type: string // 'layer' or 'layerGroup'
+  name: string
+  styleName?: string
+}
+
+export interface Bounds {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+  crs: string
+}
+
+export interface LayerGroupUpdate {
+  title?: string
+  mode?: string
+  layers?: string[]
+  enabled?: boolean
 }
 
 // Feature Type and Coverage
@@ -136,7 +232,10 @@ export interface PreviewRequest {
   layerName: string
   storeName?: string
   storeType?: string
-  layerType?: string
+  layerType?: string // 'vector', 'raster', or 'group'
+  useCache?: boolean // If true, use WMTS (cached tiles) instead of WMS
+  gridSet?: string // WMTS grid set (e.g., "EPSG:900913", "EPSG:4326")
+  tileFormat?: string // WMTS tile format (e.g., "image/png")
 }
 
 // Tree node types for UI
@@ -169,4 +268,77 @@ export interface TreeNode {
   hasError?: boolean
   errorMsg?: string
   enabled?: boolean
+}
+
+// GeoWebCache (GWC) types
+export interface GWCLayer {
+  name: string
+  enabled: boolean
+  gridSubsets?: string[]
+  mimeFormats?: string[]
+}
+
+export interface GWCSeedRequest {
+  gridSetId: string
+  zoomStart: number
+  zoomStop: number
+  format: string
+  type: 'seed' | 'reseed' | 'truncate'
+  threadCount: number
+  bounds?: GWCBounds
+}
+
+export interface GWCBounds {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+  srs: string
+}
+
+export interface GWCSeedTask {
+  id: number
+  tilesDone: number
+  tilesTotal: number
+  timeRemaining: number
+  status: 'Pending' | 'Running' | 'Done' | 'Aborted' | 'Unknown'
+  layerName: string
+  progress: number // 0-100
+}
+
+export interface GWCGridSet {
+  name: string
+  srs?: string
+  tileWidth?: number
+  tileHeight?: number
+  minX?: number
+  minY?: number
+  maxX?: number
+  maxY?: number
+}
+
+export interface GWCDiskQuota {
+  enabled: boolean
+  diskBlockSize: number
+  cacheCleanUpFrequency: number
+  maxConcurrentCleanUps: number
+  globalQuota?: string
+}
+
+// GeoServer Contact/Settings types
+export interface GeoServerContact {
+  contactPerson?: string
+  contactPosition?: string
+  contactOrganization?: string
+  addressType?: string
+  address?: string
+  addressCity?: string
+  addressState?: string
+  addressPostalCode?: string
+  addressCountry?: string
+  contactVoice?: string
+  contactFacsimile?: string
+  contactEmail?: string
+  onlineResource?: string
+  welcome?: string
 }

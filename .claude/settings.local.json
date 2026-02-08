@@ -3,7 +3,9 @@
     "allow": [
       "WebFetch(domain:docs.geoserver.org)",
       "Bash(nix develop:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

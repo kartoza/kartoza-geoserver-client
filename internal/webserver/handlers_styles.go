@@ -1,9 +1,11 @@
 package webserver
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/kartoza/kartoza-geoserver-client/internal/api"
+	"github.com/kartoza/kartoza-geoserver-client/internal/models"
 )
 
 // StyleResponse represents a style in API responses
@@ -90,6 +92,43 @@ type LayerGroupResponse struct {
 	Mode      string `json:"mode,omitempty"`
 }
 
+// LayerGroupDetailsResponse represents detailed layer group info in API responses
+type LayerGroupDetailsResponse struct {
+	Name       string                   `json:"name"`
+	Workspace  string                   `json:"workspace"`
+	Mode       string                   `json:"mode"`
+	Title      string                   `json:"title,omitempty"`
+	Abstract   string                   `json:"abstract,omitempty"`
+	Layers     []LayerGroupItemResponse `json:"layers"`
+	Bounds     *BoundsResponse          `json:"bounds,omitempty"`
+	Enabled    bool                     `json:"enabled"`
+	Advertised bool                     `json:"advertised"`
+}
+
+// LayerGroupItemResponse represents a layer within a layer group
+type LayerGroupItemResponse struct {
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	StyleName string `json:"styleName,omitempty"`
+}
+
+// BoundsResponse represents geographic bounds
+type BoundsResponse struct {
+	MinX float64 `json:"minX"`
+	MinY float64 `json:"minY"`
+	MaxX float64 `json:"maxX"`
+	MaxY float64 `json:"maxY"`
+	CRS  string  `json:"crs"`
+}
+
+// LayerGroupUpdateRequest represents a layer group update request
+type LayerGroupUpdateRequest struct {
+	Title   string   `json:"title,omitempty"`
+	Mode    string   `json:"mode,omitempty"`
+	Layers  []string `json:"layers,omitempty"`
+	Enabled bool     `json:"enabled"`
+}
+
 // handleLayerGroups handles layer group related requests
 // Pattern: /api/layergroups/{connId}/{workspace} or /api/layergroups/{connId}/{workspace}/{group}
 func (s *Server) handleLayerGroups(w http.ResponseWriter, r *http.Request) {
@@ -111,6 +150,8 @@ func (s *Server) handleLayerGroups(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			s.listLayerGroups(w, r, client, workspace)
+		case http.MethodPost:
+			s.createLayerGroup(w, r, client, workspace)
 		case http.MethodOptions:
 			s.handleCORS(w)
 		default:
@@ -119,6 +160,10 @@ func (s *Server) handleLayerGroups(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Operating on a specific layer group
 		switch r.Method {
+		case http.MethodGet:
+			s.getLayerGroup(w, r, client, workspace, group)
+		case http.MethodPut:
+			s.updateLayerGroup(w, r, client, workspace, group)
 		case http.MethodDelete:
 			s.deleteLayerGroup(w, r, client, workspace, group)
 		case http.MethodOptions:
@@ -146,6 +191,100 @@ func (s *Server) listLayerGroups(w http.ResponseWriter, r *http.Request, client 
 		}
 	}
 	s.jsonResponse(w, response)
+}
+
+// createLayerGroup creates a new layer group
+func (s *Server) createLayerGroup(w http.ResponseWriter, r *http.Request, client *api.Client, workspace string) {
+	var config models.LayerGroupCreate
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		s.jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if config.Name == "" {
+		s.jsonError(w, "Layer group name is required", http.StatusBadRequest)
+		return
+	}
+
+	if len(config.Layers) == 0 {
+		s.jsonError(w, "At least one layer is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := client.CreateLayerGroup(workspace, config); err != nil {
+		s.jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	s.jsonResponse(w, LayerGroupResponse{
+		Name:      config.Name,
+		Workspace: workspace,
+		Mode:      config.Mode,
+	})
+}
+
+// getLayerGroup returns details for a specific layer group
+func (s *Server) getLayerGroup(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, group string) {
+	details, err := client.GetLayerGroup(workspace, group)
+	if err != nil {
+		s.jsonError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	response := LayerGroupDetailsResponse{
+		Name:       details.Name,
+		Workspace:  workspace,
+		Mode:       details.Mode,
+		Title:      details.Title,
+		Abstract:   details.Abstract,
+		Enabled:    details.Enabled,
+		Advertised: details.Advertised,
+		Layers:     make([]LayerGroupItemResponse, len(details.Layers)),
+	}
+
+	for i, layer := range details.Layers {
+		response.Layers[i] = LayerGroupItemResponse{
+			Type:      layer.Type,
+			Name:      layer.Name,
+			StyleName: layer.StyleName,
+		}
+	}
+
+	if details.Bounds != nil {
+		response.Bounds = &BoundsResponse{
+			MinX: details.Bounds.MinX,
+			MinY: details.Bounds.MinY,
+			MaxX: details.Bounds.MaxX,
+			MaxY: details.Bounds.MaxY,
+			CRS:  details.Bounds.CRS,
+		}
+	}
+
+	s.jsonResponse(w, response)
+}
+
+// updateLayerGroup updates a layer group
+func (s *Server) updateLayerGroup(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, group string) {
+	var req LayerGroupUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	update := models.LayerGroupUpdate{
+		Title:   req.Title,
+		Mode:    req.Mode,
+		Layers:  req.Layers,
+		Enabled: req.Enabled,
+	}
+
+	if err := client.UpdateLayerGroup(workspace, group, update); err != nil {
+		s.jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the updated layer group
+	s.getLayerGroup(w, r, client, workspace, group)
 }
 
 // deleteLayerGroup deletes a layer group

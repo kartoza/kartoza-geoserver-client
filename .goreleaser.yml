@@ -7,6 +7,7 @@ before:
     - go mod tidy
 
 builds:
+  # TUI application
   - id: kartoza-geoserver-client
     binary: kartoza-geoserver-client
     main: .
@@ -25,8 +26,30 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
 
+  # Web application (requires frontend to be pre-built)
+  - id: kartoza-geoserver-web
+    binary: kartoza-geoserver-web
+    main: ./cmd/web
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
 archives:
-  - id: default
+  # TUI archive
+  - id: tui
+    builds:
+      - kartoza-geoserver-client
     format: tar.gz
     name_template: >-
       {{ .ProjectName }}_
@@ -40,6 +63,23 @@ archives:
       - README.md
       - LICENSE
       - SPECIFICATION.md
+
+  # Web archive
+  - id: web
+    builds:
+      - kartoza-geoserver-web
+    format: tar.gz
+    name_template: >-
+      kartoza-geoserver-web_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
 
 checksum:
   name_template: 'checksums.txt'
@@ -67,23 +107,32 @@ release:
   header: |
     ## Kartoza GeoServer Client {{ .Version }}
 
-    A Midnight Commander-style TUI for managing GeoServer instances.
+    A Midnight Commander-style TUI and modern Web interface for managing GeoServer instances.
+
+    ### Available Packages
+
+    This release includes two applications:
+
+    - **kartoza-geoserver-client** - Terminal UI (TUI) with dual-panel interface
+    - **kartoza-geoserver-web** - Web interface with React-based UI
 
     ### Highlights
 
-    - **Dual-panel interface** - Local filesystem on the left, GeoServer explorer on the right
+    - **Dual-panel TUI** - Local filesystem on the left, GeoServer explorer on the right
+    - **Modern Web UI** - React-based interface with Chakra UI
     - **Multi-connection support** - Manage multiple GeoServer instances simultaneously
     - **Upload with verification** - Upload Shapefiles, GeoPackage, GeoTIFF with automatic verification
     - **Full CRUD operations** - Create, edit, delete workspaces, stores, and layers
     - **Layer preview** - Built-in MapLibre GL web viewer with WMS support
-    - **Vim-style navigation** - Familiar j/k/h/l keys for navigation
+    - **Comprehensive metadata editing** - Edit layer title, abstract, keywords, attribution
+    - **Vim-style navigation** - Familiar j/k/h/l keys for navigation (TUI)
 
   footer: |
     ---
 
     ### Installation
 
-    #### Quick Install (Linux/macOS)
+    #### TUI - Quick Install (Linux/macOS)
     ```bash
     # Download and extract
     curl -sSL https://github.com/kartoza/kartoza-geoserver-client/releases/download/{{ .Tag }}/kartoza-geoserver-client_{{ .Version }}_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
@@ -92,28 +141,61 @@ release:
     sudo mv kartoza-geoserver-client /usr/local/bin/
     ```
 
-    #### Debian/Ubuntu
+    #### Web UI - Quick Install (Linux/macOS)
+    ```bash
+    # Download and extract
+    curl -sSL https://github.com/kartoza/kartoza-geoserver-client/releases/download/{{ .Tag }}/kartoza-geoserver-web_{{ .Version }}_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
+
+    # Move to PATH
+    sudo mv kartoza-geoserver-web /usr/local/bin/
+
+    # Run on port 8080 (default)
+    kartoza-geoserver-web
+    # Or specify a different port
+    kartoza-geoserver-web -addr :3000
+    ```
+
+    #### Debian/Ubuntu - TUI
     ```bash
     sudo dpkg -i kartoza-geoserver-client_{{ .Version }}_amd64.deb
     ```
 
-    #### Fedora/RHEL
+    #### Debian/Ubuntu - Web UI
+    ```bash
+    sudo dpkg -i kartoza-geoserver-web_{{ .Version }}_amd64.deb
+    ```
+
+    #### Fedora/RHEL - TUI
     ```bash
     sudo rpm -i kartoza-geoserver-client-{{ .Version }}.x86_64.rpm
+    ```
+
+    #### Fedora/RHEL - Web UI
+    ```bash
+    sudo rpm -i kartoza-geoserver-web-{{ .Version }}.x86_64.rpm
     ```
 
     ---
 
     ### Nix Installation
 
-    #### Run directly (no install)
+    #### Run TUI directly (no install)
     ```bash
     nix run github:kartoza/kartoza-geoserver-client
     ```
 
+    #### Run Web UI directly (no install)
+    ```bash
+    nix run github:kartoza/kartoza-geoserver-client#web
+    ```
+
     #### Install to profile
     ```bash
+    # TUI
     nix profile install github:kartoza/kartoza-geoserver-client
+
+    # Web UI
+    nix profile install github:kartoza/kartoza-geoserver-client#kartoza-geoserver-web
     ```
 
     #### Add to flake.nix
@@ -131,13 +213,19 @@ release:
           modules = [
             ({ pkgs, ... }: {
               nixpkgs.overlays = [ kartoza-geoserver-client.overlays.default ];
-              environment.systemPackages = [ pkgs.kartoza-geoserver-client ];
+              environment.systemPackages = [
+                pkgs.kartoza-geoserver-client  # TUI
+                pkgs.kartoza-geoserver-web     # Web UI
+              ];
             })
           ];
         };
 
         # Option 2: Reference package directly
-        # environment.systemPackages = [ kartoza-geoserver-client.packages.x86_64-linux.default ];
+        # environment.systemPackages = [
+        #   kartoza-geoserver-client.packages.x86_64-linux.default
+        #   kartoza-geoserver-client.packages.x86_64-linux.kartoza-geoserver-web
+        # ];
       };
     }
     ```
@@ -146,10 +234,13 @@ release:
     ```nix
     { config, pkgs, ... }:
     let
-      kartoza-geoserver-client = (builtins.getFlake "github:kartoza/kartoza-geoserver-client").packages.${pkgs.system}.default;
+      kgc = builtins.getFlake "github:kartoza/kartoza-geoserver-client";
     in
     {
-      environment.systemPackages = [ kartoza-geoserver-client ];
+      environment.systemPackages = [
+        kgc.packages.${pkgs.system}.default              # TUI
+        kgc.packages.${pkgs.system}.kartoza-geoserver-web  # Web UI
+      ];
     }
     ```
 
@@ -157,10 +248,13 @@ release:
     ```nix
     { pkgs, ... }:
     let
-      kartoza-geoserver-client = (builtins.getFlake "github:kartoza/kartoza-geoserver-client").packages.${pkgs.system}.default;
+      kgc = builtins.getFlake "github:kartoza/kartoza-geoserver-client";
     in
     {
-      home.packages = [ kartoza-geoserver-client ];
+      home.packages = [
+        kgc.packages.${pkgs.system}.default              # TUI
+        kgc.packages.${pkgs.system}.kartoza-geoserver-web  # Web UI
+      ];
     }
     ```
 
@@ -168,16 +262,26 @@ release:
 
     ### Quick Start
 
+    #### TUI
     1. Launch: `kartoza-geoserver-client`
     2. Press `c` to open connection manager
     3. Press `a` to add a GeoServer connection
     4. Navigate and explore!
 
+    #### Web UI
+    1. Launch: `kartoza-geoserver-web`
+    2. Open browser: http://localhost:8080
+    3. Click "Add Connection" to add a GeoServer
+    4. Browse and manage your GeoServer instances!
+
     **Made with love by [Kartoza](https://kartoza.com)**
 
 nfpms:
-  - id: packages
+  # TUI package
+  - id: tui-packages
     package_name: kartoza-geoserver-client
+    builds:
+      - kartoza-geoserver-client
     vendor: Kartoza
     homepage: https://github.com/kartoza/kartoza-geoserver-client
     maintainer: Tim Sutton <tim@kartoza.com>
@@ -192,3 +296,23 @@ nfpms:
         dst: /usr/share/doc/kartoza-geoserver-client/README.md
       - src: LICENSE
         dst: /usr/share/doc/kartoza-geoserver-client/LICENSE
+
+  # Web package
+  - id: web-packages
+    package_name: kartoza-geoserver-web
+    builds:
+      - kartoza-geoserver-web
+    vendor: Kartoza
+    homepage: https://github.com/kartoza/kartoza-geoserver-client
+    maintainer: Tim Sutton <tim@kartoza.com>
+    description: "A modern web interface for managing GeoServer instances"
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: README.md
+        dst: /usr/share/doc/kartoza-geoserver-web/README.md
+      - src: LICENSE
+        dst: /usr/share/doc/kartoza-geoserver-web/LICENSE

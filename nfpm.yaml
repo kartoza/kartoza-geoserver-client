@@ -1,3 +1,13 @@
+# NOTE: This file is for manual/local package builds only.
+# Release packaging is handled by .goreleaser.yml which includes
+# both TUI and Web UI package configurations.
+#
+# For releases, use: goreleaser release --clean
+# For local builds, use: nfpm pkg --packager deb --target .
+#
+# This config builds the TUI package only. For web UI, modify
+# the package name and binary path below.
+
 name: kartoza-geoserver-client
 arch: "${ARCH}"
 platform: linux

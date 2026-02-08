@@ -6,6 +6,7 @@ export type DialogType =
   | 'datastore'
   | 'coveragestore'
   | 'layer'
+  | 'layergroup'
   | 'upload'
   | 'confirm'
   | 'info'

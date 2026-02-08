@@ -157,12 +157,15 @@ func detectFileType(filename string) models.FileType {
 
 // PreviewRequest represents a preview start request
 type PreviewRequest struct {
-	ConnID    string `json:"connId"`
-	Workspace string `json:"workspace"`
-	LayerName string `json:"layerName"`
-	StoreName string `json:"storeName,omitempty"`
-	StoreType string `json:"storeType,omitempty"`
-	LayerType string `json:"layerType,omitempty"`
+	ConnID     string `json:"connId"`
+	Workspace  string `json:"workspace"`
+	LayerName  string `json:"layerName"`
+	StoreName  string `json:"storeName,omitempty"`
+	StoreType  string `json:"storeType,omitempty"`
+	LayerType  string `json:"layerType,omitempty"`
+	UseCache   bool   `json:"useCache,omitempty"`   // If true, use WMTS (cached tiles)
+	GridSet    string `json:"gridSet,omitempty"`    // WMTS grid set
+	TileFormat string `json:"tileFormat,omitempty"` // WMTS tile format
 }
 
 // handlePreview handles preview requests
@@ -219,6 +222,9 @@ func (s *Server) handlePreview(w http.ResponseWriter, r *http.Request) {
 		StoreType:    req.StoreType,
 		GeoServerURL: client.BaseURL(),
 		Type:         layerType,
+		UseCache:     req.UseCache,
+		GridSet:      req.GridSet,
+		TileFormat:   req.TileFormat,
 		Username:     conn.Username,
 		Password:     conn.Password,
 	}

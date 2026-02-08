@@ -385,6 +385,65 @@ func (c *Client) GetLayerGroups(workspace string) ([]models.LayerGroup, error) {
 	return result.LayerGroups.LayerGroup, nil
 }
 
+// CreateLayerGroup creates a new layer group in a workspace
+func (c *Client) CreateLayerGroup(workspace string, config models.LayerGroupCreate) error {
+	path := fmt.Sprintf("/workspaces/%s/layergroups", workspace)
+
+	// Build the publishables array with layer references
+	publishables := make([]map[string]interface{}, len(config.Layers))
+	styles := make([]map[string]interface{}, len(config.Layers))
+
+	for i, layerName := range config.Layers {
+		// Layer names should be in workspace:layer format
+		publishables[i] = map[string]interface{}{
+			"@type": "layer",
+			"name":  layerName,
+		}
+		// Use empty style (default) for each layer
+		styles[i] = map[string]interface{}{}
+	}
+
+	mode := config.Mode
+	if mode == "" {
+		mode = "SINGLE"
+	}
+
+	body := map[string]interface{}{
+		"layerGroup": map[string]interface{}{
+			"name": config.Name,
+			"mode": mode,
+			"publishables": map[string]interface{}{
+				"published": publishables,
+			},
+			"styles": map[string]interface{}{
+				"style": styles,
+			},
+		},
+	}
+
+	if config.Title != "" {
+		body["layerGroup"].(map[string]interface{})["title"] = config.Title
+	}
+
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal layer group: %w", err)
+	}
+
+	resp, err := c.doRequest("POST", path, bytes.NewReader(jsonBody), "application/json")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 201 && resp.StatusCode != 200 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to create layer group (status %d): %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	return nil
+}
+
 // CreateWorkspace creates a new workspace with optional configuration
 func (c *Client) CreateWorkspace(name string) error {
 	return c.CreateWorkspaceWithConfig(models.WorkspaceConfig{Name: name})
@@ -843,6 +902,154 @@ func (c *Client) GetServerVersion() (string, error) {
 	}
 
 	return "unknown", nil
+}
+
+// GetLayerGroup fetches details for a specific layer group
+func (c *Client) GetLayerGroup(workspace, name string) (*models.LayerGroupDetails, error) {
+	var path string
+	if workspace == "" {
+		path = fmt.Sprintf("/layergroups/%s", name)
+	} else {
+		path = fmt.Sprintf("/workspaces/%s/layergroups/%s", workspace, name)
+	}
+
+	resp, err := c.doRequest("GET", path, nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get layer group: %s", string(bodyBytes))
+	}
+
+	var result struct {
+		LayerGroup struct {
+			Name       string `json:"name"`
+			Mode       string `json:"mode"`
+			Title      string `json:"title"`
+			Abstract   string `json:"abstractTxt"`
+			Workspace  struct {
+				Name string `json:"name"`
+			} `json:"workspace"`
+			Publishables struct {
+				Published []struct {
+					Type string `json:"@type"`
+					Name string `json:"name"`
+				} `json:"published"`
+			} `json:"publishables"`
+			Styles struct {
+				Style []struct {
+					Name string `json:"name"`
+				} `json:"style"`
+			} `json:"styles"`
+			Bounds struct {
+				MinX float64 `json:"minx"`
+				MinY float64 `json:"miny"`
+				MaxX float64 `json:"maxx"`
+				MaxY float64 `json:"maxy"`
+				CRS  string  `json:"crs"`
+			} `json:"bounds"`
+		} `json:"layerGroup"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode layer group: %w", err)
+	}
+
+	details := &models.LayerGroupDetails{
+		Name:       result.LayerGroup.Name,
+		Mode:       result.LayerGroup.Mode,
+		Title:      result.LayerGroup.Title,
+		Abstract:   result.LayerGroup.Abstract,
+		Workspace:  result.LayerGroup.Workspace.Name,
+		Enabled:    true, // Layer groups are enabled by default
+		Advertised: true,
+	}
+
+	// Parse layers
+	for i, pub := range result.LayerGroup.Publishables.Published {
+		item := models.LayerGroupItem{
+			Type: pub.Type,
+			Name: pub.Name,
+		}
+		// Match with style if available
+		if i < len(result.LayerGroup.Styles.Style) {
+			item.StyleName = result.LayerGroup.Styles.Style[i].Name
+		}
+		details.Layers = append(details.Layers, item)
+	}
+
+	// Parse bounds
+	if result.LayerGroup.Bounds.CRS != "" {
+		details.Bounds = &models.Bounds{
+			MinX: result.LayerGroup.Bounds.MinX,
+			MinY: result.LayerGroup.Bounds.MinY,
+			MaxX: result.LayerGroup.Bounds.MaxX,
+			MaxY: result.LayerGroup.Bounds.MaxY,
+			CRS:  result.LayerGroup.Bounds.CRS,
+		}
+	}
+
+	return details, nil
+}
+
+// UpdateLayerGroup updates an existing layer group
+func (c *Client) UpdateLayerGroup(workspace, name string, update models.LayerGroupUpdate) error {
+	var path string
+	if workspace == "" {
+		path = fmt.Sprintf("/layergroups/%s", name)
+	} else {
+		path = fmt.Sprintf("/workspaces/%s/layergroups/%s", workspace, name)
+	}
+
+	// Build the publishables array with layer references
+	publishables := make([]map[string]interface{}, len(update.Layers))
+	styles := make([]map[string]interface{}, len(update.Layers))
+
+	for i, layerName := range update.Layers {
+		publishables[i] = map[string]interface{}{
+			"@type": "layer",
+			"name":  layerName,
+		}
+		// Use empty style (default) for each layer
+		styles[i] = map[string]interface{}{}
+	}
+
+	body := map[string]interface{}{
+		"layerGroup": map[string]interface{}{
+			"mode": update.Mode,
+		},
+	}
+
+	lg := body["layerGroup"].(map[string]interface{})
+
+	if update.Title != "" {
+		lg["title"] = update.Title
+	}
+
+	if len(update.Layers) > 0 {
+		lg["publishables"] = map[string]interface{}{
+			"published": publishables,
+		}
+		lg["styles"] = map[string]interface{}{
+			"style": styles,
+		}
+	}
+
+	resp, err := c.doJSONRequest("PUT", path, body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update layer group: %s", string(bodyBytes))
+	}
+
+	return nil
 }
 
 // DeleteLayerGroup deletes a layer group
@@ -1698,6 +1905,914 @@ func (c *Client) UpdateCoverageStoreConfig(workspace string, config models.Cover
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("failed to update coverage store: %s", string(bodyBytes))
+	}
+
+	return nil
+}
+
+// GetLayerMetadata retrieves comprehensive layer metadata
+func (c *Client) GetLayerMetadata(workspace, layerName string) (*models.LayerMetadata, error) {
+	metadata := &models.LayerMetadata{
+		Name:      layerName,
+		Workspace: workspace,
+	}
+
+	// Get layer info to determine resource type
+	resp, err := c.doRequest("GET", fmt.Sprintf("/layers/%s:%s", workspace, layerName), nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get layer: %s", string(bodyBytes))
+	}
+
+	var layerResult struct {
+		Layer struct {
+			Name      string `json:"name"`
+			Type      string `json:"type"`
+			Queryable *bool  `json:"queryable"`
+			Resource  struct {
+				Class string `json:"@class"`
+				Name  string `json:"name"`
+				Href  string `json:"href"`
+			} `json:"resource"`
+			DefaultStyle struct {
+				Name string `json:"name"`
+			} `json:"defaultStyle"`
+		} `json:"layer"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&layerResult); err != nil {
+		return nil, fmt.Errorf("failed to decode layer: %w", err)
+	}
+
+	if layerResult.Layer.Queryable != nil {
+		metadata.Queryable = *layerResult.Layer.Queryable
+	}
+	metadata.DefaultStyle = layerResult.Layer.DefaultStyle.Name
+
+	// Determine if featuretype or coverage
+	isFeatureType := strings.Contains(layerResult.Layer.Resource.Class, "FeatureType")
+
+	// Extract store name from href
+	storeName := c.extractStoreNameFromHref(layerResult.Layer.Resource.Href, isFeatureType)
+	metadata.Store = storeName
+	if isFeatureType {
+		metadata.StoreType = "datastore"
+	} else {
+		metadata.StoreType = "coveragestore"
+	}
+
+	// Get resource details (featuretype or coverage)
+	var resourcePath string
+	if isFeatureType {
+		resourcePath = fmt.Sprintf("/workspaces/%s/datastores/%s/featuretypes/%s", workspace, storeName, layerName)
+	} else {
+		resourcePath = fmt.Sprintf("/workspaces/%s/coveragestores/%s/coverages/%s", workspace, storeName, layerName)
+	}
+
+	resourceResp, err := c.doRequest("GET", resourcePath, nil, "")
+	if err != nil {
+		return metadata, nil // Return what we have
+	}
+	defer resourceResp.Body.Close()
+
+	if resourceResp.StatusCode != http.StatusOK {
+		return metadata, nil // Return what we have
+	}
+
+	if isFeatureType {
+		var ftResult struct {
+			FeatureType struct {
+				Name       string `json:"name"`
+				NativeName string `json:"nativeName"`
+				Title      string `json:"title"`
+				Abstract   string `json:"abstract"`
+				Keywords   struct {
+					String []string `json:"string"`
+				} `json:"keywords"`
+				NativeCRS string `json:"nativeCRS"`
+				SRS       string `json:"srs"`
+				Enabled   bool   `json:"enabled"`
+				Advertised bool  `json:"advertised"`
+				NativeBoundingBox struct {
+					MinX float64 `json:"minx"`
+					MinY float64 `json:"miny"`
+					MaxX float64 `json:"maxx"`
+					MaxY float64 `json:"maxy"`
+					CRS  string  `json:"crs"`
+				} `json:"nativeBoundingBox"`
+				LatLonBoundingBox struct {
+					MinX float64 `json:"minx"`
+					MinY float64 `json:"miny"`
+					MaxX float64 `json:"maxx"`
+					MaxY float64 `json:"maxy"`
+					CRS  string  `json:"crs"`
+				} `json:"latLonBoundingBox"`
+				MaxFeatures  int  `json:"maxFeatures"`
+				NumDecimals  int  `json:"numDecimals"`
+				MetadataLinks struct {
+					MetadataLink []struct {
+						Type         string `json:"type"`
+						MetadataType string `json:"metadataType"`
+						Content      string `json:"content"`
+					} `json:"metadataLink"`
+				} `json:"metadataLinks"`
+			} `json:"featureType"`
+		}
+
+		if err := json.NewDecoder(resourceResp.Body).Decode(&ftResult); err == nil {
+			ft := ftResult.FeatureType
+			metadata.NativeName = ft.NativeName
+			metadata.Title = ft.Title
+			metadata.Abstract = ft.Abstract
+			metadata.Keywords = ft.Keywords.String
+			metadata.NativeCRS = ft.NativeCRS
+			metadata.SRS = ft.SRS
+			metadata.Enabled = ft.Enabled
+			metadata.Advertised = ft.Advertised
+			metadata.MaxFeatures = ft.MaxFeatures
+			metadata.NumDecimals = ft.NumDecimals
+			metadata.NativeBoundingBox = &models.BoundingBox{
+				MinX: ft.NativeBoundingBox.MinX,
+				MinY: ft.NativeBoundingBox.MinY,
+				MaxX: ft.NativeBoundingBox.MaxX,
+				MaxY: ft.NativeBoundingBox.MaxY,
+				CRS:  ft.NativeBoundingBox.CRS,
+			}
+			metadata.LatLonBoundingBox = &models.BoundingBox{
+				MinX: ft.LatLonBoundingBox.MinX,
+				MinY: ft.LatLonBoundingBox.MinY,
+				MaxX: ft.LatLonBoundingBox.MaxX,
+				MaxY: ft.LatLonBoundingBox.MaxY,
+				CRS:  ft.LatLonBoundingBox.CRS,
+			}
+			for _, ml := range ft.MetadataLinks.MetadataLink {
+				metadata.MetadataLinks = append(metadata.MetadataLinks, models.MetadataLink{
+					Type:         ml.Type,
+					MetadataType: ml.MetadataType,
+					Content:      ml.Content,
+				})
+			}
+		}
+	} else {
+		var covResult struct {
+			Coverage struct {
+				Name       string `json:"name"`
+				NativeName string `json:"nativeName"`
+				Title      string `json:"title"`
+				Abstract   string `json:"abstract"`
+				Keywords   struct {
+					String []string `json:"string"`
+				} `json:"keywords"`
+				NativeCRS string `json:"nativeCRS"`
+				SRS       string `json:"srs"`
+				Enabled   bool   `json:"enabled"`
+				Advertised bool  `json:"advertised"`
+				NativeBoundingBox struct {
+					MinX float64 `json:"minx"`
+					MinY float64 `json:"miny"`
+					MaxX float64 `json:"maxx"`
+					MaxY float64 `json:"maxy"`
+					CRS  string  `json:"crs"`
+				} `json:"nativeBoundingBox"`
+				LatLonBoundingBox struct {
+					MinX float64 `json:"minx"`
+					MinY float64 `json:"miny"`
+					MaxX float64 `json:"maxx"`
+					MaxY float64 `json:"maxy"`
+					CRS  string  `json:"crs"`
+				} `json:"latLonBoundingBox"`
+			} `json:"coverage"`
+		}
+
+		if err := json.NewDecoder(resourceResp.Body).Decode(&covResult); err == nil {
+			cov := covResult.Coverage
+			metadata.NativeName = cov.NativeName
+			metadata.Title = cov.Title
+			metadata.Abstract = cov.Abstract
+			metadata.Keywords = cov.Keywords.String
+			metadata.NativeCRS = cov.NativeCRS
+			metadata.SRS = cov.SRS
+			metadata.Enabled = cov.Enabled
+			metadata.Advertised = cov.Advertised
+			metadata.NativeBoundingBox = &models.BoundingBox{
+				MinX: cov.NativeBoundingBox.MinX,
+				MinY: cov.NativeBoundingBox.MinY,
+				MaxX: cov.NativeBoundingBox.MaxX,
+				MaxY: cov.NativeBoundingBox.MaxY,
+				CRS:  cov.NativeBoundingBox.CRS,
+			}
+			metadata.LatLonBoundingBox = &models.BoundingBox{
+				MinX: cov.LatLonBoundingBox.MinX,
+				MinY: cov.LatLonBoundingBox.MinY,
+				MaxX: cov.LatLonBoundingBox.MaxX,
+				MaxY: cov.LatLonBoundingBox.MaxY,
+				CRS:  cov.LatLonBoundingBox.CRS,
+			}
+		}
+	}
+
+	return metadata, nil
+}
+
+// UpdateLayerMetadata updates layer metadata
+func (c *Client) UpdateLayerMetadata(workspace string, metadata *models.LayerMetadata) error {
+	isFeatureType := metadata.StoreType == "datastore"
+
+	// Build update body for the resource
+	var resourcePath string
+	var resourceBody map[string]interface{}
+
+	if isFeatureType {
+		resourcePath = fmt.Sprintf("/workspaces/%s/datastores/%s/featuretypes/%s", workspace, metadata.Store, metadata.Name)
+		updateFields := map[string]interface{}{
+			"enabled":    metadata.Enabled,
+			"advertised": metadata.Advertised,
+		}
+		if metadata.Title != "" {
+			updateFields["title"] = metadata.Title
+		}
+		if metadata.Abstract != "" {
+			updateFields["abstract"] = metadata.Abstract
+		}
+		if len(metadata.Keywords) > 0 {
+			updateFields["keywords"] = map[string]interface{}{
+				"string": metadata.Keywords,
+			}
+		}
+		if metadata.SRS != "" {
+			updateFields["srs"] = metadata.SRS
+		}
+		resourceBody = map[string]interface{}{
+			"featureType": updateFields,
+		}
+	} else {
+		resourcePath = fmt.Sprintf("/workspaces/%s/coveragestores/%s/coverages/%s", workspace, metadata.Store, metadata.Name)
+		updateFields := map[string]interface{}{
+			"enabled":    metadata.Enabled,
+			"advertised": metadata.Advertised,
+		}
+		if metadata.Title != "" {
+			updateFields["title"] = metadata.Title
+		}
+		if metadata.Abstract != "" {
+			updateFields["abstract"] = metadata.Abstract
+		}
+		if len(metadata.Keywords) > 0 {
+			updateFields["keywords"] = map[string]interface{}{
+				"string": metadata.Keywords,
+			}
+		}
+		if metadata.SRS != "" {
+			updateFields["srs"] = metadata.SRS
+		}
+		resourceBody = map[string]interface{}{
+			"coverage": updateFields,
+		}
+	}
+
+	resp, err := c.doJSONRequest("PUT", resourcePath, resourceBody)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update layer metadata: %s", string(bodyBytes))
+	}
+
+	// Update queryable on layer endpoint (only for vector)
+	if isFeatureType {
+		layerBody := map[string]interface{}{
+			"layer": map[string]interface{}{
+				"queryable": metadata.Queryable,
+			},
+		}
+
+		layerResp, err := c.doJSONRequest("PUT", fmt.Sprintf("/layers/%s:%s", workspace, metadata.Name), layerBody)
+		if err != nil {
+			return nil // Non-critical
+		}
+		defer layerResp.Body.Close()
+	}
+
+	return nil
+}
+
+// extractStoreNameFromHref extracts the store name from a GeoServer resource href
+// href format: .../workspaces/{ws}/datastores/{store}/featuretypes/{name}.json
+// or: .../workspaces/{ws}/coveragestores/{store}/coverages/{name}.json
+func (c *Client) extractStoreNameFromHref(href string, isFeatureType bool) string {
+	var storeType string
+	if isFeatureType {
+		storeType = "datastores"
+	} else {
+		storeType = "coveragestores"
+	}
+
+	// Split by the store type path segment
+	parts := strings.Split(href, "/"+storeType+"/")
+	if len(parts) < 2 {
+		return ""
+	}
+
+	// Get the part after datastores/ or coveragestores/
+	storePart := parts[1]
+
+	// The store name is before the next /
+	storeNameParts := strings.Split(storePart, "/")
+	if len(storeNameParts) < 1 {
+		return ""
+	}
+
+	return storeNameParts[0]
+}
+
+// ============================================================================
+// GeoWebCache (GWC) API Methods
+// ============================================================================
+
+// doGWCRequest performs an HTTP request to the GWC REST API
+func (c *Client) doGWCRequest(method, path string, body io.Reader, contentType string) (*http.Response, error) {
+	url := c.baseURL + "/gwc/rest" + path
+
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.SetBasicAuth(c.username, c.password)
+
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	return c.httpClient.Do(req)
+}
+
+// doGWCJSONRequest performs a JSON request to GWC REST API
+func (c *Client) doGWCJSONRequest(method, path string, body interface{}) (*http.Response, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		data, err := json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal body: %w", err)
+		}
+		bodyReader = bytes.NewReader(data)
+	}
+	return c.doGWCRequest(method, path, bodyReader, "application/json")
+}
+
+// GetGWCLayers fetches all cached layers from GeoWebCache
+func (c *Client) GetGWCLayers() ([]models.GWCLayer, error) {
+	resp, err := c.doGWCRequest("GET", "/layers", nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get GWC layers: %s", string(body))
+	}
+
+	// GWC returns a list of layer names
+	var result []string
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode GWC layers: %w", err)
+	}
+
+	// Convert to GWCLayer objects
+	layers := make([]models.GWCLayer, len(result))
+	for i, name := range result {
+		layers[i] = models.GWCLayer{
+			Name:    name,
+			Enabled: true, // Assume enabled if listed
+		}
+	}
+
+	return layers, nil
+}
+
+// GetGWCLayer fetches details for a specific cached layer
+func (c *Client) GetGWCLayer(layerName string) (*models.GWCLayer, error) {
+	resp, err := c.doGWCRequest("GET", fmt.Sprintf("/layers/%s.json", layerName), nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get GWC layer: %s", string(body))
+	}
+
+	var result struct {
+		GeoServerLayer struct {
+			Name       string `json:"name"`
+			Enabled    bool   `json:"enabled"`
+			GridSubsets []struct {
+				GridSetName string `json:"gridSetName"`
+			} `json:"gridSubsets"`
+			MimeFormats []string `json:"mimeFormats"`
+		} `json:"GeoServerLayer"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode GWC layer: %w", err)
+	}
+
+	layer := &models.GWCLayer{
+		Name:        result.GeoServerLayer.Name,
+		Enabled:     result.GeoServerLayer.Enabled,
+		MimeFormats: result.GeoServerLayer.MimeFormats,
+	}
+
+	// Extract grid set names
+	for _, gs := range result.GeoServerLayer.GridSubsets {
+		layer.GridSubsets = append(layer.GridSubsets, gs.GridSetName)
+	}
+
+	return layer, nil
+}
+
+// SeedLayer starts a seed/reseed operation for a layer
+func (c *Client) SeedLayer(layerName string, request models.GWCSeedRequest) error {
+	// Build the seed request body in GWC format
+	body := map[string]interface{}{
+		"seedRequest": map[string]interface{}{
+			"name":        layerName,
+			"gridSetId":   request.GridSetID,
+			"zoomStart":   request.ZoomStart,
+			"zoomStop":    request.ZoomStop,
+			"format":      request.Format,
+			"type":        request.Type, // seed, reseed, or truncate
+			"threadCount": request.ThreadCount,
+		},
+	}
+
+	if request.Bounds != nil {
+		body["seedRequest"].(map[string]interface{})["bounds"] = map[string]interface{}{
+			"coords": map[string]interface{}{
+				"double": []float64{
+					request.Bounds.MinX,
+					request.Bounds.MinY,
+					request.Bounds.MaxX,
+					request.Bounds.MaxY,
+				},
+			},
+			"srs": map[string]interface{}{
+				"number": request.Bounds.SRS,
+			},
+		}
+	}
+
+	resp, err := c.doGWCJSONRequest("POST", fmt.Sprintf("/seed/%s.json", layerName), body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to start seed operation: %s", string(bodyBytes))
+	}
+
+	return nil
+}
+
+// TruncateLayer truncates (clears) all cached tiles for a layer
+func (c *Client) TruncateLayer(layerName string, gridSetID, format string, zoomStart, zoomStop int) error {
+	request := models.GWCSeedRequest{
+		GridSetID:   gridSetID,
+		ZoomStart:   zoomStart,
+		ZoomStop:    zoomStop,
+		Format:      format,
+		Type:        "truncate",
+		ThreadCount: 1,
+	}
+	return c.SeedLayer(layerName, request)
+}
+
+// GetSeedStatus gets the status of running seed tasks for a layer
+func (c *Client) GetSeedStatus(layerName string) (*models.GWCSeedStatus, error) {
+	resp, err := c.doGWCRequest("GET", fmt.Sprintf("/seed/%s.json", layerName), nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get seed status: %s", string(body))
+	}
+
+	// GWC returns an array of arrays with task info
+	// Format: [[tiles done, tiles total, time remaining, task id, status]]
+	var result struct {
+		LongArrayArray [][]int64 `json:"long-array-array"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode seed status: %w", err)
+	}
+
+	status := &models.GWCSeedStatus{
+		Tasks: make([]models.GWCSeedTask, 0),
+	}
+
+	for _, taskData := range result.LongArrayArray {
+		if len(taskData) >= 5 {
+			task := models.GWCSeedTask{
+				TilesDone:     taskData[0],
+				TilesTotal:    taskData[1],
+				TimeRemaining: taskData[2],
+				ID:            taskData[3],
+				LayerName:     layerName,
+			}
+			// Status is encoded as an integer
+			switch taskData[4] {
+			case 0:
+				task.Status = "Pending"
+			case 1:
+				task.Status = "Running"
+			case 2:
+				task.Status = "Done"
+			case -1:
+				task.Status = "Aborted"
+			default:
+				task.Status = "Unknown"
+			}
+			status.Tasks = append(status.Tasks, task)
+		}
+	}
+
+	return status, nil
+}
+
+// TerminateSeedTasks terminates running seed tasks
+// killType can be: "running" (kill running tasks), "pending" (kill pending), or "all" (kill both)
+func (c *Client) TerminateSeedTasks(killType string) error {
+	resp, err := c.doGWCRequest("POST", fmt.Sprintf("/seed?kill_all=%s", killType), nil, "")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to terminate seed tasks: %s", string(body))
+	}
+
+	return nil
+}
+
+// TerminateLayerSeedTasks terminates seed tasks for a specific layer
+func (c *Client) TerminateLayerSeedTasks(layerName string) error {
+	// GWC REST API expects kill_all as a query parameter, not JSON body
+	resp, err := c.doGWCRequest("POST", fmt.Sprintf("/seed/%s?kill_all=all", layerName), nil, "")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to terminate layer seed tasks: %s", string(bodyBytes))
+	}
+
+	return nil
+}
+
+// GetGWCGridSets fetches all available grid sets
+func (c *Client) GetGWCGridSets() ([]models.GWCGridSet, error) {
+	resp, err := c.doGWCRequest("GET", "/gridsets", nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get grid sets: %s", string(body))
+	}
+
+	// GWC returns a list of grid set names
+	var names []string
+	if err := json.NewDecoder(resp.Body).Decode(&names); err != nil {
+		return nil, fmt.Errorf("failed to decode grid sets: %w", err)
+	}
+
+	gridSets := make([]models.GWCGridSet, len(names))
+	for i, name := range names {
+		gridSets[i] = models.GWCGridSet{Name: name}
+	}
+
+	return gridSets, nil
+}
+
+// GetGWCGridSet fetches details for a specific grid set
+func (c *Client) GetGWCGridSet(name string) (*models.GWCGridSet, error) {
+	resp, err := c.doGWCRequest("GET", fmt.Sprintf("/gridsets/%s.json", name), nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get grid set: %s", string(body))
+	}
+
+	var result struct {
+		GridSet struct {
+			Name        string  `json:"name"`
+			SRS         struct {
+				Number int `json:"number"`
+			} `json:"srs"`
+			TileWidth   int     `json:"tileWidth"`
+			TileHeight  int     `json:"tileHeight"`
+			Extent      struct {
+				Coords struct {
+					Double []float64 `json:"double"`
+				} `json:"coords"`
+			} `json:"extent"`
+		} `json:"gridSet"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode grid set: %w", err)
+	}
+
+	gridSet := &models.GWCGridSet{
+		Name:       result.GridSet.Name,
+		SRS:        fmt.Sprintf("EPSG:%d", result.GridSet.SRS.Number),
+		TileWidth:  result.GridSet.TileWidth,
+		TileHeight: result.GridSet.TileHeight,
+	}
+
+	if len(result.GridSet.Extent.Coords.Double) >= 4 {
+		gridSet.MinX = result.GridSet.Extent.Coords.Double[0]
+		gridSet.MinY = result.GridSet.Extent.Coords.Double[1]
+		gridSet.MaxX = result.GridSet.Extent.Coords.Double[2]
+		gridSet.MaxY = result.GridSet.Extent.Coords.Double[3]
+	}
+
+	return gridSet, nil
+}
+
+// GetGWCDiskQuota fetches the disk quota configuration
+func (c *Client) GetGWCDiskQuota() (*models.GWCDiskQuota, error) {
+	resp, err := c.doGWCRequest("GET", "/diskquota.json", nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get disk quota: %s", string(body))
+	}
+
+	var result struct {
+		DiskQuota struct {
+			Enabled          bool   `json:"enabled"`
+			DiskBlockSize    int    `json:"diskBlockSize"`
+			CacheCleanUpFreq int    `json:"cacheCleanUpFrequency"`
+			MaxConcurrent    int    `json:"maxConcurrentCleanUps"`
+			GlobalQuota      struct {
+				Value string `json:"value"`
+				Units string `json:"units"`
+			} `json:"globalQuota"`
+		} `json:"gwcQuotaConfiguration"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode disk quota: %w", err)
+	}
+
+	quota := &models.GWCDiskQuota{
+		Enabled:          result.DiskQuota.Enabled,
+		DiskBlockSize:    result.DiskQuota.DiskBlockSize,
+		CacheCleanUpFreq: result.DiskQuota.CacheCleanUpFreq,
+		MaxConcurrent:    result.DiskQuota.MaxConcurrent,
+	}
+
+	if result.DiskQuota.GlobalQuota.Value != "" {
+		quota.GlobalQuota = fmt.Sprintf("%s %s", result.DiskQuota.GlobalQuota.Value, result.DiskQuota.GlobalQuota.Units)
+	}
+
+	return quota, nil
+}
+
+// UpdateGWCDiskQuota updates the disk quota configuration
+func (c *Client) UpdateGWCDiskQuota(quota models.GWCDiskQuota) error {
+	body := map[string]interface{}{
+		"gwcQuotaConfiguration": map[string]interface{}{
+			"enabled":               quota.Enabled,
+			"diskBlockSize":         quota.DiskBlockSize,
+			"cacheCleanUpFrequency": quota.CacheCleanUpFreq,
+			"maxConcurrentCleanUps": quota.MaxConcurrent,
+		},
+	}
+
+	resp, err := c.doGWCJSONRequest("PUT", "/diskquota.json", body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update disk quota: %s", string(bodyBytes))
+	}
+
+	return nil
+}
+
+// MassGWCTruncate truncates all tiles for multiple layers
+func (c *Client) MassGWCTruncate(layerNames []string) error {
+	for _, name := range layerNames {
+		// Get layer info to find grid sets and formats
+		layer, err := c.GetGWCLayer(name)
+		if err != nil {
+			return fmt.Errorf("failed to get layer %s info: %w", name, err)
+		}
+
+		// Truncate each grid set and format combination
+		for _, gridSet := range layer.GridSubsets {
+			for _, format := range layer.MimeFormats {
+				if err := c.TruncateLayer(name, gridSet, format, 0, 20); err != nil {
+					return fmt.Errorf("failed to truncate %s: %w", name, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// GetGlobalSettings fetches the GeoServer global settings
+func (c *Client) GetGlobalSettings() (*models.GeoServerGlobalSettings, error) {
+	resp, err := c.doRequest("GET", "/settings", nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get global settings: %s", string(body))
+	}
+
+	var result struct {
+		Global struct {
+			Settings struct {
+				Charset           string `json:"charset"`
+				NumDecimals       int    `json:"numDecimals"`
+				OnlineResource    string `json:"onlineResource"`
+				Verbose           bool   `json:"verbose"`
+				VerboseExceptions bool   `json:"verboseExceptions"`
+				ProxyBaseURL      string `json:"proxyBaseUrl"`
+				Contact           struct {
+					ContactPerson       string `json:"contactPerson"`
+					ContactOrganization string `json:"contactOrganization"`
+					ContactPosition     string `json:"contactPosition"`
+					AddressType         string `json:"addressType"`
+					Address             string `json:"address"`
+					AddressCity         string `json:"addressCity"`
+					AddressState        string `json:"addressState"`
+					AddressPostCode     string `json:"addressPostalCode"`
+					AddressCountry      string `json:"addressCountry"`
+					ContactVoice        string `json:"contactVoice"`
+					ContactFax          string `json:"contactFacsimile"`
+					ContactEmail        string `json:"contactEmail"`
+				} `json:"contact"`
+			} `json:"settings"`
+		} `json:"global"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode global settings: %w", err)
+	}
+
+	settings := &models.GeoServerGlobalSettings{
+		Charset:           result.Global.Settings.Charset,
+		NumDecimals:       result.Global.Settings.NumDecimals,
+		OnlineResource:    result.Global.Settings.OnlineResource,
+		Verbose:           result.Global.Settings.Verbose,
+		VerboseExceptions: result.Global.Settings.VerboseExceptions,
+		ProxyBaseURL:      result.Global.Settings.ProxyBaseURL,
+		Contact: &models.GeoServerContact{
+			ContactPerson:       result.Global.Settings.Contact.ContactPerson,
+			ContactOrganization: result.Global.Settings.Contact.ContactOrganization,
+			ContactPosition:     result.Global.Settings.Contact.ContactPosition,
+			AddressType:         result.Global.Settings.Contact.AddressType,
+			Address:             result.Global.Settings.Contact.Address,
+			AddressCity:         result.Global.Settings.Contact.AddressCity,
+			AddressState:        result.Global.Settings.Contact.AddressState,
+			AddressPostCode:     result.Global.Settings.Contact.AddressPostCode,
+			AddressCountry:      result.Global.Settings.Contact.AddressCountry,
+			ContactVoice:        result.Global.Settings.Contact.ContactVoice,
+			ContactFax:          result.Global.Settings.Contact.ContactFax,
+			ContactEmail:        result.Global.Settings.Contact.ContactEmail,
+		},
+	}
+
+	return settings, nil
+}
+
+// GetContact fetches the GeoServer contact information
+func (c *Client) GetContact() (*models.GeoServerContact, error) {
+	resp, err := c.doRequest("GET", "/settings/contact", nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get contact: %s", string(body))
+	}
+
+	var result struct {
+		Contact struct {
+			ContactPerson       string `json:"contactPerson"`
+			ContactOrganization string `json:"contactOrganization"`
+			ContactPosition     string `json:"contactPosition"`
+			AddressType         string `json:"addressType"`
+			Address             string `json:"address"`
+			AddressCity         string `json:"addressCity"`
+			AddressState        string `json:"addressState"`
+			AddressPostCode     string `json:"addressPostalCode"`
+			AddressCountry      string `json:"addressCountry"`
+			ContactVoice        string `json:"contactVoice"`
+			ContactFax          string `json:"contactFacsimile"`
+			ContactEmail        string `json:"contactEmail"`
+			OnlineResource      string `json:"onlineResource"`
+			Welcome             string `json:"welcome"`
+		} `json:"contact"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode contact: %w", err)
+	}
+
+	contact := &models.GeoServerContact{
+		ContactPerson:       result.Contact.ContactPerson,
+		ContactOrganization: result.Contact.ContactOrganization,
+		ContactPosition:     result.Contact.ContactPosition,
+		AddressType:         result.Contact.AddressType,
+		Address:             result.Contact.Address,
+		AddressCity:         result.Contact.AddressCity,
+		AddressState:        result.Contact.AddressState,
+		AddressPostCode:     result.Contact.AddressPostCode,
+		AddressCountry:      result.Contact.AddressCountry,
+		ContactVoice:        result.Contact.ContactVoice,
+		ContactFax:          result.Contact.ContactFax,
+		ContactEmail:        result.Contact.ContactEmail,
+		OnlineResource:      result.Contact.OnlineResource,
+		Welcome:             result.Contact.Welcome,
+	}
+
+	return contact, nil
+}
+
+// UpdateContact updates the GeoServer contact information
+func (c *Client) UpdateContact(contact *models.GeoServerContact) error {
+	body := map[string]interface{}{
+		"contact": map[string]interface{}{
+			"contactPerson":       contact.ContactPerson,
+			"contactOrganization": contact.ContactOrganization,
+			"contactPosition":     contact.ContactPosition,
+			"addressType":         contact.AddressType,
+			"address":             contact.Address,
+			"addressCity":         contact.AddressCity,
+			"addressState":        contact.AddressState,
+			"addressPostalCode":   contact.AddressPostCode,
+			"addressCountry":      contact.AddressCountry,
+			"contactVoice":        contact.ContactVoice,
+			"contactFacsimile":    contact.ContactFax,
+			"contactEmail":        contact.ContactEmail,
+			"onlineResource":      contact.OnlineResource,
+			"welcome":             contact.Welcome,
+		},
+	}
+
+	resp, err := c.doJSONRequest("PUT", "/settings/contact", body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update contact: %s", string(bodyBytes))
 	}
 
 	return nil

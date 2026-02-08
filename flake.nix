@@ -8,7 +8,7 @@
 
   outputs = { self, nixpkgs, flake-utils }:
     let
-      version = "0.1.0";
+      version = "0.2.0";
 
       # Overlay that can be imported by other flakes
       overlay = final: prev: {
@@ -18,7 +18,7 @@
           inherit version;
           src = "${self}/web";
 
-          npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; # Will be updated
+          npmDepsHash = "sha256-amu8oLqpTjg0ViC218I6NWPaPWhUhKxCtfmm77JQ8m4=";
 
           buildPhase = ''
             npm run build
@@ -43,6 +43,9 @@
 
           vendorHash = null;
 
+          # Skip tests that require a running GeoServer
+          doCheck = false;
+
           ldflags = [
             "-s"
             "-w"
@@ -66,6 +69,9 @@
           src = self;
 
           vendorHash = null;
+
+          # Skip tests that require a running GeoServer
+          doCheck = false;
 
           # Copy the built frontend before Go build
           preBuild = ''

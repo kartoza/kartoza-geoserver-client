@@ -315,3 +315,211 @@ func (s *Server) publishCoverage(w http.ResponseWriter, r *http.Request, client 
 		"store":     store,
 	})
 }
+
+// LayerMetadataResponse represents comprehensive layer metadata in API responses
+type LayerMetadataResponse struct {
+	Name              string            `json:"name"`
+	NativeName        string            `json:"nativeName,omitempty"`
+	Workspace         string            `json:"workspace"`
+	Store             string            `json:"store"`
+	StoreType         string            `json:"storeType"`
+	Title             string            `json:"title,omitempty"`
+	Abstract          string            `json:"abstract,omitempty"`
+	Keywords          []string          `json:"keywords,omitempty"`
+	NativeCRS         string            `json:"nativeCRS,omitempty"`
+	SRS               string            `json:"srs,omitempty"`
+	Enabled           bool              `json:"enabled"`
+	Advertised        bool              `json:"advertised"`
+	Queryable         bool              `json:"queryable"`
+	NativeBoundingBox *BoundingBoxResponse `json:"nativeBoundingBox,omitempty"`
+	LatLonBoundingBox *BoundingBoxResponse `json:"latLonBoundingBox,omitempty"`
+	AttributionTitle  string            `json:"attributionTitle,omitempty"`
+	AttributionHref   string            `json:"attributionHref,omitempty"`
+	AttributionLogo   string            `json:"attributionLogo,omitempty"`
+	MetadataLinks     []MetadataLinkResponse `json:"metadataLinks,omitempty"`
+	DefaultStyle      string            `json:"defaultStyle,omitempty"`
+	MaxFeatures       int               `json:"maxFeatures,omitempty"`
+	NumDecimals       int               `json:"numDecimals,omitempty"`
+}
+
+// BoundingBoxResponse represents a geographic bounding box
+type BoundingBoxResponse struct {
+	MinX float64 `json:"minx"`
+	MinY float64 `json:"miny"`
+	MaxX float64 `json:"maxx"`
+	MaxY float64 `json:"maxy"`
+	CRS  string  `json:"crs,omitempty"`
+}
+
+// MetadataLinkResponse represents a metadata link
+type MetadataLinkResponse struct {
+	Type         string `json:"type"`
+	MetadataType string `json:"metadataType"`
+	Content      string `json:"content"`
+}
+
+// LayerMetadataUpdateRequest represents a layer metadata update request
+type LayerMetadataUpdateRequest struct {
+	Title            string   `json:"title,omitempty"`
+	Abstract         string   `json:"abstract,omitempty"`
+	Keywords         []string `json:"keywords,omitempty"`
+	SRS              string   `json:"srs,omitempty"`
+	Enabled          *bool    `json:"enabled,omitempty"`
+	Advertised       *bool    `json:"advertised,omitempty"`
+	Queryable        *bool    `json:"queryable,omitempty"`
+	AttributionTitle string   `json:"attributionTitle,omitempty"`
+	AttributionHref  string   `json:"attributionHref,omitempty"`
+	MetadataLinks    []MetadataLinkResponse `json:"metadataLinks,omitempty"`
+}
+
+// handleLayerMetadata handles comprehensive layer metadata requests
+// Pattern: /api/layermetadata/{connId}/{workspace}/{layer}
+func (s *Server) handleLayerMetadata(w http.ResponseWriter, r *http.Request) {
+	connID, workspace, layer := parsePathParams(r.URL.Path, "/api/layermetadata")
+
+	if connID == "" || workspace == "" || layer == "" {
+		s.jsonError(w, "Connection ID, workspace, and layer name are required", http.StatusBadRequest)
+		return
+	}
+
+	client := s.getClient(connID)
+	if client == nil {
+		s.jsonError(w, "Connection not found", http.StatusNotFound)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		s.getLayerMetadata(w, r, client, workspace, layer)
+	case http.MethodPut:
+		s.updateLayerMetadata(w, r, client, workspace, layer)
+	case http.MethodOptions:
+		s.handleCORS(w)
+	default:
+		s.jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// getLayerMetadata returns comprehensive layer metadata
+func (s *Server) getLayerMetadata(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, layer string) {
+	metadata, err := client.GetLayerMetadata(workspace, layer)
+	if err != nil {
+		s.jsonError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	response := LayerMetadataResponse{
+		Name:             metadata.Name,
+		NativeName:       metadata.NativeName,
+		Workspace:        metadata.Workspace,
+		Store:            metadata.Store,
+		StoreType:        metadata.StoreType,
+		Title:            metadata.Title,
+		Abstract:         metadata.Abstract,
+		Keywords:         metadata.Keywords,
+		NativeCRS:        metadata.NativeCRS,
+		SRS:              metadata.SRS,
+		Enabled:          metadata.Enabled,
+		Advertised:       metadata.Advertised,
+		Queryable:        metadata.Queryable,
+		AttributionTitle: metadata.AttributionTitle,
+		AttributionHref:  metadata.AttributionHref,
+		AttributionLogo:  metadata.AttributionLogo,
+		DefaultStyle:     metadata.DefaultStyle,
+		MaxFeatures:      metadata.MaxFeatures,
+		NumDecimals:      metadata.NumDecimals,
+	}
+
+	if metadata.NativeBoundingBox != nil {
+		response.NativeBoundingBox = &BoundingBoxResponse{
+			MinX: metadata.NativeBoundingBox.MinX,
+			MinY: metadata.NativeBoundingBox.MinY,
+			MaxX: metadata.NativeBoundingBox.MaxX,
+			MaxY: metadata.NativeBoundingBox.MaxY,
+			CRS:  metadata.NativeBoundingBox.CRS,
+		}
+	}
+
+	if metadata.LatLonBoundingBox != nil {
+		response.LatLonBoundingBox = &BoundingBoxResponse{
+			MinX: metadata.LatLonBoundingBox.MinX,
+			MinY: metadata.LatLonBoundingBox.MinY,
+			MaxX: metadata.LatLonBoundingBox.MaxX,
+			MaxY: metadata.LatLonBoundingBox.MaxY,
+			CRS:  metadata.LatLonBoundingBox.CRS,
+		}
+	}
+
+	for _, ml := range metadata.MetadataLinks {
+		response.MetadataLinks = append(response.MetadataLinks, MetadataLinkResponse{
+			Type:         ml.Type,
+			MetadataType: ml.MetadataType,
+			Content:      ml.Content,
+		})
+	}
+
+	s.jsonResponse(w, response)
+}
+
+// updateLayerMetadata updates layer metadata
+func (s *Server) updateLayerMetadata(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, layer string) {
+	var req LayerMetadataUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.jsonError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Get current metadata to merge updates
+	metadata, err := client.GetLayerMetadata(workspace, layer)
+	if err != nil {
+		s.jsonError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Update fields from request
+	if req.Title != "" {
+		metadata.Title = req.Title
+	}
+	if req.Abstract != "" {
+		metadata.Abstract = req.Abstract
+	}
+	if req.Keywords != nil {
+		metadata.Keywords = req.Keywords
+	}
+	if req.SRS != "" {
+		metadata.SRS = req.SRS
+	}
+	if req.Enabled != nil {
+		metadata.Enabled = *req.Enabled
+	}
+	if req.Advertised != nil {
+		metadata.Advertised = *req.Advertised
+	}
+	if req.Queryable != nil {
+		metadata.Queryable = *req.Queryable
+	}
+	if req.AttributionTitle != "" {
+		metadata.AttributionTitle = req.AttributionTitle
+	}
+	if req.AttributionHref != "" {
+		metadata.AttributionHref = req.AttributionHref
+	}
+	if req.MetadataLinks != nil {
+		metadata.MetadataLinks = nil
+		for _, ml := range req.MetadataLinks {
+			metadata.MetadataLinks = append(metadata.MetadataLinks, models.MetadataLink{
+				Type:         ml.Type,
+				MetadataType: ml.MetadataType,
+				Content:      ml.Content,
+			})
+		}
+	}
+
+	if err := client.UpdateLayerMetadata(workspace, metadata); err != nil {
+		s.jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return updated metadata
+	s.getLayerMetadata(w, r, client, workspace, layer)
+}

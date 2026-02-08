@@ -676,22 +676,46 @@
             const addGeoServerLayer = (map) => {
                 if (!layer) return;
 
-                const wmsUrl = `${layer.geoserver_url}/${layer.workspace}/wms`;
                 const layerName = `${layer.workspace}:${layer.name}`;
 
-                // Add WMS source with proper parameters
-                map.addSource('geoserver-layer', {
-                    type: 'raster',
-                    tiles: [
-                        `${wmsUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=${encodeURIComponent(layerName)}&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`
-                    ],
-                    tileSize: 256
-                });
+                let sourceConfig;
+                let sourceId = 'geoserver-layer';
+                let layerId = 'geoserver-wms';
+
+                if (layer.use_cache) {
+                    // Use WMTS (GeoWebCache) for cached tiles
+                    const gridSet = layer.grid_set || 'EPSG:900913';
+                    const tileFormat = layer.tile_format || 'image/png';
+
+                    // GeoServer WMTS REST URL pattern
+                    const wmtsUrl = `${layer.geoserver_url}/gwc/service/wmts/rest/${encodeURIComponent(layerName)}/${gridSet}/${encodeURIComponent(tileFormat)}/{z}/{y}/{x}`;
+
+                    console.log('Using WMTS cache with URL pattern:', wmtsUrl);
+
+                    sourceConfig = {
+                        type: 'raster',
+                        tiles: [wmtsUrl],
+                        tileSize: 256
+                    };
+                    layerId = 'geoserver-wmts';
+                } else {
+                    // Use WMS (uncached)
+                    const wmsUrl = `${layer.geoserver_url}/${layer.workspace}/wms`;
+                    sourceConfig = {
+                        type: 'raster',
+                        tiles: [
+                            `${wmsUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=${encodeURIComponent(layerName)}&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`
+                        ],
+                        tileSize: 256
+                    };
+                }
+
+                map.addSource(sourceId, sourceConfig);
 
                 map.addLayer({
-                    id: 'geoserver-wms',
+                    id: layerId,
                     type: 'raster',
-                    source: 'geoserver-layer',
+                    source: sourceId,
                     paint: {
                         'raster-opacity': opacity
                     }
@@ -1053,8 +1077,13 @@
                             <div className="map-overlay">
                                 <div className="layer-name">{layer.name}</div>
                                 <div className="workspace">{layer.workspace}</div>
+                                {layer.use_cache && (
+                                    <div style={{ marginTop: '4px' }}>
+                                        <span className="badge badge-vector" style={{ fontSize: '10px' }}>WMTS Cache</span>
+                                    </div>
+                                )}
                                 <div className={`status ${layerStatus}`}>
-                                    {layerStatus === 'loading' ? 'Loading layer...' : 'Layer loaded'}
+                                    {layerStatus === 'loading' ? 'Loading layer...' : (layer.use_cache ? 'Cached tiles loaded' : 'Layer loaded')}
                                 </div>
                                 <div className="opacity-control">
                                     <label>Layer Opacity: {Math.round(opacity * 100)}%</label>

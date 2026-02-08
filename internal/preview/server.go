@@ -25,7 +25,10 @@ type LayerInfo struct {
 	StoreName    string `json:"store_name"`
 	StoreType    string `json:"store_type"` // "datastore" or "coveragestore"
 	GeoServerURL string `json:"geoserver_url"`
-	Type         string `json:"type"` // "vector" or "raster"
+	Type         string `json:"type"`      // "vector", "raster", or "group"
+	UseCache     bool   `json:"use_cache"` // If true, use WMTS (cached tiles) instead of WMS
+	GridSet      string `json:"grid_set"`  // WMTS grid set (e.g., "EPSG:900913", "EPSG:4326")
+	TileFormat   string `json:"tile_format"` // WMTS tile format (e.g., "image/png")
 	// Credentials for REST API calls (not sent to client)
 	Username string `json:"-"`
 	Password string `json:"-"`

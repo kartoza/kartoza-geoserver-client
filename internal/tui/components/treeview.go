@@ -30,6 +30,8 @@ type TreeViewKeyMap struct {
 	Info     key.Binding
 	Preview  key.Binding
 	Publish  key.Binding
+	Cache    key.Binding
+	Settings key.Binding
 }
 
 // DefaultTreeViewKeyMap returns the default key bindings
@@ -103,6 +105,14 @@ func DefaultTreeViewKeyMap() TreeViewKeyMap {
 			key.WithKeys("p"),
 			key.WithHelp("p", "publish"),
 		),
+		Cache: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "cache"),
+		),
+		Settings: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("s", "settings"),
+		),
 	}
 }
 
@@ -131,6 +141,14 @@ type (
 	}
 	// TreePublishMsg is sent when user wants to publish a layer from a store
 	TreePublishMsg struct {
+		Node *models.TreeNode
+	}
+	// TreeCacheMsg is sent when user wants to manage tile cache for a layer
+	TreeCacheMsg struct {
+		Node *models.TreeNode
+	}
+	// TreeSettingsMsg is sent when user wants to edit service metadata/settings
+	TreeSettingsMsg struct {
 		Node *models.TreeNode
 	}
 )
@@ -340,6 +358,29 @@ func (tv *TreeView) Update(msg tea.Msg) (*TreeView, tea.Cmd) {
 				case models.NodeTypeDataStore, models.NodeTypeCoverageStore:
 					return tv, func() tea.Msg {
 						return TreePublishMsg{Node: node}
+					}
+				}
+			}
+
+		case key.Matches(msg, tv.keyMap.Cache):
+			if len(tv.flatNodes) > 0 && tv.cursor < len(tv.flatNodes) {
+				node := tv.flatNodes[tv.cursor].Node
+				// Allow cache management for layers and layer groups
+				switch node.Type {
+				case models.NodeTypeLayer, models.NodeTypeLayerGroup:
+					return tv, func() tea.Msg {
+						return TreeCacheMsg{Node: node}
+					}
+				}
+			}
+
+		case key.Matches(msg, tv.keyMap.Settings):
+			if len(tv.flatNodes) > 0 && tv.cursor < len(tv.flatNodes) {
+				node := tv.flatNodes[tv.cursor].Node
+				// Allow settings editing for connection nodes
+				if node.Type == models.NodeTypeConnection {
+					return tv, func() tea.Msg {
+						return TreeSettingsMsg{Node: node}
 					}
 				}
 			}

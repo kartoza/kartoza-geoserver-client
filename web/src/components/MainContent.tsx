@@ -15,6 +15,7 @@ import {
   StatHelpText,
   Button,
   useColorModeValue,
+  useDisclosure,
   Icon,
   Flex,
   Spacer,
@@ -31,24 +32,80 @@ import {
   FiGrid,
   FiUpload,
   FiEye,
+  FiSettings,
 } from 'react-icons/fi'
+import { useEffect, useRef } from 'react'
 import { useTreeStore } from '../stores/treeStore'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useQuery } from '@tanstack/react-query'
 import * as api from '../api/client'
 import { useUIStore } from '../stores/uiStore'
 import MapPreview from './MapPreview'
+import { SettingsDialog } from './dialogs/SettingsDialog'
 
 export default function MainContent() {
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const activePreview = useUIStore((state) => state.activePreview)
   const setPreview = useUIStore((state) => state.setPreview)
+  const prevSelectedNodeRef = useRef(selectedNode)
+
+  // Auto-update preview when selection changes to a previewable entity
+  useEffect(() => {
+    const prevNode = prevSelectedNodeRef.current
+    prevSelectedNodeRef.current = selectedNode
+
+    // Only auto-update if preview is currently active
+    if (!activePreview || !selectedNode) return
+
+    // Skip if the selection hasn't actually changed
+    if (prevNode?.id === selectedNode.id) return
+
+    // Check if the newly selected node is previewable
+    const previewableTypes = ['layer', 'layergroup', 'datastore', 'coveragestore']
+    if (!previewableTypes.includes(selectedNode.type)) return
+
+    // Auto-start preview for the newly selected node
+    const startAutoPreview = async () => {
+      try {
+        const layerType =
+          selectedNode.type === 'coveragestore' ? 'raster' :
+          selectedNode.type === 'layergroup' ? 'group' : 'vector'
+
+        const { url } = await api.startPreview({
+          connId: selectedNode.connectionId!,
+          workspace: selectedNode.workspace!,
+          layerName: selectedNode.name,
+          storeName: selectedNode.type === 'datastore' || selectedNode.type === 'coveragestore'
+            ? selectedNode.name : undefined,
+          storeType: selectedNode.type === 'datastore' || selectedNode.type === 'coveragestore'
+            ? selectedNode.type : undefined,
+          layerType,
+        })
+        setPreview({
+          url,
+          layerName: selectedNode.name,
+          workspace: selectedNode.workspace!,
+          storeName: selectedNode.type === 'datastore' || selectedNode.type === 'coveragestore'
+            ? selectedNode.name : undefined,
+          storeType: selectedNode.type === 'datastore' || selectedNode.type === 'coveragestore'
+            ? selectedNode.type : undefined,
+          layerType,
+        })
+      } catch (err) {
+        useUIStore.getState().setError((err as Error).message)
+      }
+    }
+
+    startAutoPreview()
+  }, [selectedNode, activePreview, setPreview])
 
   // Show preview if active - fills the entire available space
+  // Using key prop to force remount when layer changes, ensuring iframe and metadata fully refresh
   if (activePreview) {
     return (
       <Box flex="1" display="flex" flexDirection="column" minH="0">
         <MapPreview
+          key={`${activePreview.workspace}:${activePreview.layerName}:${activePreview.url}`}
           previewUrl={activePreview.url}
           layerName={activePreview.layerName}
           workspace={activePreview.workspace}
@@ -126,6 +183,14 @@ export default function MainContent() {
           connectionId={selectedNode.connectionId!}
           workspace={selectedNode.workspace!}
           layerName={selectedNode.name}
+        />
+      )
+    case 'layergroup':
+      return (
+        <LayerGroupPanel
+          connectionId={selectedNode.connectionId!}
+          workspace={selectedNode.workspace!}
+          groupName={selectedNode.name}
         />
       )
     default:
@@ -602,6 +667,7 @@ function LayerGroupsDashboard({
   workspace: string
 }) {
   const cardBg = useColorModeValue('white', 'gray.800')
+  const openDialog = useUIStore((state) => state.openDialog)
 
   const { data: layergroups } = useQuery({
     queryKey: ['layergroups', connectionId, workspace],
@@ -641,6 +707,12 @@ function LayerGroupsDashboard({
         variant="accent"
         leftIcon={<FiPlus />}
         py={8}
+        onClick={() =>
+          openDialog('layergroup', {
+            mode: 'create',
+            data: { connectionId, workspace },
+          })
+        }
       >
         Create Layer Group
       </Button>
@@ -823,6 +895,7 @@ function ConnectionPanel({ connectionId }: { connectionId: string }) {
   const connection = connections.find((c) => c.id === connectionId)
   const openDialog = useUIStore((state) => state.openDialog)
   const cardBg = useColorModeValue('white', 'gray.800')
+  const settingsDisclosure = useDisclosure()
 
   const { data: serverInfo } = useQuery({
     queryKey: ['serverInfo', connectionId],
@@ -855,12 +928,32 @@ function ConnectionPanel({ connectionId }: { connectionId: string }) {
               </VStack>
             </HStack>
             <Spacer />
-            <Badge colorScheme="green" fontSize="md" px={4} py={2}>
-              Connected
-            </Badge>
+            <HStack>
+              <Button
+                variant="outline"
+                color="white"
+                borderColor="whiteAlpha.400"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                leftIcon={<FiSettings />}
+                onClick={settingsDisclosure.onOpen}
+              >
+                Service Metadata
+              </Button>
+              <Badge colorScheme="green" fontSize="md" px={4} py={2}>
+                Connected
+              </Badge>
+            </HStack>
           </Flex>
         </CardBody>
       </Card>
+
+      {/* Settings Dialog */}
+      <SettingsDialog
+        isOpen={settingsDisclosure.isOpen}
+        onClose={settingsDisclosure.onClose}
+        connectionId={connectionId}
+        connectionName={connection.name}
+      />
 
       {/* Stats */}
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
@@ -1095,6 +1188,7 @@ function StorePanel({
 }) {
   const cardBg = useColorModeValue('white', 'gray.800')
   const setPreview = useUIStore((state) => state.setPreview)
+  const openDialog = useUIStore((state) => state.openDialog)
 
   const isDataStore = storeType === 'datastore'
 
@@ -1155,16 +1249,31 @@ function StorePanel({
               </VStack>
             </HStack>
             <Spacer />
-            <Button
-              variant="solid"
-              bg="whiteAlpha.200"
-              color="white"
-              _hover={{ bg: 'whiteAlpha.300' }}
-              leftIcon={<FiMap />}
-              onClick={handlePreview}
-            >
-              Preview on Map
-            </Button>
+            <HStack wrap="wrap" gap={2}>
+              <Button
+                variant="solid"
+                bg="whiteAlpha.200"
+                color="white"
+                _hover={{ bg: 'whiteAlpha.300' }}
+                leftIcon={<FiMap />}
+                onClick={handlePreview}
+              >
+                Preview on Map
+              </Button>
+              <Button
+                variant="outline"
+                color="white"
+                borderColor="whiteAlpha.400"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                leftIcon={<FiEdit3 />}
+                onClick={() => openDialog(storeType, {
+                  mode: 'edit',
+                  data: { connectionId, workspace, storeName }
+                })}
+              >
+                Edit Store
+              </Button>
+            </HStack>
           </Flex>
         </CardBody>
       </Card>
@@ -1203,6 +1312,7 @@ function LayerPanel({
 }) {
   const cardBg = useColorModeValue('white', 'gray.800')
   const setPreview = useUIStore((state) => state.setPreview)
+  const openDialog = useUIStore((state) => state.openDialog)
 
   const { data: layer } = useQuery({
     queryKey: ['layer', connectionId, workspace, layerName],
@@ -1218,6 +1328,44 @@ function LayerPanel({
         storeName: layer?.store,
         storeType: layer?.storeType,
         layerType: layer?.storeType === 'coveragestore' ? 'raster' : 'vector',
+      })
+      setPreview({
+        url,
+        layerName,
+        workspace,
+        storeName: layer?.store,
+        storeType: layer?.storeType,
+        layerType: layer?.storeType === 'coveragestore' ? 'raster' : 'vector',
+      })
+    } catch (err) {
+      useUIStore.getState().setError((err as Error).message)
+    }
+  }
+
+  const handleManageCache = () => {
+    openDialog('info', {
+      mode: 'view',
+      title: 'Tile Cache',
+      data: {
+        connectionId,
+        workspace,
+        layerName,
+      },
+    })
+  }
+
+  const handlePreviewCache = async () => {
+    try {
+      const { url } = await api.startPreview({
+        connId: connectionId,
+        workspace,
+        layerName,
+        storeName: layer?.store,
+        storeType: layer?.storeType,
+        layerType: layer?.storeType === 'coveragestore' ? 'raster' : 'vector',
+        useCache: true,
+        gridSet: 'EPSG:900913',
+        tileFormat: 'image/png',
       })
       setPreview({
         url,
@@ -1254,14 +1402,52 @@ function LayerPanel({
               </VStack>
             </HStack>
             <Spacer />
-            <Button
-              size="lg"
-              variant="accent"
-              leftIcon={<FiMap />}
-              onClick={handlePreview}
-            >
-              Preview on Map
-            </Button>
+            <HStack wrap="wrap" gap={2}>
+              <Button
+                size="lg"
+                variant="accent"
+                leftIcon={<FiMap />}
+                onClick={handlePreview}
+              >
+                Preview (WMS)
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                color="white"
+                borderColor="whiteAlpha.400"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                leftIcon={<FiMap />}
+                onClick={handlePreviewCache}
+              >
+                Preview Cache
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                color="white"
+                borderColor="whiteAlpha.400"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                leftIcon={<FiDatabase />}
+                onClick={handleManageCache}
+              >
+                Manage Cache
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                color="white"
+                borderColor="whiteAlpha.400"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                leftIcon={<FiEdit3 />}
+                onClick={() => openDialog('layer', {
+                  mode: 'edit',
+                  data: { connectionId, workspace, layerName }
+                })}
+              >
+                Edit Layer
+              </Button>
+            </HStack>
           </Flex>
         </CardBody>
       </Card>
@@ -1293,6 +1479,280 @@ function LayerPanel({
             </VStack>
           </CardBody>
         </Card>
+      )}
+
+      {/* Quick Actions Card */}
+      <Card bg={cardBg}>
+        <CardBody>
+          <VStack align="stretch" spacing={4}>
+            <Heading size="sm" color="gray.600">Tile Cache</Heading>
+            <Divider />
+            <Text fontSize="sm" color="gray.600">
+              Manage tile cache for this layer. Seed tiles for faster map viewing,
+              or truncate the cache to regenerate tiles.
+            </Text>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              <Button
+                colorScheme="kartoza"
+                leftIcon={<FiDatabase />}
+                onClick={handleManageCache}
+              >
+                Seed / Truncate Cache
+              </Button>
+            </SimpleGrid>
+          </VStack>
+        </CardBody>
+      </Card>
+    </VStack>
+  )
+}
+
+// Layer Group Panel
+function LayerGroupPanel({
+  connectionId,
+  workspace,
+  groupName,
+}: {
+  connectionId: string
+  workspace: string
+  groupName: string
+}) {
+  const cardBg = useColorModeValue('white', 'gray.800')
+  const setPreview = useUIStore((state) => state.setPreview)
+  const openDialog = useUIStore((state) => state.openDialog)
+
+  const { data: group } = useQuery({
+    queryKey: ['layergroup', connectionId, workspace, groupName],
+    queryFn: () => api.getLayerGroup(connectionId, workspace, groupName),
+  })
+
+  const handlePreview = async () => {
+    try {
+      const { url } = await api.startPreview({
+        connId: connectionId,
+        workspace,
+        layerName: groupName,
+        layerType: 'group',
+      })
+      setPreview({
+        url,
+        layerName: groupName,
+        workspace,
+        layerType: 'group',
+      })
+    } catch (err) {
+      useUIStore.getState().setError((err as Error).message)
+    }
+  }
+
+  const handleManageCache = () => {
+    openDialog('info', {
+      mode: 'view',
+      title: 'Tile Cache',
+      data: {
+        connectionId,
+        workspace,
+        layerName: groupName,
+      },
+    })
+  }
+
+  const handlePreviewCache = async () => {
+    try {
+      const { url } = await api.startPreview({
+        connId: connectionId,
+        workspace,
+        layerName: groupName,
+        layerType: 'group',
+        useCache: true,
+        gridSet: 'EPSG:900913',
+        tileFormat: 'image/png',
+      })
+      setPreview({
+        url,
+        layerName: groupName,
+        workspace,
+        layerType: 'group',
+      })
+    } catch (err) {
+      useUIStore.getState().setError((err as Error).message)
+    }
+  }
+
+  const handleEditLayers = () => {
+    openDialog('layergroup', {
+      mode: 'edit',
+      data: {
+        connectionId,
+        workspace,
+        name: groupName,
+        layers: group?.layers.map((l) => l.name) || [],
+        mode: group?.mode,
+        title: group?.title,
+      },
+    })
+  }
+
+  return (
+    <VStack spacing={6} align="stretch">
+      <Card
+        bg="linear-gradient(135deg, #1B6B9B 0%, #155a84 100%)"
+        color="white"
+      >
+        <CardBody py={8} px={6}>
+          <Flex align="center" wrap="wrap" gap={4}>
+            <HStack spacing={4}>
+              <Box bg="whiteAlpha.200" p={3} borderRadius="lg">
+                <Icon as={FiGrid} boxSize={8} />
+              </Box>
+              <VStack align="start" spacing={1}>
+                <Heading size="lg">{groupName}</Heading>
+                <HStack>
+                  <Badge colorScheme="purple">Layer Group</Badge>
+                  {group?.mode && <Badge colorScheme="blue">{group.mode}</Badge>}
+                  {group?.enabled && <Badge colorScheme="green">Enabled</Badge>}
+                </HStack>
+              </VStack>
+            </HStack>
+            <Spacer />
+            <HStack wrap="wrap" gap={2}>
+              <Button
+                size="lg"
+                variant="accent"
+                leftIcon={<FiMap />}
+                onClick={handlePreview}
+              >
+                Preview (WMS)
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                color="white"
+                borderColor="whiteAlpha.400"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                leftIcon={<FiMap />}
+                onClick={handlePreviewCache}
+              >
+                Preview Cache
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                color="white"
+                borderColor="whiteAlpha.400"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                leftIcon={<FiDatabase />}
+                onClick={handleManageCache}
+              >
+                Manage Cache
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                color="white"
+                borderColor="whiteAlpha.400"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                leftIcon={<FiEdit3 />}
+                onClick={handleEditLayers}
+              >
+                Edit Layers
+              </Button>
+            </HStack>
+          </Flex>
+        </CardBody>
+      </Card>
+
+      {group && (
+        <>
+          {/* Group Configuration */}
+          <Card bg={cardBg}>
+            <CardBody>
+              <VStack align="start" spacing={3}>
+                <Heading size="sm" color="gray.600">Group Configuration</Heading>
+                <Divider />
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="100%">
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">Workspace</Text>
+                    <Text fontWeight="medium">{workspace}</Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">Mode</Text>
+                    <Text fontWeight="medium">{group.mode || 'SINGLE'}</Text>
+                  </Box>
+                  {group.title && (
+                    <Box>
+                      <Text fontSize="xs" color="gray.500">Title</Text>
+                      <Text fontWeight="medium">{group.title}</Text>
+                    </Box>
+                  )}
+                  {group.bounds && (
+                    <Box>
+                      <Text fontSize="xs" color="gray.500">Bounds</Text>
+                      <Text fontWeight="medium" fontSize="xs">
+                        [{group.bounds.minX.toFixed(2)}, {group.bounds.minY.toFixed(2)}, {group.bounds.maxX.toFixed(2)}, {group.bounds.maxY.toFixed(2)}]
+                      </Text>
+                    </Box>
+                  )}
+                </SimpleGrid>
+              </VStack>
+            </CardBody>
+          </Card>
+
+          {/* Layers in Group */}
+          <Card bg={cardBg}>
+            <CardBody>
+              <VStack align="stretch" spacing={3}>
+                <Heading size="sm" color="gray.600">Layers in Group ({group.layers.length})</Heading>
+                <Divider />
+                <VStack align="stretch" spacing={2}>
+                  {group.layers.map((layer, index) => (
+                    <HStack key={index} p={2} bg="gray.50" borderRadius="md" _dark={{ bg: 'gray.700' }}>
+                      <Badge colorScheme={layer.type === 'layer' ? 'teal' : 'purple'}>
+                        {layer.type}
+                      </Badge>
+                      <Text fontWeight="medium">{layer.name}</Text>
+                      {layer.styleName && (
+                        <Text fontSize="sm" color="gray.500">
+                          (Style: {layer.styleName})
+                        </Text>
+                      )}
+                    </HStack>
+                  ))}
+                </VStack>
+              </VStack>
+            </CardBody>
+          </Card>
+
+          {/* Cache Management */}
+          <Card bg={cardBg}>
+            <CardBody>
+              <VStack align="stretch" spacing={4}>
+                <Heading size="sm" color="gray.600">Tile Cache</Heading>
+                <Divider />
+                <Text fontSize="sm" color="gray.600">
+                  Manage tile cache for this layer group. Seed tiles for faster map viewing,
+                  or truncate the cache to regenerate tiles.
+                </Text>
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                  <Button
+                    colorScheme="kartoza"
+                    leftIcon={<FiDatabase />}
+                    onClick={handleManageCache}
+                  >
+                    Seed / Truncate Cache
+                  </Button>
+                  <Button
+                    variant="outline"
+                    leftIcon={<FiEdit3 />}
+                    onClick={handleEditLayers}
+                  >
+                    Modify Layers
+                  </Button>
+                </SimpleGrid>
+              </VStack>
+            </CardBody>
+          </Card>
+        </>
       )}
     </VStack>
   )

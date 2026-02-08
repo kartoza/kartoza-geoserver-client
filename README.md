@@ -7,6 +7,7 @@ A Midnight Commander-style TUI (Terminal User Interface) for managing GeoServer 
 
 ## Features
 
+### TUI (Terminal User Interface)
 - **Dual-panel interface** - Local filesystem on the left, GeoServer explorer on the right
 - **Connection manager** - Store and manage multiple GeoServer connections with credentials
 - **Geospatial file detection** - Automatically identifies Shapefiles, GeoPackage, GeoTIFF, GeoJSON, SLD, and CSS files
@@ -16,6 +17,14 @@ A Midnight Commander-style TUI (Terminal User Interface) for managing GeoServer 
 - **Layer preview** - Built-in MapLibre web viewer with WMS/WFS support, attribute viewing, and metadata display
 - **Animated dialogs** - Smooth spring-based animations using Harmonica physics
 - **Vim-style navigation** - Use familiar j/k keys for navigation
+
+### Web UI
+- **Modern React interface** - Beautiful Chakra UI-based web application
+- **Tree browser** - Hierarchical view of all GeoServer resources
+- **Layer metadata editing** - Comprehensive metadata management including title, abstract, keywords, and attribution
+- **GeoWebCache management** - Seed, reseed, and truncate cached tiles with real-time progress
+- **Map preview** - Interactive map preview with WMS/WMTS support
+- **Server synchronization** - Replicate resources between GeoServer instances with animated UI
 
 ## Installation
 
@@ -38,8 +47,17 @@ go build -o geoserver-client .
 
 ```bash
 nix develop  # Enter development shell
-go run .     # Run the application
+go run .     # Run the TUI application
 ```
+
+### Web UI
+
+```bash
+nix develop  # Enter development shell
+go run . web # Run the web server on port 8080
+```
+
+Or visit http://localhost:8080 after starting the web server.
 
 ## Usage
 
@@ -143,6 +161,45 @@ Press `o` on any layer in the GeoServer tree to open an interactive map preview 
 - **Metadata panel** - View layer details, workspace, and service endpoints
 - **Attributes table** - Browse feature attributes for vector layers
 
+### Web UI Features
+
+#### Server Synchronization
+Replicate GeoServer configurations between instances. Access via Settings (gear icon) > "Sync Server(s)":
+
+1. **Select Source** - Choose the source GeoServer (read-only) from the left panel
+2. **Add Destinations** - Drag or select destination servers to the right panel
+3. **Configure Options** - Select which resources to sync:
+   - Workspaces
+   - Data Stores
+   - Coverage Stores
+   - Layers
+   - Styles
+   - Layer Groups
+4. **Start Sync** - Click the sync button to begin replication
+5. **Monitor Progress** - Watch real-time progress with animated indicators
+6. **Save Configuration** - Save sync setups for easy reloading
+
+Features:
+- **Animated UI** - Visual feedback with pulsing icons and flowing arrows
+- **Real-time progress** - Per-destination progress bars and activity logs
+- **Stop controls** - Stop individual syncs or all at once
+- **Additive sync** - Only adds or updates missing resources (non-destructive)
+
+#### GeoWebCache Management
+Manage tile caching for optimal performance:
+- **Seed** - Pre-generate cached tiles for faster access
+- **Reseed** - Regenerate existing cached tiles
+- **Truncate** - Clear cached tiles to free storage
+- **Progress monitoring** - Track seeding operations in real-time
+
+#### Layer Metadata
+Edit comprehensive layer metadata:
+- Title, abstract, and keywords
+- Attribution information
+- Coordinate reference systems
+- Bounding boxes
+- Service endpoint configuration
+
 ## Configuration
 
 Configuration is stored in `~/.config/kartoza-geoserver-client/config.json`:
@@ -159,7 +216,24 @@ Configuration is stored in `~/.config/kartoza-geoserver-client/config.json`:
     }
   ],
   "active_connection": "uuid",
-  "last_local_path": "/home/user/geodata"
+  "last_local_path": "/home/user/geodata",
+  "sync_configs": [
+    {
+      "id": "sync-uuid",
+      "name": "Production to Staging",
+      "source_id": "uuid",
+      "destination_ids": ["dest-uuid-1", "dest-uuid-2"],
+      "options": {
+        "workspaces": true,
+        "datastores": true,
+        "coveragestores": true,
+        "layers": true,
+        "styles": true,
+        "layergroups": true
+      },
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ]
 }
 ```
 

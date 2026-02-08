@@ -11,7 +11,7 @@ import {
   Tooltip,
   useColorModeValue,
 } from '@chakra-ui/react'
-import { FiPlus, FiSettings, FiUpload, FiRefreshCw, FiHelpCircle } from 'react-icons/fi'
+import { FiPlus, FiSettings, FiUpload, FiRefreshCw, FiHelpCircle, FiRefreshCcw } from 'react-icons/fi'
 import { useUIStore } from '../stores/uiStore'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useTreeStore } from '../stores/treeStore'
@@ -87,6 +87,12 @@ export default function Header() {
               _hover={{ bg: 'kartoza.600' }}
             />
             <MenuList>
+              <MenuItem
+                icon={<FiRefreshCcw />}
+                onClick={() => openDialog('sync', { mode: 'create' })}
+              >
+                Sync Server(s)
+              </MenuItem>
               <MenuItem icon={<FiHelpCircle />}>Help</MenuItem>
               <MenuItem
                 icon={<FiPlus />}

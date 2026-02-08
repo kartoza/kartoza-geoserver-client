@@ -42,6 +42,7 @@ import * as api from '../api/client'
 import { useUIStore } from '../stores/uiStore'
 import MapPreview from './MapPreview'
 import { SettingsDialog } from './dialogs/SettingsDialog'
+import Dashboard from './Dashboard'
 
 export default function MainContent() {
   const selectedNode = useTreeStore((state) => state.selectedNode)
@@ -119,7 +120,7 @@ export default function MainContent() {
   }
 
   if (!selectedNode) {
-    return <WelcomePanel />
+    return <Dashboard />
   }
 
   switch (selectedNode.type) {
@@ -194,117 +195,8 @@ export default function MainContent() {
         />
       )
     default:
-      return <WelcomePanel />
+      return <Dashboard />
   }
-}
-
-// Hero-style Welcome Panel
-function WelcomePanel() {
-  const connections = useConnectionStore((state) => state.connections)
-  const openDialog = useUIStore((state) => state.openDialog)
-
-  return (
-    <VStack spacing={6} align="stretch">
-      {/* Hero Card */}
-      <Card
-        bg="linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 50%, #5BB5E8 100%)"
-        color="white"
-        overflow="hidden"
-      >
-        <CardBody py={12} px={8}>
-          <VStack spacing={6} align="center">
-            <Box
-              bg="whiteAlpha.200"
-              p={4}
-              borderRadius="full"
-            >
-              <Icon as={FiServer} boxSize={12} />
-            </Box>
-            <VStack spacing={2}>
-              <Heading size="xl" textAlign="center">
-                Kartoza GeoServer Client
-              </Heading>
-              <Text fontSize="lg" opacity={0.9} textAlign="center" maxW="lg">
-                Manage your GeoServer instances with a beautiful, modern interface.
-                Upload layers, preview maps, and configure services.
-              </Text>
-            </VStack>
-            {connections.length === 0 ? (
-              <Button
-                size="xl"
-                variant="accent"
-                leftIcon={<FiPlus />}
-                onClick={() => openDialog('connection', { mode: 'create' })}
-              >
-                Add Your First Connection
-              </Button>
-            ) : (
-              <Text fontSize="md" opacity={0.8}>
-                Select a connection from the sidebar to get started
-              </Text>
-            )}
-          </VStack>
-        </CardBody>
-      </Card>
-
-      {/* Feature Cards */}
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-        <FeatureCard
-          icon={FiServer}
-          title="Multi-Server"
-          description="Connect to multiple GeoServer instances simultaneously and manage them all from one place."
-          color="kartoza.500"
-        />
-        <FeatureCard
-          icon={FiLayers}
-          title="Layer Management"
-          description="Upload shapefiles, GeoPackages, and GeoTIFFs. Preview layers with interactive maps."
-          color="accent.400"
-        />
-        <FeatureCard
-          icon={FiDatabase}
-          title="Store Management"
-          description="Create and configure data stores and coverage stores for your geospatial data."
-          color="kartoza.700"
-        />
-      </SimpleGrid>
-    </VStack>
-  )
-}
-
-function FeatureCard({
-  icon,
-  title,
-  description,
-  color,
-}: {
-  icon: React.ElementType
-  title: string
-  description: string
-  color: string
-}) {
-  const cardBg = useColorModeValue('white', 'gray.800')
-
-  return (
-    <Card bg={cardBg} variant="elevated">
-      <CardBody>
-        <VStack align="start" spacing={3}>
-          <Box
-            bg={`${color.split('.')[0]}.50`}
-            color={color}
-            p={3}
-            borderRadius="lg"
-          >
-            <Icon as={icon} boxSize={6} />
-          </Box>
-          <Heading size="sm">{title}</Heading>
-          <Text fontSize="sm" color="gray.600">
-            {description}
-          </Text>
-        </VStack>
-      </CardBody>
-    </Card>
-  )
 }
 
 // Dashboard for Data Stores

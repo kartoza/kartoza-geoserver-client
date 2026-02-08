@@ -24,12 +24,24 @@ type Client struct {
 	httpClient *http.Client
 }
 
-// NewClient creates a new GeoServer API client
+// NewClient creates a new GeoServer API client from a Connection
 func NewClient(conn *config.Connection) *Client {
 	return &Client{
 		baseURL:  strings.TrimSuffix(conn.URL, "/"),
 		username: conn.Username,
 		password: conn.Password,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+}
+
+// NewClientDirect creates a new GeoServer API client with direct parameters
+func NewClientDirect(baseURL, username, password string) *Client {
+	return &Client{
+		baseURL:  strings.TrimSuffix(baseURL, "/"),
+		username: username,
+		password: password,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -95,6 +107,162 @@ type ServerInfo struct {
 	GeoServerRevision  string
 	GeoToolsVersion    string
 	GeoWebCacheVersion string
+}
+
+// ServerStatus contains runtime status information
+type ServerStatus struct {
+	Online          bool    `json:"online"`
+	ResponseTimeMs  int64   `json:"responseTimeMs"`
+	MemoryUsed      int64   `json:"memoryUsed"`      // bytes
+	MemoryFree      int64   `json:"memoryFree"`      // bytes
+	MemoryTotal     int64   `json:"memoryTotal"`     // bytes
+	MemoryUsedPct   float64 `json:"memoryUsedPct"`   // percentage
+	CPULoad         float64 `json:"cpuLoad"`         // percentage (if available)
+	WorkspaceCount  int     `json:"workspaceCount"`
+	LayerCount      int     `json:"layerCount"`
+	DataStoreCount  int     `json:"dataStoreCount"`
+	CoverageCount   int     `json:"coverageCount"`
+	StyleCount      int     `json:"styleCount"`
+	Error           string  `json:"error,omitempty"`
+	GeoServerVersion string `json:"geoserverVersion,omitempty"`
+}
+
+// GetServerStatus fetches the runtime status of the GeoServer instance
+func (c *Client) GetServerStatus() (*ServerStatus, error) {
+	startTime := time.Now()
+	status := &ServerStatus{Online: false}
+
+	// First check if server is reachable
+	resp, err := c.doRequest("GET", "/about/status", nil, "")
+	if err != nil {
+		status.Error = fmt.Sprintf("Connection failed: %v", err)
+		return status, nil
+	}
+	defer resp.Body.Close()
+
+	status.ResponseTimeMs = time.Since(startTime).Milliseconds()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		status.Error = fmt.Sprintf("Status check failed: %s", string(body))
+		return status, nil
+	}
+
+	status.Online = true
+
+	// Parse status response for memory info
+	var statusResp struct {
+		About struct {
+			Status []struct {
+				Name  string `json:"@name"`
+				Value string `json:"value"`
+			} `json:"status"`
+		} `json:"about"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&statusResp); err == nil {
+		for _, s := range statusResp.About.Status {
+			switch s.Name {
+			case "GEOSERVER_DATA_DIR":
+				// data dir info
+			}
+		}
+	}
+
+	// Get memory info from system status endpoint
+	memResp, err := c.doRequest("GET", "/about/system-status", nil, "")
+	if err == nil {
+		defer memResp.Body.Close()
+		if memResp.StatusCode == http.StatusOK {
+			var sysStatus struct {
+				Metrics struct {
+					Metric []struct {
+						Name      string `json:"@name"`
+						Available bool   `json:"available"`
+						Value     string `json:"value"`
+						Unit      string `json:"unit,omitempty"`
+					} `json:"metric"`
+				} `json:"metrics"`
+			}
+			if err := json.NewDecoder(memResp.Body).Decode(&sysStatus); err == nil {
+				for _, m := range sysStatus.Metrics.Metric {
+					if !m.Available {
+						continue
+					}
+					switch m.Name {
+					case "MEMORY_USED":
+						fmt.Sscanf(m.Value, "%d", &status.MemoryUsed)
+					case "MEMORY_FREE":
+						fmt.Sscanf(m.Value, "%d", &status.MemoryFree)
+					case "MEMORY_TOTAL":
+						fmt.Sscanf(m.Value, "%d", &status.MemoryTotal)
+					case "CPU_LOAD":
+						fmt.Sscanf(m.Value, "%f", &status.CPULoad)
+					}
+				}
+				if status.MemoryTotal > 0 {
+					status.MemoryUsedPct = float64(status.MemoryUsed) / float64(status.MemoryTotal) * 100
+				}
+			}
+		}
+	}
+
+	// Get version info
+	if info, err := c.GetServerInfo(); err == nil {
+		status.GeoServerVersion = info.GeoServerVersion
+	}
+
+	return status, nil
+}
+
+// GetServerCounts fetches counts of various resources
+func (c *Client) GetServerCounts() (*ServerStatus, error) {
+	status := &ServerStatus{Online: true}
+
+	// Count workspaces
+	if workspaces, err := c.GetWorkspaces(); err == nil {
+		status.WorkspaceCount = len(workspaces)
+
+		// Count layers, stores across all workspaces
+		for _, ws := range workspaces {
+			if layers, err := c.GetLayers(ws.Name); err == nil {
+				status.LayerCount += len(layers)
+			}
+			if stores, err := c.GetDataStores(ws.Name); err == nil {
+				status.DataStoreCount += len(stores)
+			}
+			if coverages, err := c.GetCoverageStores(ws.Name); err == nil {
+				status.CoverageCount += len(coverages)
+			}
+		}
+	}
+
+	// Count global styles
+	if styles, err := c.GetStyles(""); err == nil {
+		status.StyleCount = len(styles)
+	}
+
+	return status, nil
+}
+
+// GetFullServerStatus gets both runtime status and resource counts
+func (c *Client) GetFullServerStatus() (*ServerStatus, error) {
+	status, err := c.GetServerStatus()
+	if err != nil || !status.Online {
+		return status, err
+	}
+
+	// Get resource counts
+	counts, _ := c.GetServerCounts()
+	if counts != nil {
+		status.WorkspaceCount = counts.WorkspaceCount
+		status.LayerCount = counts.LayerCount
+		status.DataStoreCount = counts.DataStoreCount
+		status.CoverageCount = counts.CoverageCount
+		status.StyleCount = counts.StyleCount
+	}
+
+	return status, nil
 }
 
 // GetServerInfo fetches information about the GeoServer instance
@@ -346,6 +514,125 @@ func (c *Client) GetStyles(workspace string) ([]models.Style, error) {
 	}
 
 	return result.Styles.Style, nil
+}
+
+// GetStyleSLD fetches the SLD content of a style
+func (c *Client) GetStyleSLD(workspace, styleName string) (string, error) {
+	var path string
+	if workspace == "" {
+		path = fmt.Sprintf("/styles/%s.sld", styleName)
+	} else {
+		path = fmt.Sprintf("/workspaces/%s/styles/%s.sld", workspace, styleName)
+	}
+
+	url := c.baseURL + "/rest" + path
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.SetBasicAuth(c.username, c.password)
+	req.Header.Set("Accept", "application/vnd.ogc.sld+xml")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("failed to get style SLD: %s", string(body))
+	}
+
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read style content: %w", err)
+	}
+
+	return string(content), nil
+}
+
+// CreateOrUpdateStyle creates or updates a style with SLD content
+func (c *Client) CreateOrUpdateStyle(workspace, styleName, sldContent string) error {
+	var basePath string
+	if workspace == "" {
+		basePath = "/styles"
+	} else {
+		basePath = fmt.Sprintf("/workspaces/%s/styles", workspace)
+	}
+
+	// First, try to check if the style exists
+	checkPath := basePath + "/" + styleName
+	checkResp, err := c.doRequest("GET", checkPath, nil, "")
+	if err != nil {
+		return err
+	}
+	checkResp.Body.Close()
+
+	if checkResp.StatusCode == http.StatusOK {
+		// Style exists, update it
+		updatePath := basePath + "/" + styleName
+		url := c.baseURL + "/rest" + updatePath
+		req, err := http.NewRequest("PUT", url, strings.NewReader(sldContent))
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
+		req.SetBasicAuth(c.username, c.password)
+		req.Header.Set("Content-Type", "application/vnd.ogc.sld+xml")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+			body, _ := io.ReadAll(resp.Body)
+			return fmt.Errorf("failed to update style: %s", string(body))
+		}
+		return nil
+	}
+
+	// Style doesn't exist, create it
+	// First create the style definition
+	styleBody := map[string]interface{}{
+		"style": map[string]interface{}{
+			"name":     styleName,
+			"filename": styleName + ".sld",
+		},
+	}
+	resp, err := c.doJSONRequest("POST", basePath, styleBody)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to create style definition: status %d", resp.StatusCode)
+	}
+
+	// Now upload the SLD content
+	uploadPath := basePath + "/" + styleName
+	url := c.baseURL + "/rest" + uploadPath
+	req, err := http.NewRequest("PUT", url, strings.NewReader(sldContent))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.SetBasicAuth(c.username, c.password)
+	req.Header.Set("Content-Type", "application/vnd.ogc.sld+xml")
+
+	uploadResp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer uploadResp.Body.Close()
+
+	if uploadResp.StatusCode != http.StatusOK && uploadResp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(uploadResp.Body)
+		return fmt.Errorf("failed to upload style content: %s", string(body))
+	}
+
+	return nil
 }
 
 // GetLayerGroups fetches all layer groups (global or workspace-specific)

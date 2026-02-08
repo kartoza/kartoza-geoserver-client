@@ -21,10 +21,12 @@ import (
 type Screen int
 
 const (
-	ScreenMain Screen = iota
+	ScreenDashboard Screen = iota
+	ScreenMain
 	ScreenConnections
 	ScreenUpload
 	ScreenHelp
+	ScreenSync
 )
 
 // CRUDOperation represents the type of CRUD operation
@@ -54,6 +56,7 @@ type AppKeyMap struct {
 	Upload      key.Binding
 	Refresh     key.Binding
 	Escape      key.Binding
+	Sync        key.Binding
 }
 
 // DefaultAppKeyMap returns the default key bindings
@@ -86,6 +89,10 @@ func DefaultAppKeyMap() AppKeyMap {
 		Escape: key.NewBinding(
 			key.WithKeys("esc"),
 			key.WithHelp("esc", "back"),
+		),
+		Sync: key.NewBinding(
+			key.WithKeys("S"),
+			key.WithHelp("S", "sync servers"),
 		),
 	}
 }
@@ -131,6 +138,8 @@ type App struct {
 	fileBrowser       *components.FileBrowser
 	treeView          *components.TreeView
 	connectionsScreen *screens.ConnectionsScreen
+	syncScreen        *screens.SyncScreen
+	dashboardScreen   *screens.DashboardScreen
 	screen            Screen
 	activePanel       Panel
 	keyMap            AppKeyMap
@@ -205,7 +214,9 @@ func NewApp(cfg *config.Config, version string) *App {
 		fileBrowser:       components.NewFileBrowser(cfg.LastLocalPath),
 		treeView:          components.NewTreeView(),
 		connectionsScreen: screens.NewConnectionsScreen(cfg),
-		screen:            ScreenMain,
+		syncScreen:        screens.NewSyncScreen(cfg),
+		dashboardScreen:   screens.NewDashboardScreen(cfg),
+		screen:            ScreenDashboard, // Start with dashboard
 		activePanel:       PanelLeft,
 		keyMap:            DefaultAppKeyMap(),
 		spinner:           s,
@@ -233,6 +244,7 @@ func NewApp(cfg *config.Config, version string) *App {
 func (a *App) Init() tea.Cmd {
 	cmds := []tea.Cmd{
 		a.spinner.Tick,
+		a.dashboardScreen.Init(), // Initialize dashboard
 	}
 
 	// Build initial tree with all connections
@@ -403,7 +415,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, tea.Quit
 
 		case key.Matches(msg, a.keyMap.Tab):
-			if a.screen == ScreenMain {
+			if a.screen == ScreenDashboard {
+				// Switch to main screen from dashboard
+				a.screen = ScreenMain
+				return a, nil
+			} else if a.screen == ScreenMain {
 				a.switchPanel()
 				return a, nil
 			}
@@ -417,24 +433,30 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.showHelp = false
 				return a, nil
 			}
-			if a.screen != ScreenMain {
+			// Navigate back: Dashboard <- Main <- Other screens
+			if a.screen == ScreenMain {
+				a.screen = ScreenDashboard
+				return a, a.dashboardScreen.TriggerRefresh()
+			} else if a.screen != ScreenDashboard {
 				a.screen = ScreenMain
 				return a, nil
 			}
 
 		case key.Matches(msg, a.keyMap.Connections):
-			if a.screen == ScreenMain {
+			if a.screen == ScreenMain || a.screen == ScreenDashboard {
 				a.screen = ScreenConnections
 				return a, nil
 			}
 
 		case key.Matches(msg, a.keyMap.Upload):
-			if a.screen == ScreenMain {
+			if a.screen == ScreenMain || a.screen == ScreenDashboard {
 				return a, a.handleUpload()
 			}
 
 		case key.Matches(msg, a.keyMap.Refresh):
-			if a.screen == ScreenMain {
+			if a.screen == ScreenDashboard {
+				return a, a.dashboardScreen.TriggerRefresh()
+			} else if a.screen == ScreenMain {
 				if a.activePanel == PanelLeft {
 					a.fileBrowser.Refresh()
 				} else if len(a.clients) > 0 {
@@ -444,10 +466,23 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return a, nil
 			}
+
+		case key.Matches(msg, a.keyMap.Sync):
+			if a.screen == ScreenMain || a.screen == ScreenDashboard {
+				a.screen = ScreenSync
+				return a, a.syncScreen.Init()
+			}
+
 		}
 
 		// Handle screen-specific keys
-		if a.screen == ScreenConnections && !a.showHelp {
+		if a.screen == ScreenDashboard && !a.showHelp {
+			var cmd tea.Cmd
+			a.dashboardScreen, cmd = a.dashboardScreen.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		} else if a.screen == ScreenConnections && !a.showHelp {
 			var cmd tea.Cmd
 			a.connectionsScreen, cmd = a.connectionsScreen.Update(msg)
 			if cmd != nil {
@@ -464,6 +499,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Rebuild tree
 				a.buildConnectionsTree()
 				a.treeView.SetConnected(len(a.clients) > 0, "GeoServer Connections")
+			}
+		} else if a.screen == ScreenSync && !a.showHelp {
+			var cmd tea.Cmd
+			a.syncScreen, cmd = a.syncScreen.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
 			}
 		} else if a.screen == ScreenMain && !a.showHelp {
 			if a.activePanel == PanelLeft {
@@ -979,6 +1020,26 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.errorMsg = fmt.Sprintf("%s failed: %v", msg.operation, msg.err)
 		}
 
+	case screens.SyncProgressMsg:
+		// Forward to sync screen
+		if a.syncScreen != nil {
+			var cmd tea.Cmd
+			a.syncScreen, cmd = a.syncScreen.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+
+	case screens.DashboardStatusMsg, screens.DashboardRefreshMsg:
+		// Forward to dashboard screen
+		if a.dashboardScreen != nil {
+			var cmd tea.Cmd
+			a.dashboardScreen, cmd = a.dashboardScreen.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+
 	case errMsg:
 		a.loading = false
 		a.errorMsg = msg.err.Error()
@@ -996,14 +1057,18 @@ func (a *App) View() string {
 	var content string
 
 	switch a.screen {
+	case ScreenDashboard:
+		content = a.renderDashboardScreen()
 	case ScreenMain:
 		content = a.renderMainScreen()
 	case ScreenConnections:
 		content = a.renderConnectionsScreen()
+	case ScreenSync:
+		content = a.renderSyncScreen()
 	case ScreenHelp:
 		content = a.renderHelpScreen()
 	default:
-		content = a.renderMainScreen()
+		content = a.renderDashboardScreen()
 	}
 
 	if a.showHelp {
@@ -1149,6 +1214,7 @@ func (a *App) renderHelpBar() string {
 
 	items = append(items, styles.RenderHelpKey("c", "connections"))
 	items = append(items, styles.RenderHelpKey("u", "upload"))
+	items = append(items, styles.RenderHelpKey("S", "sync"))
 	items = append(items, styles.RenderHelpKey("r", "refresh"))
 	items = append(items, styles.RenderHelpKey("?", "help"))
 	items = append(items, styles.RenderHelpKey("q", "quit"))
@@ -1160,6 +1226,18 @@ func (a *App) renderHelpBar() string {
 func (a *App) renderConnectionsScreen() string {
 	a.connectionsScreen.SetSize(a.width, a.height)
 	return a.connectionsScreen.View()
+}
+
+// renderSyncScreen renders the sync screen
+func (a *App) renderSyncScreen() string {
+	a.syncScreen.SetSize(a.width, a.height)
+	return a.syncScreen.View()
+}
+
+// renderDashboardScreen renders the dashboard screen
+func (a *App) renderDashboardScreen() string {
+	a.dashboardScreen.SetSize(a.width, a.height)
+	return a.dashboardScreen.View()
 }
 
 // renderHelpScreen renders the help screen

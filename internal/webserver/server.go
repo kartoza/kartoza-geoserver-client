@@ -105,6 +105,19 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	// API routes - Settings
 	mux.HandleFunc("/api/settings/", s.handleSettings)
 
+	// API routes - Sync (server replication)
+	mux.HandleFunc("/api/sync/configs", s.handleSyncConfigs)
+	mux.HandleFunc("/api/sync/configs/", s.handleSyncConfigs)
+	mux.HandleFunc("/api/sync/start", s.handleSyncStart)
+	mux.HandleFunc("/api/sync/status", s.handleSyncStatus)
+	mux.HandleFunc("/api/sync/status/", s.handleSyncStatus)
+	mux.HandleFunc("/api/sync/stop", s.handleSyncStop)
+	mux.HandleFunc("/api/sync/stop/", s.handleSyncStop)
+
+	// API routes - Dashboard (server status overview)
+	mux.HandleFunc("/api/dashboard", s.handleDashboard)
+	mux.HandleFunc("/api/dashboard/server", s.handleServerStatus)
+
 	// Serve static files (React app)
 	mux.HandleFunc("/", s.serveStatic)
 }

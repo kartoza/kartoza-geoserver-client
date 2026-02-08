@@ -22,12 +22,48 @@ type Connection struct {
 	IsActive bool   `json:"is_active"`
 }
 
+// SyncConfiguration represents a saved sync setup
+type SyncConfiguration struct {
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	SourceID     string   `json:"source_id"`      // Connection ID of source server
+	DestIDs      []string `json:"destination_ids"` // Connection IDs of destination servers
+	SyncOptions  SyncOptions `json:"options"`
+	CreatedAt    string   `json:"created_at"`
+	LastSyncedAt string   `json:"last_synced_at,omitempty"`
+}
+
+// SyncOptions configures what to sync
+type SyncOptions struct {
+	Workspaces   bool `json:"workspaces"`
+	DataStores   bool `json:"datastores"`
+	CoverageStores bool `json:"coveragestores"`
+	Layers       bool `json:"layers"`
+	Styles       bool `json:"styles"`
+	LayerGroups  bool `json:"layergroups"`
+	// Filter options
+	WorkspaceFilter []string `json:"workspace_filter,omitempty"` // If set, only sync these workspaces
+}
+
+// DefaultSyncOptions returns default sync options (sync everything)
+func DefaultSyncOptions() SyncOptions {
+	return SyncOptions{
+		Workspaces:     true,
+		DataStores:     true,
+		CoverageStores: true,
+		Layers:         true,
+		Styles:         true,
+		LayerGroups:    true,
+	}
+}
+
 // Config holds the application configuration
 type Config struct {
-	Connections      []Connection `json:"connections"`
-	ActiveConnection string       `json:"active_connection"`
-	LastLocalPath    string       `json:"last_local_path"`
-	Theme            string       `json:"theme"`
+	Connections      []Connection        `json:"connections"`
+	ActiveConnection string              `json:"active_connection"`
+	LastLocalPath    string              `json:"last_local_path"`
+	Theme            string              `json:"theme"`
+	SyncConfigs      []SyncConfiguration `json:"sync_configs,omitempty"`
 }
 
 // DefaultConfig returns the default configuration
@@ -140,4 +176,50 @@ func (c *Config) RemoveConnection(id string) {
 // SetActiveConnection sets the active connection by ID
 func (c *Config) SetActiveConnection(id string) {
 	c.ActiveConnection = id
+}
+
+// AddSyncConfig adds a new sync configuration
+func (c *Config) AddSyncConfig(cfg SyncConfiguration) {
+	c.SyncConfigs = append(c.SyncConfigs, cfg)
+}
+
+// GetSyncConfig returns a sync configuration by ID
+func (c *Config) GetSyncConfig(id string) *SyncConfiguration {
+	for i := range c.SyncConfigs {
+		if c.SyncConfigs[i].ID == id {
+			return &c.SyncConfigs[i]
+		}
+	}
+	return nil
+}
+
+// UpdateSyncConfig updates an existing sync configuration
+func (c *Config) UpdateSyncConfig(cfg SyncConfiguration) bool {
+	for i := range c.SyncConfigs {
+		if c.SyncConfigs[i].ID == cfg.ID {
+			c.SyncConfigs[i] = cfg
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveSyncConfig removes a sync configuration by ID
+func (c *Config) RemoveSyncConfig(id string) {
+	for i, cfg := range c.SyncConfigs {
+		if cfg.ID == id {
+			c.SyncConfigs = append(c.SyncConfigs[:i], c.SyncConfigs[i+1:]...)
+			return
+		}
+	}
+}
+
+// GetConnection returns a connection by ID
+func (c *Config) GetConnection(id string) *Connection {
+	for i := range c.Connections {
+		if c.Connections[i].ID == id {
+			return &c.Connections[i]
+		}
+	}
+	return nil
 }

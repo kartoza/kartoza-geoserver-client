@@ -10,6 +10,7 @@ export type DialogType =
   | 'upload'
   | 'confirm'
   | 'info'
+  | 'sync'
   | null
 
 export type DialogMode = 'create' | 'edit' | 'delete' | 'view'

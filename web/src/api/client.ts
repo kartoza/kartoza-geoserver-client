@@ -28,6 +28,11 @@ import type {
   GWCGridSet,
   GWCDiskQuota,
   GeoServerContact,
+  SyncConfiguration,
+  SyncTask,
+  StartSyncRequest,
+  DashboardData,
+  ServerStatus,
 } from '../types'
 
 const API_BASE = '/api'
@@ -510,4 +515,107 @@ export async function updateContact(
     body: JSON.stringify(contact),
   })
   return handleResponse<GeoServerContact>(response)
+}
+
+// ============================================================================
+// Server Sync API
+// ============================================================================
+
+// Get all sync configurations
+export async function getSyncConfigs(): Promise<SyncConfiguration[]> {
+  const response = await fetch(`${API_BASE}/sync/configs`)
+  return handleResponse<SyncConfiguration[]>(response)
+}
+
+// Get a specific sync configuration
+export async function getSyncConfig(id: string): Promise<SyncConfiguration> {
+  const response = await fetch(`${API_BASE}/sync/configs/${id}`)
+  return handleResponse<SyncConfiguration>(response)
+}
+
+// Create a new sync configuration
+export async function createSyncConfig(
+  config: Omit<SyncConfiguration, 'id' | 'created_at'>
+): Promise<SyncConfiguration> {
+  const response = await fetch(`${API_BASE}/sync/configs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  return handleResponse<SyncConfiguration>(response)
+}
+
+// Update an existing sync configuration
+export async function updateSyncConfig(
+  id: string,
+  config: Partial<SyncConfiguration>
+): Promise<SyncConfiguration> {
+  const response = await fetch(`${API_BASE}/sync/configs/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  return handleResponse<SyncConfiguration>(response)
+}
+
+// Delete a sync configuration
+export async function deleteSyncConfig(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/sync/configs/${id}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<void>(response)
+}
+
+// Start a sync operation
+export async function startSync(request: StartSyncRequest): Promise<SyncTask[]> {
+  const response = await fetch(`${API_BASE}/sync/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  return handleResponse<SyncTask[]>(response)
+}
+
+// Get status of all running sync tasks
+export async function getSyncStatus(): Promise<SyncTask[]> {
+  const response = await fetch(`${API_BASE}/sync/status`)
+  return handleResponse<SyncTask[]>(response)
+}
+
+// Get status of a specific sync task
+export async function getSyncTaskStatus(taskId: string): Promise<SyncTask> {
+  const response = await fetch(`${API_BASE}/sync/status/${taskId}`)
+  return handleResponse<SyncTask>(response)
+}
+
+// Stop a specific sync task
+export async function stopSyncTask(taskId: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/sync/stop/${taskId}`, {
+    method: 'POST',
+  })
+  return handleResponse<{ success: boolean; message: string }>(response)
+}
+
+// Stop all running sync tasks
+export async function stopAllSyncs(): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/sync/stop`, {
+    method: 'POST',
+  })
+  return handleResponse<{ success: boolean; message: string }>(response)
+}
+
+// ============================================================================
+// Dashboard API
+// ============================================================================
+
+// Get dashboard data (all servers status)
+export async function getDashboard(): Promise<DashboardData> {
+  const response = await fetch(`${API_BASE}/dashboard`)
+  return handleResponse<DashboardData>(response)
+}
+
+// Get status for a single server
+export async function getServerStatus(connectionId: string): Promise<ServerStatus> {
+  const response = await fetch(`${API_BASE}/dashboard/server?id=${connectionId}`)
+  return handleResponse<ServerStatus>(response)
 }

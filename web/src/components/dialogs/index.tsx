@@ -7,6 +7,7 @@ import CacheDialog from './CacheDialog'
 import LayerDialog from './LayerDialog'
 import StoreDialog from './StoreDialog'
 import { SettingsDialog } from './SettingsDialog'
+import { SyncDialog } from './SyncDialog'
 
 export default function Dialogs() {
   return (
@@ -19,8 +20,9 @@ export default function Dialogs() {
       <CacheDialog />
       <LayerDialog />
       <StoreDialog />
+      <SyncDialog />
     </>
   )
 }
 
-export { SettingsDialog }
+export { SettingsDialog, SyncDialog }

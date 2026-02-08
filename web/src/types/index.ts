@@ -342,3 +342,79 @@ export interface GeoServerContact {
   onlineResource?: string
   welcome?: string
 }
+
+// Sync types
+export interface SyncOptions {
+  workspaces: boolean
+  datastores: boolean
+  coveragestores: boolean
+  layers: boolean
+  styles: boolean
+  layergroups: boolean
+  workspace_filter?: string[]
+}
+
+export interface SyncConfiguration {
+  id: string
+  name: string
+  source_id: string
+  destination_ids: string[]
+  options: SyncOptions
+  created_at: string
+  last_synced_at?: string
+}
+
+export interface SyncTask {
+  id: string
+  configId: string
+  sourceId: string
+  destId: string
+  status: 'running' | 'completed' | 'failed' | 'stopped'
+  progress: number
+  currentItem: string
+  itemsTotal: number
+  itemsDone: number
+  itemsSkipped: number
+  itemsFailed: number
+  startedAt: string
+  completedAt?: string
+  error?: string
+  log: string[]
+}
+
+export interface StartSyncRequest {
+  configId?: string
+  sourceId?: string
+  destinationIds?: string[]
+  options?: SyncOptions
+}
+
+// Dashboard types
+export interface ServerStatus {
+  connectionId: string
+  connectionName: string
+  url: string
+  online: boolean
+  responseTimeMs: number
+  memoryUsed: number
+  memoryFree: number
+  memoryTotal: number
+  memoryUsedPct: number
+  cpuLoad: number
+  workspaceCount: number
+  layerCount: number
+  dataStoreCount: number
+  coverageCount: number
+  styleCount: number
+  error?: string
+  geoserverVersion?: string
+}
+
+export interface DashboardData {
+  servers: ServerStatus[]
+  onlineCount: number
+  offlineCount: number
+  totalLayers: number
+  totalStores: number
+  alertServers: ServerStatus[]
+}

@@ -65,45 +65,46 @@ func (n NodeType) String() string {
 	}
 }
 
-// Icon returns an appropriate icon for the node type
+// Icon returns an appropriate Nerd Font icon for the node type
+// See: https://www.nerdfonts.com/cheat-sheet
 func (n NodeType) Icon() string {
 	switch n {
 	case NodeTypeRoot:
-		return "🌍"
+		return "\uf0ac" // fa-globe
 	case NodeTypeConnection:
-		return "🖥️"
+		return "\uf233" // fa-server
 	case NodeTypeWorkspace:
-		return "📁"
+		return "\uf07b" // fa-folder
 	case NodeTypeDataStores:
-		return "💾"
+		return "\uf1b3" // fa-cubes
 	case NodeTypeCoverageStores:
-		return "🖼️"
+		return "\uf03e" // fa-image
 	case NodeTypeWMSStores:
-		return "🗺️"
+		return "\uf279" // fa-map
 	case NodeTypeWMTSStores:
-		return "🔲"
+		return "\uf00a" // fa-th (grid)
 	case NodeTypeDataStore:
-		return "🗃️"
+		return "\uf1c0" // fa-database
 	case NodeTypeCoverageStore:
-		return "📷"
+		return "\uf03e" // fa-image
 	case NodeTypeWMSStore:
-		return "🌐"
+		return "\uf279" // fa-map
 	case NodeTypeWMTSStore:
-		return "📐"
+		return "\uf00a" // fa-th (grid)
 	case NodeTypeLayers:
-		return "📑"
+		return "\uf5fd" // fa-layer-group
 	case NodeTypeLayer:
-		return "📄"
+		return "\uf5fd" // fa-layer-group
 	case NodeTypeStyles:
-		return "🎨"
+		return "\uf53f" // fa-palette
 	case NodeTypeStyle:
-		return "🖌️"
+		return "\uf1fc" // fa-paint-brush
 	case NodeTypeLayerGroups:
-		return "📚"
+		return "\uf5db" // fa-books
 	case NodeTypeLayerGroup:
-		return "📘"
+		return "\uf02d" // fa-book
 	default:
-		return "❓"
+		return "\uf128" // fa-question
 	}
 }
 
@@ -537,25 +538,28 @@ func (f FileType) String() string {
 	}
 }
 
-// Icon returns an appropriate icon for the file type
+// Icon returns an appropriate Nerd Font icon for the file type
+// See: https://www.nerdfonts.com/cheat-sheet
 func (f FileType) Icon() string {
 	switch f {
 	case FileTypeDirectory:
-		return "📁"
+		return "\uf07b" // fa-folder
 	case FileTypeShapefile:
-		return "🗺️"
+		return "\uf279" // fa-map
 	case FileTypeGeoPackage:
-		return "📦"
+		return "\uf187" // fa-archive
 	case FileTypeGeoTIFF:
-		return "🖼️"
+		return "\uf03e" // fa-image
 	case FileTypeGeoJSON:
-		return "📄"
+		return "\uf121" // fa-code
 	case FileTypeSLD:
-		return "🎨"
+		return "\uf53f" // fa-palette
 	case FileTypeCSS:
-		return "🎨"
+		return "\uf53f" // fa-palette
+	case FileTypeGpkgLayer:
+		return "\uf5fd" // fa-layer-group
 	default:
-		return "📄"
+		return "\uf15b" // fa-file
 	}
 }
 
@@ -571,13 +575,25 @@ func (f FileType) CanUpload() bool {
 
 // LocalFile represents a file in the local file system
 type LocalFile struct {
-	Name     string
-	Path     string
-	Type     FileType
-	Size     int64
-	IsDir    bool
-	Selected bool
+	Name       string
+	Path       string
+	Type       FileType
+	Size       int64
+	IsDir      bool
+	Selected   bool
+	Expanded   bool        // Whether the item is expanded (for GeoPackages)
+	Children   []LocalFile // Child items (layers inside GeoPackages)
+	ParentPath string      // Parent GeoPackage path (for layers inside GeoPackages)
+	LayerName  string      // Layer name inside GeoPackage
 }
+
+// CanExpand returns true if this file type can be expanded to show children
+func (f *LocalFile) CanExpand() bool {
+	return f.Type == FileTypeGeoPackage
+}
+
+// FileTypeGpkgLayer represents a layer inside a GeoPackage
+const FileTypeGpkgLayer FileType = 100
 
 // DataStoreType represents the type of data store
 type DataStoreType int

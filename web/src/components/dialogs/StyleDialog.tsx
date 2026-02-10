@@ -57,6 +57,7 @@ import {
   FiGrid,
   FiChevronDown,
   FiChevronUp,
+  FiImage,
 } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import * as api from '../../api/client'
@@ -114,6 +115,1137 @@ const COLOR_RAMPS: Record<string, string[]> = {
   'reds': ['#fff5f0', '#fee0d2', '#fcbba1', '#fc9272', '#fb6a4a', '#ef3b2c', '#cb181d', '#99000d'],
   'greens': ['#f7fcf5', '#e5f5e0', '#c7e9c0', '#a1d99b', '#74c476', '#41ab5d', '#238b45', '#005a32'],
 }
+
+// Raster-specific color ramps with more gradient options
+const RASTER_COLOR_RAMPS: Record<string, { name: string; colors: string[]; description: string }> = {
+  'rainbow': {
+    name: 'Rainbow',
+    description: 'Classic rainbow spectrum',
+    colors: ['#9400D3', '#4B0082', '#0000FF', '#00FF00', '#FFFF00', '#FF7F00', '#FF0000'],
+  },
+  'terrain': {
+    name: 'Terrain',
+    description: 'Natural terrain colors (blue-green-brown)',
+    colors: ['#0000FF', '#00FFFF', '#00FF00', '#FFFF00', '#FF8C00', '#8B4513', '#FFFFFF'],
+  },
+  'elevation': {
+    name: 'Elevation',
+    description: 'DEM/elevation visualization',
+    colors: ['#006400', '#228B22', '#90EE90', '#FFFF00', '#FFA500', '#8B4513', '#FFFFFF'],
+  },
+  'temperature': {
+    name: 'Temperature',
+    description: 'Cold to hot temperature scale',
+    colors: ['#0000FF', '#00BFFF', '#00FFFF', '#FFFF00', '#FFA500', '#FF0000', '#8B0000'],
+  },
+  'ndvi': {
+    name: 'NDVI',
+    description: 'Vegetation index (brown-yellow-green)',
+    colors: ['#8B4513', '#D2691E', '#FFD700', '#ADFF2F', '#32CD32', '#006400'],
+  },
+  'bathymetry': {
+    name: 'Bathymetry',
+    description: 'Ocean depth visualization',
+    colors: ['#000033', '#000066', '#0000CC', '#0066FF', '#00CCFF', '#99FFFF'],
+  },
+  'grayscale': {
+    name: 'Grayscale',
+    description: 'Black to white gradient',
+    colors: ['#000000', '#333333', '#666666', '#999999', '#CCCCCC', '#FFFFFF'],
+  },
+  'magma': {
+    name: 'Magma',
+    description: 'Dark purple to bright yellow',
+    colors: ['#000004', '#3B0F70', '#8C2981', '#DE4968', '#FE9F6D', '#FCFDBF'],
+  },
+  'plasma': {
+    name: 'Plasma',
+    description: 'Blue-purple to yellow',
+    colors: ['#0D0887', '#6A00A8', '#B12A90', '#E16462', '#FCA636', '#F0F921'],
+  },
+  'inferno': {
+    name: 'Inferno',
+    description: 'Black through red to bright yellow',
+    colors: ['#000004', '#420A68', '#932667', '#DD513A', '#FCA50A', '#FCFFA4'],
+  },
+}
+
+// Hillshade presets
+const HILLSHADE_PRESETS = [
+  { name: 'Default', azimuth: 315, altitude: 45, zFactor: 1 },
+  { name: 'Morning Light', azimuth: 90, altitude: 30, zFactor: 1 },
+  { name: 'Evening Light', azimuth: 270, altitude: 30, zFactor: 1 },
+  { name: 'High Contrast', azimuth: 315, altitude: 60, zFactor: 2 },
+  { name: 'Subtle', azimuth: 315, altitude: 45, zFactor: 0.5 },
+]
+
+// Generate raster color map SLD
+function generateRasterColorMapSLD(
+  styleName: string,
+  colorRamp: string[],
+  minValue: number,
+  maxValue: number,
+  colorMapType: 'ramp' | 'intervals' | 'values' = 'ramp',
+  opacity: number = 1
+): string {
+  const range = maxValue - minValue
+  const colorMapEntries = colorRamp.map((color, i) => {
+    const quantity = minValue + (range * i) / (colorRamp.length - 1)
+    return `          <ColorMapEntry color="${color}" quantity="${quantity.toFixed(2)}" opacity="${opacity}" />`
+  }).join('\n')
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Raster Color Map</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <RasterSymbolizer>
+            <Opacity>${opacity}</Opacity>
+            <ColorMap type="${colorMapType}">
+${colorMapEntries}
+            </ColorMap>
+          </RasterSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate hillshade SLD
+function generateHillshadeSLD(
+  styleName: string,
+  azimuth: number = 315,
+  altitude: number = 45,
+  zFactor: number = 1,
+  opacity: number = 1
+): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Hillshade</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <RasterSymbolizer>
+            <Opacity>${opacity}</Opacity>
+            <ShadedRelief>
+              <BrightnessOnly>false</BrightnessOnly>
+              <ReliefFactor>${zFactor}</ReliefFactor>
+            </ShadedRelief>
+            <VendorOption name="algorithm">zevenbergenThorne</VendorOption>
+            <VendorOption name="azimuth">${azimuth}</VendorOption>
+            <VendorOption name="altitude">${altitude}</VendorOption>
+          </RasterSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate combined hillshade + color ramp SLD
+function generateHillshadeWithColorSLD(
+  styleName: string,
+  colorRamp: string[],
+  minValue: number,
+  maxValue: number,
+  azimuth: number = 315,
+  altitude: number = 45,
+  zFactor: number = 1,
+  opacity: number = 1
+): string {
+  const range = maxValue - minValue
+  const colorMapEntries = colorRamp.map((color, i) => {
+    const quantity = minValue + (range * i) / (colorRamp.length - 1)
+    return `          <ColorMapEntry color="${color}" quantity="${quantity.toFixed(2)}" />`
+  }).join('\n')
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Hillshade with Color</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <RasterSymbolizer>
+            <Opacity>${opacity}</Opacity>
+            <ColorMap type="ramp">
+${colorMapEntries}
+            </ColorMap>
+            <ShadedRelief>
+              <BrightnessOnly>false</BrightnessOnly>
+              <ReliefFactor>${zFactor}</ReliefFactor>
+            </ShadedRelief>
+            <VendorOption name="algorithm">zevenbergenThorne</VendorOption>
+            <VendorOption name="azimuth">${azimuth}</VendorOption>
+            <VendorOption name="altitude">${altitude}</VendorOption>
+          </RasterSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate contrast enhancement SLD
+function generateContrastEnhancementSLD(
+  styleName: string,
+  method: 'normalize' | 'histogram' | 'none' = 'normalize',
+  gammaValue: number = 1.0,
+  opacity: number = 1
+): string {
+  const contrastEnhancement = method === 'none' ? '' : `
+            <ContrastEnhancement>
+              <${method === 'normalize' ? 'Normalize' : 'Histogram'} />
+              <GammaValue>${gammaValue}</GammaValue>
+            </ContrastEnhancement>`
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Enhanced</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <RasterSymbolizer>
+            <Opacity>${opacity}</Opacity>${contrastEnhancement}
+          </RasterSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// ============================================
+// QGIS-LIKE MARKER SHAPES
+// ============================================
+const MARKER_SHAPES = [
+  { name: 'circle', label: 'Circle', wellKnownName: 'circle' },
+  { name: 'square', label: 'Square', wellKnownName: 'square' },
+  { name: 'triangle', label: 'Triangle', wellKnownName: 'triangle' },
+  { name: 'star', label: 'Star', wellKnownName: 'star' },
+  { name: 'cross', label: 'Cross', wellKnownName: 'cross' },
+  { name: 'x', label: 'X', wellKnownName: 'x' },
+  { name: 'diamond', label: 'Diamond', wellKnownName: 'shape://vertline' },
+  { name: 'pentagon', label: 'Pentagon', wellKnownName: 'pentagon' },
+  { name: 'hexagon', label: 'Hexagon', wellKnownName: 'hexagon' },
+  { name: 'octagon', label: 'Octagon', wellKnownName: 'octagon' },
+  { name: 'arrow', label: 'Arrow', wellKnownName: 'shape://oarrow' },
+  { name: 'carrow', label: 'Closed Arrow', wellKnownName: 'shape://carrow' },
+]
+
+// ============================================
+// LINE DASH PATTERNS (QGIS-like)
+// ============================================
+const LINE_DASH_PATTERNS = [
+  { name: 'solid', label: 'Solid', dashArray: '' },
+  { name: 'dash', label: 'Dash', dashArray: '10 5' },
+  { name: 'dot', label: 'Dot', dashArray: '2 5' },
+  { name: 'dash-dot', label: 'Dash Dot', dashArray: '10 5 2 5' },
+  { name: 'dash-dot-dot', label: 'Dash Dot Dot', dashArray: '10 5 2 5 2 5' },
+  { name: 'long-dash', label: 'Long Dash', dashArray: '20 10' },
+  { name: 'short-dash', label: 'Short Dash', dashArray: '5 5' },
+  { name: 'dense-dot', label: 'Dense Dot', dashArray: '1 2' },
+]
+
+// ============================================
+// LINE CAP AND JOIN STYLES
+// ============================================
+const LINE_CAP_STYLES = [
+  { name: 'butt', label: 'Flat' },
+  { name: 'round', label: 'Round' },
+  { name: 'square', label: 'Square' },
+]
+
+const LINE_JOIN_STYLES = [
+  { name: 'miter', label: 'Miter' },
+  { name: 'round', label: 'Round' },
+  { name: 'bevel', label: 'Bevel' },
+]
+
+// ============================================
+// FILL PATTERNS (QGIS-like graphic fills)
+// ============================================
+const FILL_PATTERNS = [
+  { name: 'solid', label: 'Solid Fill', type: 'solid' },
+  { name: 'horizontal', label: 'Horizontal Lines', type: 'hatch', angle: 0 },
+  { name: 'vertical', label: 'Vertical Lines', type: 'hatch', angle: 90 },
+  { name: 'cross', label: 'Cross Hatch', type: 'hatch', angle: 0, double: true },
+  { name: 'forward-diagonal', label: 'Forward Diagonal', type: 'hatch', angle: 45 },
+  { name: 'backward-diagonal', label: 'Backward Diagonal', type: 'hatch', angle: 135 },
+  { name: 'diagonal-cross', label: 'Diagonal Cross', type: 'hatch', angle: 45, double: true },
+  { name: 'dot-grid', label: 'Dot Grid', type: 'point-pattern' },
+  { name: 'dense-dot', label: 'Dense Dots', type: 'point-pattern', spacing: 4 },
+  { name: 'sparse-dot', label: 'Sparse Dots', type: 'point-pattern', spacing: 12 },
+]
+
+// ============================================
+// BLEND MODES (supported by GeoServer)
+// ============================================
+const BLEND_MODES = [
+  { name: 'normal', label: 'Normal' },
+  { name: 'multiply', label: 'Multiply' },
+  { name: 'screen', label: 'Screen' },
+  { name: 'overlay', label: 'Overlay' },
+  { name: 'darken', label: 'Darken' },
+  { name: 'lighten', label: 'Lighten' },
+  { name: 'color-dodge', label: 'Color Dodge' },
+  { name: 'color-burn', label: 'Color Burn' },
+  { name: 'hard-light', label: 'Hard Light' },
+  { name: 'soft-light', label: 'Soft Light' },
+  { name: 'difference', label: 'Difference' },
+  { name: 'exclusion', label: 'Exclusion' },
+]
+
+// ============================================
+// FONT MARKER FONTS
+// ============================================
+const _FONT_MARKER_FONTS = [
+  { name: 'Wingdings', characters: ['✈', '★', '♦', '♣', '♠', '♥', '☎', '✉', '✂', '✓', '✗'] },
+  { name: 'Webdings', characters: ['⌂', '⌘', '⚙', '⚡', '⚠', '⚑', '⚐', '☀', '☁', '☂', '☃'] },
+  { name: 'Symbol', characters: ['α', 'β', 'γ', 'δ', 'ε', 'π', 'Σ', 'Ω', '∞', '≈', '≠'] },
+]
+
+// ============================================
+// LABEL PLACEMENT OPTIONS
+// ============================================
+const _LABEL_PLACEMENT_OPTIONS = [
+  { name: 'point', label: 'Point on Point' },
+  { name: 'line', label: 'Along Line' },
+  { name: 'polygon', label: 'Inside Polygon' },
+]
+
+const _LABEL_ANCHOR_POINTS = [
+  { x: 0, y: 0, label: 'Top Left' },
+  { x: 0.5, y: 0, label: 'Top Center' },
+  { x: 1, y: 0, label: 'Top Right' },
+  { x: 0, y: 0.5, label: 'Middle Left' },
+  { x: 0.5, y: 0.5, label: 'Center' },
+  { x: 1, y: 0.5, label: 'Middle Right' },
+  { x: 0, y: 1, label: 'Bottom Left' },
+  { x: 0.5, y: 1, label: 'Bottom Center' },
+  { x: 1, y: 1, label: 'Bottom Right' },
+]
+/* eslint-enable @typescript-eslint/no-unused-vars */
+
+// Export for future use
+export {
+  _FONT_MARKER_FONTS,
+  _LABEL_PLACEMENT_OPTIONS,
+  _LABEL_ANCHOR_POINTS,
+  MARKER_SHAPES,
+  LINE_DASH_PATTERNS,
+  LINE_CAP_STYLES,
+  LINE_JOIN_STYLES,
+  FILL_PATTERNS,
+  BLEND_MODES,
+}
+
+// ============================================
+// SLD GENERATORS FOR ADVANCED FEATURES
+// These generators are available for use by the UI wizards
+// ============================================
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+// Generate hatch pattern fill SLD
+function generateHatchFillSLD(
+  styleName: string,
+  fillColor: string,
+  strokeColor: string,
+  strokeWidth: number,
+  angle: number,
+  spacing: number = 8,
+  doubleHatch: boolean = false
+): string {
+  const hatchGraphic = `
+            <GraphicFill>
+              <Graphic>
+                <Mark>
+                  <WellKnownName>shape://horline</WellKnownName>
+                  <Stroke>
+                    <CssParameter name="stroke">${strokeColor}</CssParameter>
+                    <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+                  </Stroke>
+                </Mark>
+                <Size>${spacing}</Size>
+                <Rotation>${angle}</Rotation>
+              </Graphic>
+            </GraphicFill>`
+
+  const secondHatch = doubleHatch ? `
+            <GraphicFill>
+              <Graphic>
+                <Mark>
+                  <WellKnownName>shape://horline</WellKnownName>
+                  <Stroke>
+                    <CssParameter name="stroke">${strokeColor}</CssParameter>
+                    <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+                  </Stroke>
+                </Mark>
+                <Size>${spacing}</Size>
+                <Rotation>${angle + 90}</Rotation>
+              </Graphic>
+            </GraphicFill>` : ''
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Hatch Fill</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">${fillColor}</CssParameter>
+            </Fill>
+          </PolygonSymbolizer>
+          <PolygonSymbolizer>${hatchGraphic}${secondHatch}
+          </PolygonSymbolizer>
+          <PolygonSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">1</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate point pattern fill SLD
+function generatePointPatternFillSLD(
+  styleName: string,
+  fillColor: string,
+  markerColor: string,
+  markerSize: number,
+  spacingX: number,
+  spacingY: number,
+  strokeColor: string,
+  strokeWidth: number
+): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Point Pattern Fill</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">${fillColor}</CssParameter>
+            </Fill>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>
+          <PolygonSymbolizer>
+            <Fill>
+              <GraphicFill>
+                <Graphic>
+                  <Mark>
+                    <WellKnownName>circle</WellKnownName>
+                    <Fill>
+                      <CssParameter name="fill">${markerColor}</CssParameter>
+                    </Fill>
+                  </Mark>
+                  <Size>${markerSize}</Size>
+                </Graphic>
+              </GraphicFill>
+            </Fill>
+            <VendorOption name="graphic-margin">${spacingY} ${spacingX}</VendorOption>
+          </PolygonSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate marker line SLD (repeating markers along line)
+function generateMarkerLineSLD(
+  styleName: string,
+  strokeColor: string,
+  strokeWidth: number,
+  markerShape: string,
+  markerSize: number,
+  markerFill: string,
+  markerStroke: string,
+  spacing: number,
+  _followLine: boolean = true
+): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Marker Line</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <LineSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </LineSymbolizer>
+          <LineSymbolizer>
+            <Stroke>
+              <GraphicStroke>
+                <Graphic>
+                  <Mark>
+                    <WellKnownName>${markerShape}</WellKnownName>
+                    <Fill>
+                      <CssParameter name="fill">${markerFill}</CssParameter>
+                    </Fill>
+                    <Stroke>
+                      <CssParameter name="stroke">${markerStroke}</CssParameter>
+                      <CssParameter name="stroke-width">1</CssParameter>
+                    </Stroke>
+                  </Mark>
+                  <Size>${markerSize}</Size>
+                </Graphic>
+              </GraphicStroke>
+              <CssParameter name="stroke-dasharray">${spacing} ${spacing}</CssParameter>
+            </Stroke>
+          </LineSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate arrow line SLD
+function generateArrowLineSLD(
+  styleName: string,
+  strokeColor: string,
+  strokeWidth: number,
+  arrowSize: number,
+  arrowPosition: 'start' | 'end' | 'both' = 'end'
+): string {
+  const endArrow = arrowPosition === 'end' || arrowPosition === 'both' ? `
+          <PointSymbolizer>
+            <Geometry>
+              <ogc:Function name="endPoint">
+                <ogc:PropertyName>geometry</ogc:PropertyName>
+              </ogc:Function>
+            </Geometry>
+            <Graphic>
+              <Mark>
+                <WellKnownName>shape://oarrow</WellKnownName>
+                <Fill>
+                  <CssParameter name="fill">${strokeColor}</CssParameter>
+                </Fill>
+              </Mark>
+              <Size>${arrowSize}</Size>
+              <Rotation>
+                <ogc:Function name="endAngle">
+                  <ogc:PropertyName>geometry</ogc:PropertyName>
+                </ogc:Function>
+              </Rotation>
+            </Graphic>
+          </PointSymbolizer>` : ''
+
+  const startArrow = arrowPosition === 'start' || arrowPosition === 'both' ? `
+          <PointSymbolizer>
+            <Geometry>
+              <ogc:Function name="startPoint">
+                <ogc:PropertyName>geometry</ogc:PropertyName>
+              </ogc:Function>
+            </Geometry>
+            <Graphic>
+              <Mark>
+                <WellKnownName>shape://oarrow</WellKnownName>
+                <Fill>
+                  <CssParameter name="fill">${strokeColor}</CssParameter>
+                </Fill>
+              </Mark>
+              <Size>${arrowSize}</Size>
+              <Rotation>
+                <ogc:Add>
+                  <ogc:Function name="startAngle">
+                    <ogc:PropertyName>geometry</ogc:PropertyName>
+                  </ogc:Function>
+                  <ogc:Literal>180</ogc:Literal>
+                </ogc:Add>
+              </Rotation>
+            </Graphic>
+          </PointSymbolizer>` : ''
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Arrow Line</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <LineSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </LineSymbolizer>${startArrow}${endArrow}
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate label style SLD
+function generateLabelSLD(
+  styleName: string,
+  labelField: string,
+  fontFamily: string,
+  fontSize: number,
+  fontColor: string,
+  fontWeight: 'normal' | 'bold',
+  fontStyle: 'normal' | 'italic',
+  haloColor: string,
+  haloRadius: number,
+  anchorX: number,
+  anchorY: number,
+  offsetX: number,
+  offsetY: number,
+  rotation: number,
+  maxDisplacement: number = 50,
+  followLine: boolean = false
+): string {
+  const placement = followLine ? `
+              <LinePlacement>
+                <PerpendicularOffset>0</PerpendicularOffset>
+              </LinePlacement>` : `
+              <PointPlacement>
+                <AnchorPoint>
+                  <AnchorPointX>${anchorX}</AnchorPointX>
+                  <AnchorPointY>${anchorY}</AnchorPointY>
+                </AnchorPoint>
+                <Displacement>
+                  <DisplacementX>${offsetX}</DisplacementX>
+                  <DisplacementY>${offsetY}</DisplacementY>
+                </Displacement>
+                <Rotation>${rotation}</Rotation>
+              </PointPlacement>`
+
+  const halo = haloRadius > 0 ? `
+            <Halo>
+              <Radius>${haloRadius}</Radius>
+              <Fill>
+                <CssParameter name="fill">${haloColor}</CssParameter>
+              </Fill>
+            </Halo>` : ''
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Labels</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <TextSymbolizer>
+            <Label>
+              <ogc:PropertyName>${labelField}</ogc:PropertyName>
+            </Label>
+            <Font>
+              <CssParameter name="font-family">${fontFamily}</CssParameter>
+              <CssParameter name="font-size">${fontSize}</CssParameter>
+              <CssParameter name="font-weight">${fontWeight}</CssParameter>
+              <CssParameter name="font-style">${fontStyle}</CssParameter>
+            </Font>
+            <LabelPlacement>${placement}
+            </LabelPlacement>${halo}
+            <Fill>
+              <CssParameter name="fill">${fontColor}</CssParameter>
+            </Fill>
+            <VendorOption name="maxDisplacement">${maxDisplacement}</VendorOption>
+            <VendorOption name="autoWrap">60</VendorOption>
+            <VendorOption name="conflictResolution">true</VendorOption>
+          </TextSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate gradient fill SLD
+function generateGradientFillSLD(
+  styleName: string,
+  color1: string,
+  _color2: string,
+  _gradientType: 'linear' | 'radial' = 'linear',
+  _angle: number = 90,
+  strokeColor: string,
+  strokeWidth: number
+): string {
+  // Note: GeoServer SLD doesn't directly support gradients,
+  // but we can use a vendor-specific extension or a workaround with multiple symbolizers
+  // For now, we'll use a simple two-color fill with transparency gradient effect
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Gradient Fill</Title>
+      <Abstract>Simulated gradient using GeoServer rendering transformations</Abstract>
+      <FeatureTypeStyle>
+        <Rule>
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">${color1}</CssParameter>
+            </Fill>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate categorized style SLD
+function generateCategorizedSLD(
+  styleName: string,
+  attribute: string,
+  categories: { value: string; color: string; label: string }[],
+  geomType: 'polygon' | 'line' | 'point',
+  strokeColor: string,
+  strokeWidth: number,
+  defaultColor: string = '#cccccc'
+): string {
+  const rules = categories.map(cat => {
+    const symbolizer = geomType === 'polygon' ? `
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">${cat.color}</CssParameter>
+            </Fill>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>` : geomType === 'line' ? `
+          <LineSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">${cat.color}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </LineSymbolizer>` : `
+          <PointSymbolizer>
+            <Graphic>
+              <Mark>
+                <WellKnownName>circle</WellKnownName>
+                <Fill>
+                  <CssParameter name="fill">${cat.color}</CssParameter>
+                </Fill>
+                <Stroke>
+                  <CssParameter name="stroke">${strokeColor}</CssParameter>
+                  <CssParameter name="stroke-width">1</CssParameter>
+                </Stroke>
+              </Mark>
+              <Size>8</Size>
+            </Graphic>
+          </PointSymbolizer>`
+
+    return `
+        <Rule>
+          <Name>${cat.label}</Name>
+          <Title>${cat.label}</Title>
+          <ogc:Filter>
+            <ogc:PropertyIsEqualTo>
+              <ogc:PropertyName>${attribute}</ogc:PropertyName>
+              <ogc:Literal>${cat.value}</ogc:Literal>
+            </ogc:PropertyIsEqualTo>
+          </ogc:Filter>${symbolizer}
+        </Rule>`
+  }).join('')
+
+  // Add default rule for unmatched values
+  const defaultSymbolizer = geomType === 'polygon' ? `
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">${defaultColor}</CssParameter>
+            </Fill>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>` : geomType === 'line' ? `
+          <LineSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">${defaultColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </LineSymbolizer>` : `
+          <PointSymbolizer>
+            <Graphic>
+              <Mark>
+                <WellKnownName>circle</WellKnownName>
+                <Fill>
+                  <CssParameter name="fill">${defaultColor}</CssParameter>
+                </Fill>
+              </Mark>
+              <Size>8</Size>
+            </Graphic>
+          </PointSymbolizer>`
+
+  const defaultRule = `
+        <Rule>
+          <Name>Other</Name>
+          <Title>Other</Title>
+          <ElseFilter/>${defaultSymbolizer}
+        </Rule>`
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Categorized</Title>
+      <FeatureTypeStyle>${rules}${defaultRule}
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate rule-based style SLD
+function generateRuleBasedSLD(
+  styleName: string,
+  rules: { name: string; filter: string; color: string; size?: number }[],
+  geomType: 'polygon' | 'line' | 'point',
+  strokeColor: string,
+  strokeWidth: number
+): string {
+  const rulesSLD = rules.map(rule => {
+    const symbolizer = geomType === 'polygon' ? `
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">${rule.color}</CssParameter>
+            </Fill>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>` : geomType === 'line' ? `
+          <LineSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">${rule.color}</CssParameter>
+              <CssParameter name="stroke-width">${rule.size || strokeWidth}</CssParameter>
+            </Stroke>
+          </LineSymbolizer>` : `
+          <PointSymbolizer>
+            <Graphic>
+              <Mark>
+                <WellKnownName>circle</WellKnownName>
+                <Fill>
+                  <CssParameter name="fill">${rule.color}</CssParameter>
+                </Fill>
+              </Mark>
+              <Size>${rule.size || 8}</Size>
+            </Graphic>
+          </PointSymbolizer>`
+
+    return `
+        <Rule>
+          <Name>${rule.name}</Name>
+          <Title>${rule.name}</Title>
+          <ogc:Filter>
+            ${rule.filter}
+          </ogc:Filter>${symbolizer}
+        </Rule>`
+  }).join('')
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Rule Based</Title>
+      <FeatureTypeStyle>${rulesSLD}
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate proportional symbol SLD
+function generateProportionalSymbolSLD(
+  styleName: string,
+  attribute: string,
+  minSize: number,
+  maxSize: number,
+  minValue: number,
+  maxValue: number,
+  fillColor: string,
+  strokeColor: string,
+  markerShape: string = 'circle'
+): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Proportional Symbol</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <PointSymbolizer>
+            <Graphic>
+              <Mark>
+                <WellKnownName>${markerShape}</WellKnownName>
+                <Fill>
+                  <CssParameter name="fill">${fillColor}</CssParameter>
+                </Fill>
+                <Stroke>
+                  <CssParameter name="stroke">${strokeColor}</CssParameter>
+                  <CssParameter name="stroke-width">1</CssParameter>
+                </Stroke>
+              </Mark>
+              <Size>
+                <ogc:Add>
+                  <ogc:Literal>${minSize}</ogc:Literal>
+                  <ogc:Mul>
+                    <ogc:Div>
+                      <ogc:Sub>
+                        <ogc:PropertyName>${attribute}</ogc:PropertyName>
+                        <ogc:Literal>${minValue}</ogc:Literal>
+                      </ogc:Sub>
+                      <ogc:Literal>${maxValue - minValue}</ogc:Literal>
+                    </ogc:Div>
+                    <ogc:Literal>${maxSize - minSize}</ogc:Literal>
+                  </ogc:Mul>
+                </ogc:Add>
+              </Size>
+            </Graphic>
+          </PointSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate centroid fill SLD
+function generateCentroidFillSLD(
+  styleName: string,
+  fillColor: string,
+  strokeColor: string,
+  strokeWidth: number,
+  markerShape: string,
+  markerSize: number,
+  markerFill: string
+): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Centroid Fill</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">${fillColor}</CssParameter>
+            </Fill>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>
+          <PointSymbolizer>
+            <Geometry>
+              <ogc:Function name="centroid">
+                <ogc:PropertyName>geometry</ogc:PropertyName>
+              </ogc:Function>
+            </Geometry>
+            <Graphic>
+              <Mark>
+                <WellKnownName>${markerShape}</WellKnownName>
+                <Fill>
+                  <CssParameter name="fill">${markerFill}</CssParameter>
+                </Fill>
+                <Stroke>
+                  <CssParameter name="stroke">${strokeColor}</CssParameter>
+                  <CssParameter name="stroke-width">1</CssParameter>
+                </Stroke>
+              </Mark>
+              <Size>${markerSize}</Size>
+            </Graphic>
+          </PointSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+
+// Generate raster contour SLD
+function generateRasterContourSLD(
+  styleName: string,
+  interval: number,
+  strokeColor: string,
+  strokeWidth: number,
+  _majorInterval: number = 5,
+  _majorStrokeWidth: number = 2,
+  labelContours: boolean = true
+): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0"
+  xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd"
+  xmlns="http://www.opengis.net/sld"
+  xmlns:ogc="http://www.opengis.net/ogc"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>${styleName}</Name>
+    <UserStyle>
+      <Title>${styleName} - Contours</Title>
+      <FeatureTypeStyle>
+        <Transformation>
+          <ogc:Function name="ras:Contour">
+            <ogc:Function name="parameter">
+              <ogc:Literal>data</ogc:Literal>
+            </ogc:Function>
+            <ogc:Function name="parameter">
+              <ogc:Literal>levels</ogc:Literal>
+              <ogc:Literal>${interval}</ogc:Literal>
+            </ogc:Function>
+          </ogc:Function>
+        </Transformation>
+        <Rule>
+          <Name>Contour</Name>
+          <LineSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">${strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">${strokeWidth}</CssParameter>
+            </Stroke>
+          </LineSymbolizer>${labelContours ? `
+          <TextSymbolizer>
+            <Label>
+              <ogc:PropertyName>value</ogc:PropertyName>
+            </Label>
+            <Font>
+              <CssParameter name="font-family">Arial</CssParameter>
+              <CssParameter name="font-size">10</CssParameter>
+            </Font>
+            <LabelPlacement>
+              <LinePlacement/>
+            </LabelPlacement>
+            <Fill>
+              <CssParameter name="fill">${strokeColor}</CssParameter>
+            </Fill>
+            <VendorOption name="followLine">true</VendorOption>
+            <VendorOption name="maxAngleDelta">90</VendorOption>
+            <VendorOption name="repeat">200</VendorOption>
+          </TextSymbolizer>` : ''}
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`
+}
+// Export SLD generators for external use
+export {
+  generateHatchFillSLD,
+  generatePointPatternFillSLD,
+  generateMarkerLineSLD,
+  generateArrowLineSLD,
+  generateLabelSLD,
+  generateGradientFillSLD,
+  generateCategorizedSLD,
+  generateRuleBasedSLD,
+  generateProportionalSymbolSLD,
+  generateCentroidFillSLD,
+  generateRasterContourSLD,
+}
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 // Calculate equal interval breaks
 function equalIntervalBreaks(values: number[], numClasses: number): number[] {
@@ -322,6 +1454,272 @@ function generateClassifiedSLD(
 </StyledLayerDescriptor>`
 }
 
+// Beautiful point style presets
+interface PointStylePreset {
+  name: string
+  description: string
+  icon: string
+  shape: string
+  fill: string
+  fillOpacity: number
+  stroke: string
+  strokeWidth: number
+  size: number
+  haloColor?: string
+  haloRadius?: number
+  rotation?: number
+}
+
+const POINT_STYLE_PRESETS: PointStylePreset[] = [
+  // Classic pins
+  {
+    name: 'Ocean Drop',
+    description: 'Deep blue with soft glow',
+    icon: '💧',
+    shape: 'circle',
+    fill: '#0077be',
+    fillOpacity: 0.9,
+    stroke: '#004d80',
+    strokeWidth: 2,
+    size: 12,
+    haloColor: '#87ceeb',
+    haloRadius: 3,
+  },
+  {
+    name: 'Sunset Glow',
+    description: 'Warm orange with golden halo',
+    icon: '🌅',
+    shape: 'circle',
+    fill: '#ff6b35',
+    fillOpacity: 0.95,
+    stroke: '#cc4400',
+    strokeWidth: 2,
+    size: 14,
+    haloColor: '#ffd700',
+    haloRadius: 4,
+  },
+  {
+    name: 'Forest Emerald',
+    description: 'Rich green nature marker',
+    icon: '🌲',
+    shape: 'circle',
+    fill: '#228b22',
+    fillOpacity: 0.9,
+    stroke: '#145214',
+    strokeWidth: 2,
+    size: 12,
+    haloColor: '#90ee90',
+    haloRadius: 3,
+  },
+  {
+    name: 'Royal Purple',
+    description: 'Elegant purple with silver edge',
+    icon: '👑',
+    shape: 'circle',
+    fill: '#8b008b',
+    fillOpacity: 0.9,
+    stroke: '#c0c0c0',
+    strokeWidth: 2,
+    size: 12,
+    haloColor: '#dda0dd',
+    haloRadius: 3,
+  },
+  {
+    name: 'Cherry Blossom',
+    description: 'Soft pink with delicate outline',
+    icon: '🌸',
+    shape: 'circle',
+    fill: '#ffb7c5',
+    fillOpacity: 0.95,
+    stroke: '#ff69b4',
+    strokeWidth: 1.5,
+    size: 11,
+    haloColor: '#fff0f5',
+    haloRadius: 2,
+  },
+  // Geometric shapes
+  {
+    name: 'Diamond Marker',
+    description: 'Classic diamond shape',
+    icon: '💎',
+    shape: 'square',
+    fill: '#00bfff',
+    fillOpacity: 0.85,
+    stroke: '#0080ff',
+    strokeWidth: 2,
+    size: 14,
+    rotation: 45,
+  },
+  {
+    name: 'Golden Star',
+    description: 'Bright star for highlights',
+    icon: '⭐',
+    shape: 'star',
+    fill: '#ffd700',
+    fillOpacity: 1,
+    stroke: '#b8860b',
+    strokeWidth: 1.5,
+    size: 16,
+  },
+  {
+    name: 'Ruby Triangle',
+    description: 'Bold triangular marker',
+    icon: '🔺',
+    shape: 'triangle',
+    fill: '#dc143c',
+    fillOpacity: 0.9,
+    stroke: '#8b0000',
+    strokeWidth: 2,
+    size: 14,
+  },
+  {
+    name: 'Navy Square',
+    description: 'Professional square marker',
+    icon: '🔷',
+    shape: 'square',
+    fill: '#1e3a5f',
+    fillOpacity: 0.95,
+    stroke: '#0d1b2a',
+    strokeWidth: 2,
+    size: 12,
+  },
+  // Special effects
+  {
+    name: 'Neon Pulse',
+    description: 'Bright neon with glow effect',
+    icon: '💡',
+    shape: 'circle',
+    fill: '#00ff88',
+    fillOpacity: 1,
+    stroke: '#00cc6a',
+    strokeWidth: 1,
+    size: 10,
+    haloColor: '#00ff88',
+    haloRadius: 6,
+  },
+  {
+    name: 'Fire Ember',
+    description: 'Hot red with orange glow',
+    icon: '🔥',
+    shape: 'circle',
+    fill: '#ff4500',
+    fillOpacity: 0.95,
+    stroke: '#8b0000',
+    strokeWidth: 2,
+    size: 12,
+    haloColor: '#ff8c00',
+    haloRadius: 4,
+  },
+  {
+    name: 'Ice Crystal',
+    description: 'Cool blue with frost effect',
+    icon: '❄️',
+    shape: 'star',
+    fill: '#e0ffff',
+    fillOpacity: 0.9,
+    stroke: '#00ced1',
+    strokeWidth: 1.5,
+    size: 14,
+    haloColor: '#b0e0e6',
+    haloRadius: 3,
+  },
+  {
+    name: 'Midnight Shadow',
+    description: 'Dark with subtle shadow',
+    icon: '🌙',
+    shape: 'circle',
+    fill: '#2c3e50',
+    fillOpacity: 0.95,
+    stroke: '#1a252f',
+    strokeWidth: 2,
+    size: 12,
+    haloColor: '#34495e',
+    haloRadius: 4,
+  },
+  {
+    name: 'Coral Reef',
+    description: 'Vibrant coral with aqua edge',
+    icon: '🐠',
+    shape: 'circle',
+    fill: '#ff7f50',
+    fillOpacity: 0.9,
+    stroke: '#20b2aa',
+    strokeWidth: 2,
+    size: 12,
+    haloColor: '#40e0d0',
+    haloRadius: 3,
+  },
+  // Professional markers
+  {
+    name: 'Map Pin Red',
+    description: 'Classic red location pin',
+    icon: '📍',
+    shape: 'circle',
+    fill: '#e74c3c',
+    fillOpacity: 1,
+    stroke: '#c0392b',
+    strokeWidth: 2,
+    size: 14,
+    haloColor: '#ffffff',
+    haloRadius: 2,
+  },
+  {
+    name: 'Corporate Blue',
+    description: 'Clean professional blue',
+    icon: '🏢',
+    shape: 'circle',
+    fill: '#3498db',
+    fillOpacity: 0.95,
+    stroke: '#2980b9',
+    strokeWidth: 2,
+    size: 12,
+  },
+  {
+    name: 'Success Green',
+    description: 'Positive indicator marker',
+    icon: '✅',
+    shape: 'circle',
+    fill: '#27ae60',
+    fillOpacity: 0.95,
+    stroke: '#1e8449',
+    strokeWidth: 2,
+    size: 12,
+  },
+  {
+    name: 'Warning Amber',
+    description: 'Attention-grabbing yellow',
+    icon: '⚠️',
+    shape: 'triangle',
+    fill: '#f39c12',
+    fillOpacity: 1,
+    stroke: '#d68910',
+    strokeWidth: 2,
+    size: 14,
+  },
+  {
+    name: 'Cross Mark',
+    description: 'X marker for exclusions',
+    icon: '❌',
+    shape: 'cross',
+    fill: '#e74c3c',
+    fillOpacity: 1,
+    stroke: '#c0392b',
+    strokeWidth: 2,
+    size: 14,
+  },
+  {
+    name: 'Target Bullseye',
+    description: 'Precision crosshair marker',
+    icon: '🎯',
+    shape: 'cross',
+    fill: '#2c3e50',
+    fillOpacity: 1,
+    stroke: '#e74c3c',
+    strokeWidth: 3,
+    size: 16,
+  },
+]
+
 // Style rule interface for visual editor
 interface StyleRule {
   name: string
@@ -333,8 +1731,11 @@ interface StyleRule {
     stroke?: string
     strokeWidth?: number
     strokeOpacity?: number
-    pointShape?: 'circle' | 'square' | 'triangle' | 'star' | 'cross'
+    pointShape?: 'circle' | 'square' | 'triangle' | 'star' | 'cross' | 'x'
     pointSize?: number
+    haloColor?: string
+    haloRadius?: number
+    rotation?: number
   }
 }
 
@@ -456,7 +1857,13 @@ function generateSLD(styleName: string, rules: StyleRule[]): string {
             </Stroke>
           </LineSymbolizer>`
     } else if (rule.symbolizer.type === 'point') {
-      symbolizerXml = `
+      // Build optional rotation element
+      const rotationXml = rule.symbolizer.rotation
+        ? `\n              <Rotation>${rule.symbolizer.rotation}</Rotation>`
+        : ''
+
+      // Build the main point symbolizer
+      let mainSymbolizer = `
           <PointSymbolizer>
             <Graphic>
               <Mark>
@@ -470,9 +1877,30 @@ function generateSLD(styleName: string, rules: StyleRule[]): string {
                   <CssParameter name="stroke-width">${rule.symbolizer.strokeWidth || 1}</CssParameter>
                 </Stroke>
               </Mark>
-              <Size>${rule.symbolizer.pointSize || 8}</Size>
+              <Size>${rule.symbolizer.pointSize || 8}</Size>${rotationXml}
             </Graphic>
           </PointSymbolizer>`
+
+      // Add halo effect as an additional symbolizer behind the main one
+      if (rule.symbolizer.haloColor && rule.symbolizer.haloRadius) {
+        const haloSize = (rule.symbolizer.pointSize || 8) + (rule.symbolizer.haloRadius * 2)
+        const haloSymbolizer = `
+          <PointSymbolizer>
+            <Graphic>
+              <Mark>
+                <WellKnownName>${rule.symbolizer.pointShape || 'circle'}</WellKnownName>
+                <Fill>
+                  <CssParameter name="fill">${rule.symbolizer.haloColor}</CssParameter>
+                  <CssParameter name="fill-opacity">0.4</CssParameter>
+                </Fill>
+              </Mark>
+              <Size>${haloSize}</Size>${rotationXml}
+            </Graphic>
+          </PointSymbolizer>`
+        symbolizerXml = haloSymbolizer + mainSymbolizer
+      } else {
+        symbolizerXml = mainSymbolizer
+      }
     }
 
     rulesXml += `
@@ -565,6 +1993,7 @@ function RuleEditor({
 }) {
   const bgColor = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
+  const [showMorePresets, setShowMorePresets] = useState(false)
 
   const updateSymbolizer = (updates: Partial<StyleRule['symbolizer']>) => {
     onChange({
@@ -700,19 +2129,189 @@ function RuleEditor({
         {rule.symbolizer.type === 'point' && (
           <Box>
             <Text fontWeight="600" fontSize="sm" mb={2}>Point Symbol</Text>
-            <HStack spacing={4}>
+
+            {/* Style Presets Gallery */}
+            <Box mb={4}>
+              <Text fontSize="xs" color="gray.500" mb={2}>Quick Presets</Text>
+              <Flex flexWrap="wrap" gap={2}>
+                {POINT_STYLE_PRESETS.slice(0, 10).map((preset) => (
+                  <Box
+                    key={preset.name}
+                    title={`${preset.name}: ${preset.description}`}
+                    cursor="pointer"
+                    p={1}
+                    borderRadius="md"
+                    border="2px solid"
+                    borderColor={
+                      rule.symbolizer.fill === preset.fill &&
+                      rule.symbolizer.pointShape === preset.shape
+                        ? 'kartoza.500'
+                        : 'transparent'
+                    }
+                    _hover={{ borderColor: 'kartoza.300', bg: 'gray.50' }}
+                    onClick={() => {
+                      updateSymbolizer({
+                        pointShape: preset.shape as 'circle' | 'square' | 'triangle' | 'star' | 'cross' | 'x',
+                        fill: preset.fill,
+                        fillOpacity: preset.fillOpacity,
+                        stroke: preset.stroke,
+                        strokeWidth: preset.strokeWidth,
+                        pointSize: preset.size,
+                        haloColor: preset.haloColor,
+                        haloRadius: preset.haloRadius,
+                        rotation: preset.rotation,
+                      })
+                    }}
+                  >
+                    <Box
+                      w="28px"
+                      h="28px"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      position="relative"
+                    >
+                      {/* Halo effect */}
+                      {preset.haloColor && (
+                        <Box
+                          position="absolute"
+                          w={`${preset.size + (preset.haloRadius || 0) * 2}px`}
+                          h={`${preset.size + (preset.haloRadius || 0) * 2}px`}
+                          borderRadius={preset.shape === 'circle' ? '50%' : preset.shape === 'triangle' ? '0' : 'sm'}
+                          bg={preset.haloColor}
+                          opacity={0.4}
+                          transform={preset.rotation ? `rotate(${preset.rotation}deg)` : undefined}
+                          style={{
+                            clipPath: preset.shape === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : undefined,
+                          }}
+                        />
+                      )}
+                      {/* Main symbol */}
+                      <Box
+                        position="relative"
+                        w={`${preset.size}px`}
+                        h={`${preset.size}px`}
+                        borderRadius={preset.shape === 'circle' ? '50%' : preset.shape === 'triangle' ? '0' : 'sm'}
+                        bg={preset.fill}
+                        opacity={preset.fillOpacity}
+                        border={`${preset.strokeWidth}px solid ${preset.stroke}`}
+                        transform={preset.rotation ? `rotate(${preset.rotation}deg)` : undefined}
+                        style={{
+                          clipPath: preset.shape === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' :
+                                   preset.shape === 'star' ? 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' :
+                                   preset.shape === 'cross' ? 'polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%)' :
+                                   undefined,
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                ))}
+              </Flex>
+
+              {/* Show more presets */}
+              <Collapse in={showMorePresets} animateOpacity>
+                <Flex flexWrap="wrap" gap={2} mt={2}>
+                  {POINT_STYLE_PRESETS.slice(10).map((preset) => (
+                    <Box
+                      key={preset.name}
+                      title={`${preset.name}: ${preset.description}`}
+                      cursor="pointer"
+                      p={1}
+                      borderRadius="md"
+                      border="2px solid"
+                      borderColor={
+                        rule.symbolizer.fill === preset.fill &&
+                        rule.symbolizer.pointShape === preset.shape
+                          ? 'kartoza.500'
+                          : 'transparent'
+                      }
+                      _hover={{ borderColor: 'kartoza.300', bg: 'gray.50' }}
+                      onClick={() => {
+                        updateSymbolizer({
+                          pointShape: preset.shape as 'circle' | 'square' | 'triangle' | 'star' | 'cross' | 'x',
+                          fill: preset.fill,
+                          fillOpacity: preset.fillOpacity,
+                          stroke: preset.stroke,
+                          strokeWidth: preset.strokeWidth,
+                          pointSize: preset.size,
+                          haloColor: preset.haloColor,
+                          haloRadius: preset.haloRadius,
+                          rotation: preset.rotation,
+                        })
+                      }}
+                    >
+                      <Box
+                        w="28px"
+                        h="28px"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        position="relative"
+                      >
+                        {preset.haloColor && (
+                          <Box
+                            position="absolute"
+                            w={`${preset.size + (preset.haloRadius || 0) * 2}px`}
+                            h={`${preset.size + (preset.haloRadius || 0) * 2}px`}
+                            borderRadius={preset.shape === 'circle' ? '50%' : preset.shape === 'triangle' ? '0' : 'sm'}
+                            bg={preset.haloColor}
+                            opacity={0.4}
+                            transform={preset.rotation ? `rotate(${preset.rotation}deg)` : undefined}
+                            style={{
+                              clipPath: preset.shape === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : undefined,
+                            }}
+                          />
+                        )}
+                        <Box
+                          position="relative"
+                          w={`${preset.size}px`}
+                          h={`${preset.size}px`}
+                          borderRadius={preset.shape === 'circle' ? '50%' : preset.shape === 'triangle' ? '0' : 'sm'}
+                          bg={preset.fill}
+                          opacity={preset.fillOpacity}
+                          border={`${preset.strokeWidth}px solid ${preset.stroke}`}
+                          transform={preset.rotation ? `rotate(${preset.rotation}deg)` : undefined}
+                          style={{
+                            clipPath: preset.shape === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' :
+                                     preset.shape === 'star' ? 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' :
+                                     preset.shape === 'cross' ? 'polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%)' :
+                                     undefined,
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  ))}
+                </Flex>
+              </Collapse>
+
+              <Button
+                size="xs"
+                variant="ghost"
+                mt={2}
+                onClick={() => setShowMorePresets(!showMorePresets)}
+                rightIcon={<Icon as={showMorePresets ? FiChevronUp : FiChevronDown} />}
+              >
+                {showMorePresets ? 'Show Less' : `Show ${POINT_STYLE_PRESETS.length - 10} More`}
+              </Button>
+            </Box>
+
+            <Divider my={3} />
+
+            {/* Manual controls */}
+            <HStack spacing={4} wrap="wrap">
               <FormControl maxW="150px">
                 <FormLabel fontSize="sm">Shape</FormLabel>
                 <Select
                   size="sm"
                   value={rule.symbolizer.pointShape || 'circle'}
-                  onChange={(e) => updateSymbolizer({ pointShape: e.target.value as 'circle' | 'square' | 'triangle' | 'star' | 'cross' })}
+                  onChange={(e) => updateSymbolizer({ pointShape: e.target.value as 'circle' | 'square' | 'triangle' | 'star' | 'cross' | 'x' })}
                 >
                   <option value="circle">Circle</option>
                   <option value="square">Square</option>
                   <option value="triangle">Triangle</option>
                   <option value="star">Star</option>
                   <option value="cross">Cross</option>
+                  <option value="x">X</option>
                 </Select>
               </FormControl>
               <FormControl maxW="100px">
@@ -731,7 +2330,64 @@ function RuleEditor({
                   </NumberInputStepper>
                 </NumberInput>
               </FormControl>
+              <FormControl maxW="100px">
+                <FormLabel fontSize="sm">Rotation</FormLabel>
+                <NumberInput
+                  size="sm"
+                  value={rule.symbolizer.rotation || 0}
+                  min={0}
+                  max={360}
+                  step={15}
+                  onChange={(_, val) => updateSymbolizer({ rotation: val })}
+                >
+                  <NumberInputField />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
+              </FormControl>
             </HStack>
+
+            {/* Halo / Glow effect */}
+            <Box mt={4}>
+              <Text fontWeight="600" fontSize="sm" mb={2}>Halo / Glow Effect</Text>
+              <HStack spacing={4} wrap="wrap">
+                <ColorPicker
+                  label="Halo Color"
+                  value={rule.symbolizer.haloColor || '#ffffff'}
+                  onChange={(color) => updateSymbolizer({ haloColor: color })}
+                />
+                <FormControl maxW="120px">
+                  <FormLabel fontSize="sm">Halo Radius</FormLabel>
+                  <HStack>
+                    <Slider
+                      value={rule.symbolizer.haloRadius || 0}
+                      min={0}
+                      max={10}
+                      step={1}
+                      onChange={(val) => updateSymbolizer({ haloRadius: val })}
+                    >
+                      <SliderTrack>
+                        <SliderFilledTrack bg="kartoza.500" />
+                      </SliderTrack>
+                      <SliderThumb />
+                    </Slider>
+                    <Text fontSize="sm" w="30px">{rule.symbolizer.haloRadius || 0}px</Text>
+                  </HStack>
+                </FormControl>
+                {rule.symbolizer.haloRadius && rule.symbolizer.haloRadius > 0 && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    colorScheme="red"
+                    onClick={() => updateSymbolizer({ haloRadius: 0, haloColor: undefined })}
+                  >
+                    Remove Halo
+                  </Button>
+                )}
+              </HStack>
+            </Box>
           </Box>
         )}
 
@@ -768,14 +2424,45 @@ function RuleEditor({
               />
             )}
             {rule.symbolizer.type === 'point' && (
-              <Box
-                w={`${rule.symbolizer.pointSize || 8}px`}
-                h={`${rule.symbolizer.pointSize || 8}px`}
-                borderRadius={rule.symbolizer.pointShape === 'circle' ? '50%' : 'sm'}
-                bg={rule.symbolizer.fill}
-                opacity={rule.symbolizer.fillOpacity}
-                border={`${rule.symbolizer.strokeWidth}px solid ${rule.symbolizer.stroke}`}
-              />
+              <Box position="relative" display="flex" alignItems="center" justifyContent="center">
+                {/* Halo effect */}
+                {rule.symbolizer.haloColor && rule.symbolizer.haloRadius && rule.symbolizer.haloRadius > 0 && (
+                  <Box
+                    position="absolute"
+                    w={`${(rule.symbolizer.pointSize || 8) + rule.symbolizer.haloRadius * 2}px`}
+                    h={`${(rule.symbolizer.pointSize || 8) + rule.symbolizer.haloRadius * 2}px`}
+                    borderRadius={rule.symbolizer.pointShape === 'circle' ? '50%' : rule.symbolizer.pointShape === 'triangle' ? '0' : 'sm'}
+                    bg={rule.symbolizer.haloColor}
+                    opacity={0.4}
+                    transform={rule.symbolizer.rotation ? `rotate(${rule.symbolizer.rotation}deg)` : undefined}
+                    style={{
+                      clipPath: rule.symbolizer.pointShape === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' :
+                               rule.symbolizer.pointShape === 'star' ? 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' :
+                               rule.symbolizer.pointShape === 'cross' ? 'polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%)' :
+                               rule.symbolizer.pointShape === 'x' ? 'polygon(10% 0%, 50% 40%, 90% 0%, 100% 10%, 60% 50%, 100% 90%, 90% 100%, 50% 60%, 10% 100%, 0% 90%, 40% 50%, 0% 10%)' :
+                               undefined,
+                    }}
+                  />
+                )}
+                {/* Main point symbol */}
+                <Box
+                  position="relative"
+                  w={`${rule.symbolizer.pointSize || 8}px`}
+                  h={`${rule.symbolizer.pointSize || 8}px`}
+                  borderRadius={rule.symbolizer.pointShape === 'circle' ? '50%' : rule.symbolizer.pointShape === 'triangle' ? '0' : 'sm'}
+                  bg={rule.symbolizer.fill}
+                  opacity={rule.symbolizer.fillOpacity}
+                  border={`${rule.symbolizer.strokeWidth}px solid ${rule.symbolizer.stroke}`}
+                  transform={rule.symbolizer.rotation ? `rotate(${rule.symbolizer.rotation}deg)` : undefined}
+                  style={{
+                    clipPath: rule.symbolizer.pointShape === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' :
+                             rule.symbolizer.pointShape === 'star' ? 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' :
+                             rule.symbolizer.pointShape === 'cross' ? 'polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%)' :
+                             rule.symbolizer.pointShape === 'x' ? 'polygon(10% 0%, 50% 40%, 90% 0%, 100% 10%, 60% 50%, 100% 90%, 90% 100%, 50% 60%, 10% 100%, 0% 90%, 40% 50%, 0% 10%)' :
+                             undefined,
+                  }}
+                />
+              </Box>
             )}
           </Box>
         </Box>
@@ -816,6 +2503,20 @@ export function StyleDialog() {
   const [classifyColorRamp, setClassifyColorRamp] = useState('blue-to-red')
   const [classifyGeomType, setClassifyGeomType] = useState<'polygon' | 'line' | 'point'>('polygon')
   const [classifySampleValues, setClassifySampleValues] = useState('')
+
+  // Raster style wizard state
+  const { isOpen: rasterPanelOpen, onToggle: toggleRasterPanel } = useDisclosure()
+  const [rasterStyleType, setRasterStyleType] = useState<'colormap' | 'hillshade' | 'hillshade-color' | 'contrast'>('colormap')
+  const [rasterColorRamp, setRasterColorRamp] = useState('rainbow')
+  const [rasterMinValue, setRasterMinValue] = useState(0)
+  const [rasterMaxValue, setRasterMaxValue] = useState(1000)
+  const [rasterOpacity, setRasterOpacity] = useState(1)
+  const [rasterColorMapType, setRasterColorMapType] = useState<'ramp' | 'intervals' | 'values'>('ramp')
+  const [hillshadeAzimuth, setHillshadeAzimuth] = useState(315)
+  const [hillshadeAltitude, setHillshadeAltitude] = useState(45)
+  const [hillshadeZFactor, setHillshadeZFactor] = useState(1)
+  const [contrastMethod, setContrastMethod] = useState<'normalize' | 'histogram' | 'none'>('normalize')
+  const [gammaValue, setGammaValue] = useState(1.0)
 
   const bgColor = useColorModeValue('gray.50', 'gray.900')
   const headerBg = useColorModeValue('linear-gradient(135deg, #3d9970 0%, #2d7a5a 100%)', 'linear-gradient(135deg, #2d7a5a 0%, #1d5a40 100%)')
@@ -1046,6 +2747,77 @@ export function StyleDialog() {
     })
   }
 
+  // Generate raster style
+  const handleGenerateRasterStyle = () => {
+    const styleName_ = name || 'RasterStyle'
+    const colorRamp = RASTER_COLOR_RAMPS[rasterColorRamp]?.colors || RASTER_COLOR_RAMPS['rainbow'].colors
+    let sld: string
+
+    switch (rasterStyleType) {
+      case 'colormap':
+        sld = generateRasterColorMapSLD(
+          styleName_,
+          colorRamp,
+          rasterMinValue,
+          rasterMaxValue,
+          rasterColorMapType,
+          rasterOpacity
+        )
+        break
+      case 'hillshade':
+        sld = generateHillshadeSLD(
+          styleName_,
+          hillshadeAzimuth,
+          hillshadeAltitude,
+          hillshadeZFactor,
+          rasterOpacity
+        )
+        break
+      case 'hillshade-color':
+        sld = generateHillshadeWithColorSLD(
+          styleName_,
+          colorRamp,
+          rasterMinValue,
+          rasterMaxValue,
+          hillshadeAzimuth,
+          hillshadeAltitude,
+          hillshadeZFactor,
+          rasterOpacity
+        )
+        break
+      case 'contrast':
+        sld = generateContrastEnhancementSLD(
+          styleName_,
+          contrastMethod,
+          gammaValue,
+          rasterOpacity
+        )
+        break
+      default:
+        sld = generateRasterColorMapSLD(styleName_, colorRamp, rasterMinValue, rasterMaxValue, 'ramp', rasterOpacity)
+    }
+
+    setContent(sld)
+    setFormat('sld')
+    setRules([]) // Clear vector rules
+    setHasChanges(true)
+    setActiveTab(1) // Switch to code editor to show result
+
+    toast({
+      title: 'Raster style generated',
+      description: `Created ${rasterStyleType === 'hillshade' ? 'hillshade' : rasterStyleType === 'hillshade-color' ? 'hillshade with colors' : rasterStyleType === 'contrast' ? 'contrast enhanced' : 'color map'} style`,
+      status: 'success',
+      duration: 3000,
+    })
+  }
+
+  // Apply hillshade preset
+  const applyHillshadePreset = (preset: typeof HILLSHADE_PRESETS[0]) => {
+    setHillshadeAzimuth(preset.azimuth)
+    setHillshadeAltitude(preset.altitude)
+    setHillshadeZFactor(preset.zFactor)
+  }
+
   const extensions = useMemo(() => {
     return format === 'sld' ? [xml()] : [css()]
   }, [format])
@@ -1269,6 +3041,223 @@ export function StyleDialog() {
                             isDisabled={!classifyAttribute || !classifySampleValues}
                           >
                             Generate Style
+                          </Button>
+                        </VStack>
+                      </Collapse>
+
+                      <Divider />
+
+                      <Text fontWeight="600">Raster Style</Text>
+                      <Button
+                        size="sm"
+                        leftIcon={<Icon as={FiImage} />}
+                        rightIcon={<Icon as={rasterPanelOpen ? FiChevronUp : FiChevronDown} />}
+                        variant="outline"
+                        colorScheme="purple"
+                        onClick={toggleRasterPanel}
+                      >
+                        Raster Wizard
+                      </Button>
+
+                      <Collapse in={rasterPanelOpen} animateOpacity>
+                        <VStack spacing={3} p={3} bg="purple.50" borderRadius="md" align="stretch">
+                          <FormControl size="sm">
+                            <FormLabel fontSize="xs">Style Type</FormLabel>
+                            <Select
+                              size="sm"
+                              value={rasterStyleType}
+                              onChange={(e) => setRasterStyleType(e.target.value as 'colormap' | 'hillshade' | 'hillshade-color' | 'contrast')}
+                            >
+                              <option value="colormap">Color Map (Graduated)</option>
+                              <option value="hillshade">Hillshade Only</option>
+                              <option value="hillshade-color">Hillshade + Colors</option>
+                              <option value="contrast">Contrast Enhancement</option>
+                            </Select>
+                          </FormControl>
+
+                          {(rasterStyleType === 'colormap' || rasterStyleType === 'hillshade-color') && (
+                            <>
+                              <FormControl size="sm">
+                                <FormLabel fontSize="xs">Color Ramp</FormLabel>
+                                <Select
+                                  size="sm"
+                                  value={rasterColorRamp}
+                                  onChange={(e) => setRasterColorRamp(e.target.value)}
+                                >
+                                  {Object.entries(RASTER_COLOR_RAMPS).map(([key, ramp]) => (
+                                    <option key={key} value={key}>{ramp.name}</option>
+                                  ))}
+                                </Select>
+                                <HStack mt={1} spacing={0}>
+                                  {RASTER_COLOR_RAMPS[rasterColorRamp]?.colors.map((color, i) => (
+                                    <Box key={i} flex="1" h="8px" bg={color} borderRadius={i === 0 ? 'sm 0 0 sm' : i === RASTER_COLOR_RAMPS[rasterColorRamp].colors.length - 1 ? '0 sm sm 0' : '0'} />
+                                  ))}
+                                </HStack>
+                                <Text fontSize="xs" color="gray.500" mt={1}>
+                                  {RASTER_COLOR_RAMPS[rasterColorRamp]?.description}
+                                </Text>
+                              </FormControl>
+
+                              <FormControl size="sm">
+                                <FormLabel fontSize="xs">Min Value</FormLabel>
+                                <Input
+                                  size="sm"
+                                  type="number"
+                                  value={rasterMinValue}
+                                  onChange={(e) => setRasterMinValue(parseFloat(e.target.value) || 0)}
+                                />
+                              </FormControl>
+
+                              <FormControl size="sm">
+                                <FormLabel fontSize="xs">Max Value</FormLabel>
+                                <Input
+                                  size="sm"
+                                  type="number"
+                                  value={rasterMaxValue}
+                                  onChange={(e) => setRasterMaxValue(parseFloat(e.target.value) || 1000)}
+                                />
+                              </FormControl>
+
+                              {rasterStyleType === 'colormap' && (
+                                <FormControl size="sm">
+                                  <FormLabel fontSize="xs">Color Map Type</FormLabel>
+                                  <Select
+                                    size="sm"
+                                    value={rasterColorMapType}
+                                    onChange={(e) => setRasterColorMapType(e.target.value as 'ramp' | 'intervals' | 'values')}
+                                  >
+                                    <option value="ramp">Ramp (Smooth gradient)</option>
+                                    <option value="intervals">Intervals (Discrete)</option>
+                                    <option value="values">Values (Exact match)</option>
+                                  </Select>
+                                </FormControl>
+                              )}
+                            </>
+                          )}
+
+                          {(rasterStyleType === 'hillshade' || rasterStyleType === 'hillshade-color') && (
+                            <>
+                              <FormControl size="sm">
+                                <FormLabel fontSize="xs">Hillshade Preset</FormLabel>
+                                <Select
+                                  size="sm"
+                                  placeholder="Select preset..."
+                                  onChange={(e) => {
+                                    const preset = HILLSHADE_PRESETS.find(p => p.name === e.target.value)
+                                    if (preset) applyHillshadePreset(preset)
+                                  }}
+                                >
+                                  {HILLSHADE_PRESETS.map((preset) => (
+                                    <option key={preset.name} value={preset.name}>{preset.name}</option>
+                                  ))}
+                                </Select>
+                              </FormControl>
+
+                              <FormControl size="sm">
+                                <FormLabel fontSize="xs">Sun Azimuth: {hillshadeAzimuth}°</FormLabel>
+                                <Slider
+                                  value={hillshadeAzimuth}
+                                  onChange={(v) => setHillshadeAzimuth(v)}
+                                  min={0}
+                                  max={360}
+                                  step={15}
+                                >
+                                  <SliderTrack>
+                                    <SliderFilledTrack bg="purple.500" />
+                                  </SliderTrack>
+                                  <SliderThumb />
+                                </Slider>
+                              </FormControl>
+
+                              <FormControl size="sm">
+                                <FormLabel fontSize="xs">Sun Altitude: {hillshadeAltitude}°</FormLabel>
+                                <Slider
+                                  value={hillshadeAltitude}
+                                  onChange={(v) => setHillshadeAltitude(v)}
+                                  min={0}
+                                  max={90}
+                                  step={5}
+                                >
+                                  <SliderTrack>
+                                    <SliderFilledTrack bg="purple.500" />
+                                  </SliderTrack>
+                                  <SliderThumb />
+                                </Slider>
+                              </FormControl>
+
+                              <FormControl size="sm">
+                                <FormLabel fontSize="xs">Z Factor: {hillshadeZFactor}</FormLabel>
+                                <Slider
+                                  value={hillshadeZFactor}
+                                  onChange={(v) => setHillshadeZFactor(v)}
+                                  min={0.1}
+                                  max={5}
+                                  step={0.1}
+                                >
+                                  <SliderTrack>
+                                    <SliderFilledTrack bg="purple.500" />
+                                  </SliderTrack>
+                                  <SliderThumb />
+                                </Slider>
+                              </FormControl>
+                            </>
+                          )}
+
+                          {rasterStyleType === 'contrast' && (
+                            <>
+                              <FormControl size="sm">
+                                <FormLabel fontSize="xs">Enhancement Method</FormLabel>
+                                <Select
+                                  size="sm"
+                                  value={contrastMethod}
+                                  onChange={(e) => setContrastMethod(e.target.value as 'normalize' | 'histogram' | 'none')}
+                                >
+                                  <option value="normalize">Normalize (Stretch to min/max)</option>
+                                  <option value="histogram">Histogram Equalization</option>
+                                  <option value="none">None</option>
+                                </Select>
+                              </FormControl>
+
+                              <FormControl size="sm">
+                                <FormLabel fontSize="xs">Gamma: {gammaValue.toFixed(1)}</FormLabel>
+                                <Slider
+                                  value={gammaValue}
+                                  onChange={(v) => setGammaValue(v)}
+                                  min={0.1}
+                                  max={3}
+                                  step={0.1}
+                                >
+                                  <SliderTrack>
+                                    <SliderFilledTrack bg="purple.500" />
+                                  </SliderTrack>
+                                  <SliderThumb />
+                                </Slider>
+                              </FormControl>
+                            </>
+                          )}
+
+                          <FormControl size="sm">
+                            <FormLabel fontSize="xs">Opacity: {(rasterOpacity * 100).toFixed(0)}%</FormLabel>
+                            <Slider
+                              value={rasterOpacity}
+                              onChange={(v) => setRasterOpacity(v)}
+                              min={0}
+                              max={1}
+                              step={0.05}
+                            >
+                              <SliderTrack>
+                                <SliderFilledTrack bg="purple.500" />
+                              </SliderTrack>
+                              <SliderThumb />
+                            </Slider>
+                          </FormControl>
+
+                          <Button
+                            size="sm"
+                            colorScheme="purple"
+                            onClick={handleGenerateRasterStyle}
+                          >
+                            Generate Raster Style
                           </Button>
                         </VStack>
                       </Collapse>

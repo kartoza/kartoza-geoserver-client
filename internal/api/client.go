@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -774,18 +775,14 @@ func (c *Client) UpdateStyleContent(workspace, styleName, content, format string
 func (c *Client) CreateStyle(workspace, styleName, content, format string) error {
 	var basePath string
 	var contentType string
-	var extension string
 
 	switch format {
 	case "css":
 		contentType = "application/vnd.geoserver.geocss+css"
-		extension = ".css"
 	case "mbstyle":
 		contentType = "application/vnd.geoserver.mbstyle+json"
-		extension = ".json"
 	default: // sld
 		contentType = "application/vnd.ogc.sld+xml"
-		extension = ".sld"
 	}
 
 	if workspace == "" {
@@ -794,42 +791,25 @@ func (c *Client) CreateStyle(workspace, styleName, content, format string) error
 		basePath = fmt.Sprintf("/workspaces/%s/styles", workspace)
 	}
 
-	// First create the style definition
-	styleBody := map[string]interface{}{
-		"style": map[string]interface{}{
-			"name":     styleName,
-			"filename": styleName + extension,
-		},
-	}
-	resp, err := c.doJSONRequest("POST", basePath, styleBody)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to create style definition: status %d", resp.StatusCode)
-	}
-
-	// Now upload the style content
-	uploadPath := basePath + "/" + styleName
-	url := c.baseURL + "/rest" + uploadPath
-	req, err := http.NewRequest("PUT", url, strings.NewReader(content))
+	// Use the "raw" upload approach - POST the content directly with name parameter
+	// This is simpler and more reliable than the two-step approach
+	url := c.baseURL + "/rest" + basePath + "?name=" + neturl.QueryEscape(styleName)
+	req, err := http.NewRequest("POST", url, strings.NewReader(content))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 	req.SetBasicAuth(c.username, c.password)
 	req.Header.Set("Content-Type", contentType)
 
-	uploadResp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer uploadResp.Body.Close()
+	defer resp.Body.Close()
 
-	if uploadResp.StatusCode != http.StatusOK && uploadResp.StatusCode != http.StatusCreated && uploadResp.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(uploadResp.Body)
-		return fmt.Errorf("failed to upload style content: %s", string(body))
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to create style: status %d - %s", resp.StatusCode, string(body))
 	}
 
 	return nil
@@ -2513,6 +2493,90 @@ func (c *Client) UpdateLayerConfig(workspace string, config models.LayerConfig) 
 	return nil
 }
 
+// LayerStyles represents the styles associated with a layer
+type LayerStyles struct {
+	DefaultStyle    string   `json:"defaultStyle"`
+	AdditionalStyles []string `json:"styles"`
+}
+
+// GetLayerStyles retrieves the default and additional styles for a layer
+func (c *Client) GetLayerStyles(workspace, layerName string) (*LayerStyles, error) {
+	resp, err := c.doRequest("GET", fmt.Sprintf("/layers/%s:%s", workspace, layerName), nil, "")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get layer styles: %s", string(bodyBytes))
+	}
+
+	var result struct {
+		Layer struct {
+			DefaultStyle struct {
+				Name string `json:"name"`
+			} `json:"defaultStyle"`
+			Styles struct {
+				Style []struct {
+					Name string `json:"name"`
+				} `json:"style"`
+			} `json:"styles"`
+		} `json:"layer"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode layer styles: %w", err)
+	}
+
+	styles := &LayerStyles{
+		DefaultStyle: result.Layer.DefaultStyle.Name,
+	}
+
+	for _, s := range result.Layer.Styles.Style {
+		styles.AdditionalStyles = append(styles.AdditionalStyles, s.Name)
+	}
+
+	return styles, nil
+}
+
+// UpdateLayerStyles updates the default and additional styles for a layer
+func (c *Client) UpdateLayerStyles(workspace, layerName, defaultStyle string, additionalStyles []string) error {
+	// Build the styles array
+	stylesArray := make([]map[string]string, 0)
+	for _, styleName := range additionalStyles {
+		stylesArray = append(stylesArray, map[string]string{"name": styleName})
+	}
+
+	body := map[string]interface{}{
+		"layer": map[string]interface{}{
+			"defaultStyle": map[string]string{
+				"name": defaultStyle,
+			},
+		},
+	}
+
+	// Only include styles if there are additional styles
+	if len(stylesArray) > 0 {
+		body["layer"].(map[string]interface{})["styles"] = map[string]interface{}{
+			"style": stylesArray,
+		}
+	}
+
+	resp, err := c.doJSONRequest("PUT", fmt.Sprintf("/layers/%s:%s", workspace, layerName), body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update layer styles: %s", string(bodyBytes))
+	}
+
+	return nil
+}
+
 // GetDataStoreConfig retrieves data store configuration
 func (c *Client) GetDataStoreConfig(workspace, storeName string) (*models.DataStoreConfig, error) {
 	config := &models.DataStoreConfig{
@@ -3005,6 +3069,65 @@ func (c *Client) GetLayerMetadata(workspace, layerName string) (*models.LayerMet
 	}
 
 	return metadata, nil
+}
+
+// GetFeatureCount returns the feature count for a vector layer via WFS
+// Returns -1 if the count cannot be determined (e.g., for raster layers)
+func (c *Client) GetFeatureCount(workspace, layerName string) (int64, error) {
+	// Construct WFS URL for GetFeature with resultType=hits
+	wfsURL := fmt.Sprintf("%s/%s/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=%s:%s&resultType=hits",
+		c.baseURL, workspace, workspace, layerName)
+
+	req, err := http.NewRequest("GET", wfsURL, nil)
+	if err != nil {
+		return -1, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.SetBasicAuth(c.username, c.password)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return -1, fmt.Errorf("WFS request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return -1, fmt.Errorf("WFS request returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return -1, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	bodyStr := string(body)
+
+	// Parse numberMatched or numberOfFeatures from the response
+	// WFS 2.0 uses numberMatched, WFS 1.x uses numberOfFeatures
+	var count int64 = -1
+
+	// Try numberMatched first (WFS 2.0)
+	if idx := strings.Index(bodyStr, "numberMatched=\""); idx != -1 {
+		start := idx + len("numberMatched=\"")
+		end := strings.Index(bodyStr[start:], "\"")
+		if end != -1 {
+			if n, err := fmt.Sscanf(bodyStr[start:start+end], "%d", &count); err == nil && n == 1 {
+				return count, nil
+			}
+		}
+	}
+
+	// Try numberOfFeatures (WFS 1.x)
+	if idx := strings.Index(bodyStr, "numberOfFeatures=\""); idx != -1 {
+		start := idx + len("numberOfFeatures=\"")
+		end := strings.Index(bodyStr[start:], "\"")
+		if end != -1 {
+			if n, err := fmt.Sscanf(bodyStr[start:start+end], "%d", &count); err == nil && n == 1 {
+				return count, nil
+			}
+		}
+	}
+
+	return -1, fmt.Errorf("could not parse feature count from WFS response")
 }
 
 // UpdateLayerMetadata updates layer metadata
@@ -3543,6 +3666,119 @@ func (c *Client) MassGWCTruncate(layerNames []string) error {
 		}
 	}
 	return nil
+}
+
+// DeleteGWCLayer deletes a GeoWebCache layer entry
+func (c *Client) DeleteGWCLayer(layerName string) error {
+	resp, err := c.doGWCRequest("DELETE", fmt.Sprintf("/layers/%s", layerName), nil, "")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// 200 OK or 404 Not Found are both acceptable (layer may not be cached)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to delete GWC layer: %s", string(body))
+	}
+
+	return nil
+}
+
+// TruncateAndDeleteGWCLayer truncates all tiles and then deletes the GWC layer entry
+func (c *Client) TruncateAndDeleteGWCLayer(layerName string) error {
+	// First try to get the layer info and truncate
+	layer, err := c.GetGWCLayer(layerName)
+	if err == nil && layer != nil {
+		// Truncate each grid set and format combination
+		for _, gridSet := range layer.GridSubsets {
+			for _, format := range layer.MimeFormats {
+				// Ignore truncate errors - layer might not have tiles
+				_ = c.TruncateLayer(layerName, gridSet, format, 0, 20)
+			}
+		}
+	}
+
+	// Then delete the GWC layer entry
+	return c.DeleteGWCLayer(layerName)
+}
+
+// GetLayersForDataStore returns all layer names associated with a data store
+func (c *Client) GetLayersForDataStore(workspace, storeName string) ([]string, error) {
+	featureTypes, err := c.GetFeatureTypes(workspace, storeName)
+	if err != nil {
+		return nil, err
+	}
+
+	var layerNames []string
+	for _, ft := range featureTypes {
+		layerNames = append(layerNames, fmt.Sprintf("%s:%s", workspace, ft.Name))
+	}
+	return layerNames, nil
+}
+
+// GetLayersForCoverageStore returns all layer names associated with a coverage store
+func (c *Client) GetLayersForCoverageStore(workspace, storeName string) ([]string, error) {
+	coverages, err := c.GetCoverages(workspace, storeName)
+	if err != nil {
+		return nil, err
+	}
+
+	var layerNames []string
+	for _, cov := range coverages {
+		layerNames = append(layerNames, fmt.Sprintf("%s:%s", workspace, cov.Name))
+	}
+	return layerNames, nil
+}
+
+// DeleteDataStoreWithCleanup deletes a data store and cleans up associated GWC caches
+func (c *Client) DeleteDataStoreWithCleanup(workspace, name string, recurse bool) error {
+	// If recursing, first clean up GWC caches for all associated layers
+	if recurse {
+		layerNames, err := c.GetLayersForDataStore(workspace, name)
+		if err != nil {
+			// Log but don't fail - the layers might not exist or be accessible
+			fmt.Printf("Warning: could not get layers for cleanup: %v\n", err)
+		} else {
+			for _, layerName := range layerNames {
+				// Truncate and delete GWC entries - ignore errors as cache might not exist
+				_ = c.TruncateAndDeleteGWCLayer(layerName)
+			}
+		}
+	}
+
+	// Now delete the data store
+	return c.DeleteDataStore(workspace, name, recurse)
+}
+
+// DeleteCoverageStoreWithCleanup deletes a coverage store and cleans up associated GWC caches
+func (c *Client) DeleteCoverageStoreWithCleanup(workspace, name string, recurse bool) error {
+	// If recursing, first clean up GWC caches for all associated layers
+	if recurse {
+		layerNames, err := c.GetLayersForCoverageStore(workspace, name)
+		if err != nil {
+			// Log but don't fail - the layers might not exist or be accessible
+			fmt.Printf("Warning: could not get layers for cleanup: %v\n", err)
+		} else {
+			for _, layerName := range layerNames {
+				// Truncate and delete GWC entries - ignore errors as cache might not exist
+				_ = c.TruncateAndDeleteGWCLayer(layerName)
+			}
+		}
+	}
+
+	// Now delete the coverage store
+	return c.DeleteCoverageStore(workspace, name, recurse)
+}
+
+// DeleteLayerWithCleanup deletes a layer and cleans up its GWC cache
+func (c *Client) DeleteLayerWithCleanup(workspace, name string) error {
+	// Clean up GWC cache first
+	layerName := fmt.Sprintf("%s:%s", workspace, name)
+	_ = c.TruncateAndDeleteGWCLayer(layerName)
+
+	// Now delete the layer
+	return c.DeleteLayer(workspace, name)
 }
 
 // GetGlobalSettings fetches the GeoServer global settings

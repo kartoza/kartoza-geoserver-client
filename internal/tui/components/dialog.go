@@ -365,9 +365,9 @@ func (d *Dialog) View() string {
 			var indicator string
 			if i == d.focusIndex {
 				if d.editingField {
-					indicator = styles.ConnectedStyle.Render("▶ ")
+					indicator = styles.ConnectedStyle.Render("\uf0da ") // fa-caret-right
 				} else {
-					indicator = styles.SelectedItemStyle.Render("● ")
+					indicator = styles.SelectedItemStyle.Render("\uf111 ") // fa-circle
 				}
 			} else {
 				indicator = "  "
@@ -404,7 +404,7 @@ func (d *Dialog) View() string {
 	if d.animOpacity < 1.0 {
 		// Apply a faded style
 		fadedStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#666666"))
+			Foreground(styles.Muted)
 		if d.animOpacity > 0.5 {
 			dialog = lipgloss.NewStyle().Render(dialog)
 		} else {

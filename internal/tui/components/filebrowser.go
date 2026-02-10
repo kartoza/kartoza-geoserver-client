@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kartoza/kartoza-geoserver-client/internal/models"
+	"github.com/kartoza/kartoza-geoserver-client/internal/tui/icons"
 	"github.com/kartoza/kartoza-geoserver-client/internal/tui/styles"
 )
 
@@ -224,6 +226,9 @@ func (fb *FileBrowser) Update(msg tea.Msg) (*FileBrowser, tea.Cmd) {
 					fb.cursor = 0
 					fb.offset = 0
 					fb.loadDirectory()
+				} else if file.Type == models.FileTypeGeoPackage {
+					// Toggle GeoPackage expansion
+					fb.toggleGeoPackageExpand(fb.cursor)
 				}
 			}
 
@@ -371,11 +376,26 @@ func (fb *FileBrowser) renderFile(file models.LocalFile, selected bool) string {
 	// Selection marker
 	marker := " "
 	if file.Selected {
-		marker = "●"
+		marker = icons.Circle // filled circle
 	}
 
-	name := fb.truncateName(file.Name, fb.width-10)
-	line := fmt.Sprintf("%s %s %s", marker, icon, name)
+	// Handle GeoPackage expansion indicator
+	expandIndicator := " "
+	indent := ""
+	if file.Type == models.FileTypeGeoPackage {
+		if file.Expanded {
+			expandIndicator = icons.ChevronDown
+		} else {
+			expandIndicator = icons.ChevronRight
+		}
+	} else if file.Type == models.FileTypeGpkgLayer {
+		// Indent child layers
+		indent = "  "
+		icon = icons.Layers // Use layers icon for gpkg layers
+	}
+
+	name := fb.truncateName(file.Name, fb.width-12-len(indent))
+	line := fmt.Sprintf("%s%s%s %s %s", indent, marker, expandIndicator, icon, name)
 
 	return style.Width(fb.width - 4).Render(line)
 }
@@ -482,4 +502,107 @@ func (fb *FileBrowser) ClearSelection() {
 // Refresh reloads the current directory
 func (fb *FileBrowser) Refresh() {
 	fb.loadDirectory()
+}
+
+// readGeoPackageLayers reads the layer names from a GeoPackage file using sqlite3 CLI
+func readGeoPackageLayers(gpkgPath string) ([]string, error) {
+	// Use sqlite3 command-line tool to query the GeoPackage
+	// GeoPackages store layer info in the gpkg_contents table
+	query := "SELECT table_name FROM gpkg_contents WHERE data_type IN ('features', 'tiles');"
+	cmd := exec.Command("sqlite3", gpkgPath, query)
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse output - each line is a layer name
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	var layers []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			layers = append(layers, line)
+		}
+	}
+
+	return layers, nil
+}
+
+// toggleGeoPackageExpand toggles the expansion state of a GeoPackage
+func (fb *FileBrowser) toggleGeoPackageExpand(idx int) {
+	if idx < 0 || idx >= len(fb.files) {
+		return
+	}
+	file := &fb.files[idx]
+	if file.Type != models.FileTypeGeoPackage {
+		return
+	}
+
+	if file.Expanded {
+		// Collapse: remove children from the flat list
+		file.Expanded = false
+		fb.removeChildrenFromList(idx)
+	} else {
+		// Expand: read layers and insert them after this item
+		layers, err := readGeoPackageLayers(file.Path)
+		if err != nil {
+			return
+		}
+
+		file.Expanded = true
+		file.Children = make([]models.LocalFile, len(layers))
+
+		// Create child entries for each layer
+		var children []models.LocalFile
+		for i, layerName := range layers {
+			child := models.LocalFile{
+				Name:       layerName,
+				Path:       file.Path,
+				Type:       models.FileTypeGpkgLayer,
+				ParentPath: file.Path,
+				LayerName:  layerName,
+			}
+			children = append(children, child)
+			file.Children[i] = child
+		}
+
+		// Insert children into the flat file list after the parent
+		fb.insertChildrenIntoList(idx, children)
+	}
+}
+
+// insertChildrenIntoList inserts children after the given index
+func (fb *FileBrowser) insertChildrenIntoList(parentIdx int, children []models.LocalFile) {
+	if len(children) == 0 {
+		return
+	}
+	insertPos := parentIdx + 1
+	// Create new slice with space for children
+	newFiles := make([]models.LocalFile, 0, len(fb.files)+len(children))
+	newFiles = append(newFiles, fb.files[:insertPos]...)
+	newFiles = append(newFiles, children...)
+	newFiles = append(newFiles, fb.files[insertPos:]...)
+	fb.files = newFiles
+}
+
+// removeChildrenFromList removes children of the GeoPackage at the given index
+func (fb *FileBrowser) removeChildrenFromList(parentIdx int) {
+	if parentIdx < 0 || parentIdx >= len(fb.files) {
+		return
+	}
+	parent := fb.files[parentIdx]
+	numChildren := len(parent.Children)
+	if numChildren == 0 {
+		return
+	}
+
+	// Remove the children (they are right after the parent)
+	removeStart := parentIdx + 1
+	removeEnd := removeStart + numChildren
+	if removeEnd > len(fb.files) {
+		removeEnd = len(fb.files)
+	}
+
+	fb.files = append(fb.files[:removeStart], fb.files[removeEnd:]...)
+	fb.files[parentIdx].Children = nil
 }

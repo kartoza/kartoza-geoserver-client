@@ -316,88 +316,109 @@ export default function Dashboard() {
   const alertServers = data.servers.filter(s => !s.online)
 
   return (
-    <Box h="100%" overflowY="auto" p={6}>
-      <VStack spacing={6} align="stretch">
-        {/* Header with refresh button */}
-        <Flex justify="space-between" align="center">
-          <HStack spacing={3}>
-            <Icon as={FiActivity} boxSize={6} color="kartoza.500" />
-            <Text fontSize="xl" fontWeight="bold">Server Dashboard</Text>
-          </HStack>
-          <HStack spacing={4}>
-            {/* Summary stats */}
-            <HStack spacing={6} display={{ base: 'none', md: 'flex' }}>
-              <HStack spacing={2}>
-                <Icon as={FiCheckCircle} color="green.500" />
-                <Text fontWeight="bold" color="green.600">{data.onlineCount}</Text>
-                <Text color="gray.500">Online</Text>
-              </HStack>
-              {data.offlineCount > 0 && (
-                <HStack spacing={2}>
-                  <Icon as={FiXCircle} color="red.500" />
-                  <Text fontWeight="bold" color="red.600">{data.offlineCount}</Text>
-                  <Text color="gray.500">Offline</Text>
-                </HStack>
-              )}
-              <HStack spacing={2}>
-                <Icon as={FiLayers} color="purple.500" />
-                <Text fontWeight="bold" color="purple.600">{data.totalLayers}</Text>
-                <Text color="gray.500">Layers</Text>
-              </HStack>
-              <HStack spacing={2}>
-                <Icon as={FiClock} color="gray.500" />
-                <Text color="gray.500">{data.pingIntervalSecs || 60}s</Text>
-              </HStack>
+    <Flex h="100%" direction="column">
+      {/* Header with refresh button - fixed at top */}
+      <Flex
+        justify="space-between"
+        align="center"
+        p={4}
+        borderBottom="1px solid"
+        borderColor="gray.200"
+        bg="white"
+        flexShrink={0}
+      >
+        <HStack spacing={3}>
+          <Icon as={FiActivity} boxSize={6} color="kartoza.500" />
+          <Text fontSize="xl" fontWeight="bold">Server Dashboard</Text>
+        </HStack>
+        <HStack spacing={4}>
+          {/* Summary stats */}
+          <HStack spacing={6} display={{ base: 'none', md: 'flex' }}>
+            <HStack spacing={2}>
+              <Icon as={FiCheckCircle} color="green.500" />
+              <Text fontWeight="bold" color="green.600">{data.onlineCount}</Text>
+              <Text color="gray.500">Online</Text>
             </HStack>
-            <Tooltip label="Refresh status">
-              <IconButton
-                aria-label="Refresh"
-                icon={<FiRefreshCw />}
-                variant="ghost"
-                colorScheme="kartoza"
-                onClick={() => refetch()}
-                css={isFetching ? css`animation: ${spinKeyframes} 1s linear infinite;` : undefined}
-              />
-            </Tooltip>
-          </HStack>
-        </Flex>
-
-        {/* Alert section for offline/error servers */}
-        {alertServers.length > 0 && (
-          <Box>
-            <HStack spacing={2} mb={3}>
-              <Icon as={FiAlertTriangle} color="red.500" />
-              <Text fontWeight="bold" color="red.600">
-                Servers Requiring Attention ({alertServers.length})
-              </Text>
-            </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-              {alertServers.map(server => (
-                <ServerCard key={server.connectionId} server={server} isAlert />
-              ))}
-            </SimpleGrid>
-          </Box>
-        )}
-
-        {/* Healthy servers section */}
-        {healthyServers.length > 0 && (
-          <Box>
-            {alertServers.length > 0 && (
-              <HStack spacing={2} mb={3}>
-                <Icon as={FiCheckCircle} color="green.500" />
-                <Text fontWeight="bold" color="green.600">
-                  Online Servers ({healthyServers.length})
-                </Text>
+            {data.offlineCount > 0 && (
+              <HStack spacing={2}>
+                <Icon as={FiXCircle} color="red.500" />
+                <Text fontWeight="bold" color="red.600">{data.offlineCount}</Text>
+                <Text color="gray.500">Offline</Text>
               </HStack>
             )}
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={4}>
-              {healthyServers.map(server => (
-                <ServerCard key={server.connectionId} server={server} />
-              ))}
-            </SimpleGrid>
-          </Box>
-        )}
-      </VStack>
-    </Box>
+            <HStack spacing={2}>
+              <Icon as={FiLayers} color="purple.500" />
+              <Text fontWeight="bold" color="purple.600">{data.totalLayers}</Text>
+              <Text color="gray.500">Layers</Text>
+            </HStack>
+            <HStack spacing={2}>
+              <Icon as={FiClock} color="gray.500" />
+              <Text color="gray.500">{data.pingIntervalSecs || 60}s</Text>
+            </HStack>
+          </HStack>
+          <Tooltip label="Refresh status">
+            <IconButton
+              aria-label="Refresh"
+              icon={<FiRefreshCw />}
+              variant="ghost"
+              colorScheme="kartoza"
+              onClick={() => refetch()}
+              css={isFetching ? css`animation: ${spinKeyframes} 1s linear infinite;` : undefined}
+            />
+          </Tooltip>
+        </HStack>
+      </Flex>
+
+      {/* Scrollable content area with centered cards */}
+      <Flex
+        flex={1}
+        overflowY="auto"
+        p={6}
+        justify="center"
+        align={data.servers.length <= 3 ? 'center' : 'flex-start'}
+      >
+        <VStack spacing={6} maxW="1400px" w="100%">
+          {/* Alert section for offline/error servers */}
+          {alertServers.length > 0 && (
+            <Box w="100%">
+              <HStack spacing={2} mb={3} justify="center">
+                <Icon as={FiAlertTriangle} color="red.500" />
+                <Text fontWeight="bold" color="red.600">
+                  Servers Requiring Attention ({alertServers.length})
+                </Text>
+              </HStack>
+              <Flex wrap="wrap" gap={4} justify="center">
+                {alertServers.map(server => (
+                  <Box key={server.connectionId} w={{ base: '100%', md: '340px' }}>
+                    <ServerCard server={server} isAlert />
+                  </Box>
+                ))}
+              </Flex>
+            </Box>
+          )}
+
+          {/* Healthy servers section */}
+          {healthyServers.length > 0 && (
+            <Box w="100%">
+              {alertServers.length > 0 && (
+                <HStack spacing={2} mb={3} justify="center">
+                  <Icon as={FiCheckCircle} color="green.500" />
+                  <Text fontWeight="bold" color="green.600">
+                    Online Servers ({healthyServers.length})
+                  </Text>
+                </HStack>
+              )}
+              <Flex wrap="wrap" gap={4} justify="center">
+                {healthyServers.map(server => (
+                  <Box key={server.connectionId} w={{ base: '100%', md: '340px' }}>
+                    <ServerCard server={server} />
+                  </Box>
+                ))}
+              </Flex>
+            </Box>
+          )}
+        </VStack>
+      </Flex>
+    </Flex>
   )
 }

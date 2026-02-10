@@ -39,9 +39,13 @@ import {
   AccordionIcon,
   IconButton,
   useToast,
+  Checkbox,
+  Radio,
+  RadioGroup,
+  Stack,
 } from '@chakra-ui/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FiLayers, FiEye, FiSearch, FiInfo, FiGlobe, FiLink, FiPlus, FiTrash2 } from 'react-icons/fi'
+import { FiLayers, FiEye, FiSearch, FiInfo, FiGlobe, FiLink, FiPlus, FiTrash2, FiDroplet, FiStar } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import { useTreeStore } from '../../stores/treeStore'
 import * as api from '../../api/client'
@@ -68,6 +72,11 @@ export default function LayerDialog() {
     content: '',
   })
 
+  // Styles state
+  const [defaultStyle, setDefaultStyle] = useState<string>('')
+  const [additionalStyles, setAdditionalStyles] = useState<string[]>([])
+  const [stylesChanged, setStylesChanged] = useState(false)
+
   const isOpen = activeDialog === 'layer'
 
   const connectionId = (dialogData?.data?.connectionId as string) || selectedNode?.connectionId || ''
@@ -78,6 +87,20 @@ export default function LayerDialog() {
   const { data: metadata, isLoading } = useQuery({
     queryKey: ['layerMetadata', connectionId, workspace, layerName],
     queryFn: () => api.getLayerFullMetadata(connectionId, workspace, layerName),
+    enabled: isOpen && !!connectionId && !!workspace && !!layerName,
+  })
+
+  // Fetch available styles for the workspace
+  const { data: availableStyles } = useQuery({
+    queryKey: ['styles', connectionId, workspace],
+    queryFn: () => api.getStyles(connectionId, workspace),
+    enabled: isOpen && !!connectionId && !!workspace,
+  })
+
+  // Fetch current layer styles
+  const { data: layerStyles, isLoading: loadingStyles } = useQuery({
+    queryKey: ['layerStyles', connectionId, workspace, layerName],
+    queryFn: () => api.getLayerStyles(connectionId, workspace, layerName),
     enabled: isOpen && !!connectionId && !!workspace && !!layerName,
   })
 
@@ -97,6 +120,15 @@ export default function LayerDialog() {
       setMetadataLinks(metadata.metadataLinks || [])
     }
   }, [metadata])
+
+  // Update styles state when layerStyles loads
+  useEffect(() => {
+    if (layerStyles) {
+      setDefaultStyle(layerStyles.defaultStyle || '')
+      setAdditionalStyles(layerStyles.additionalStyles || [])
+      setStylesChanged(false)
+    }
+  }, [layerStyles])
 
   const updateMutation = useMutation({
     mutationFn: (data: LayerMetadataUpdate) =>
@@ -119,6 +151,30 @@ export default function LayerDialog() {
     onError: (error: Error) => {
       toast({
         title: 'Error updating layer',
+        description: error.message,
+        status: 'error',
+        duration: 5000,
+      })
+    },
+  })
+
+  const updateStylesMutation = useMutation({
+    mutationFn: () =>
+      api.updateLayerStyles(connectionId, workspace, layerName, defaultStyle, additionalStyles),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['layerStyles', connectionId, workspace, layerName] })
+      queryClient.invalidateQueries({ queryKey: ['layer', connectionId, workspace, layerName] })
+      setStylesChanged(false)
+      toast({
+        title: 'Styles updated',
+        description: 'Layer styles have been updated successfully.',
+        status: 'success',
+        duration: 3000,
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error updating styles',
         description: error.message,
         status: 'error',
         duration: 5000,
@@ -160,6 +216,28 @@ export default function LayerDialog() {
 
   const handleSubmit = () => {
     updateMutation.mutate(formData)
+  }
+
+  const handleStylesSubmit = () => {
+    updateStylesMutation.mutate()
+  }
+
+  const handleToggleAdditionalStyle = (styleName: string) => {
+    setStylesChanged(true)
+    if (additionalStyles.includes(styleName)) {
+      setAdditionalStyles(additionalStyles.filter((s) => s !== styleName))
+    } else {
+      setAdditionalStyles([...additionalStyles, styleName])
+    }
+  }
+
+  const handleSetDefaultStyle = (styleName: string) => {
+    setStylesChanged(true)
+    setDefaultStyle(styleName)
+    // Ensure default style is not in additional styles
+    if (additionalStyles.includes(styleName)) {
+      setAdditionalStyles(additionalStyles.filter((s) => s !== styleName))
+    }
   }
 
   if (!isOpen) return null
@@ -211,6 +289,7 @@ export default function LayerDialog() {
             <Tabs variant="enclosed" colorScheme="kartoza">
               <TabList>
                 <Tab><HStack spacing={2}><Icon as={FiInfo} /><Text>Basic Info</Text></HStack></Tab>
+                <Tab><HStack spacing={2}><Icon as={FiDroplet} /><Text>Styles</Text></HStack></Tab>
                 <Tab><HStack spacing={2}><Icon as={FiGlobe} /><Text>Description</Text></HStack></Tab>
                 <Tab><HStack spacing={2}><Icon as={FiLink} /><Text>Attribution</Text></HStack></Tab>
               </TabList>
@@ -356,6 +435,121 @@ export default function LayerDialog() {
                         </AccordionPanel>
                       </AccordionItem>
                     </Accordion>
+                  </VStack>
+                </TabPanel>
+
+                {/* Styles Tab */}
+                <TabPanel px={0} py={4}>
+                  <VStack spacing={4} align="stretch">
+                    <Box p={4} bg="blue.50" borderRadius="lg" borderLeft="4px solid" borderLeftColor="blue.400">
+                      <Text fontSize="sm" color="blue.700">
+                        <strong>Styles</strong> control how your layer is rendered on the map. Select a default style and optionally add additional styles that users can choose from.
+                      </Text>
+                    </Box>
+
+                    {loadingStyles ? (
+                      <VStack py={6}>
+                        <Spinner size="md" color="kartoza.500" />
+                        <Text fontSize="sm" color="gray.500">Loading styles...</Text>
+                      </VStack>
+                    ) : (
+                      <>
+                        {/* Default Style Selection */}
+                        <Box>
+                          <Text fontWeight="600" mb={3}>Default Style</Text>
+                          <Text fontSize="xs" color="gray.500" mb={3}>
+                            The style used when no specific style is requested
+                          </Text>
+                          <RadioGroup value={defaultStyle} onChange={handleSetDefaultStyle}>
+                            <Stack spacing={2}>
+                              {availableStyles?.map((style) => (
+                                <Box
+                                  key={style.name}
+                                  p={3}
+                                  bg={defaultStyle === style.name ? 'kartoza.50' : 'gray.50'}
+                                  borderRadius="lg"
+                                  border="2px solid"
+                                  borderColor={defaultStyle === style.name ? 'kartoza.500' : 'transparent'}
+                                  _hover={{ borderColor: 'kartoza.300' }}
+                                  transition="all 0.15s"
+                                >
+                                  <HStack>
+                                    <Radio value={style.name} colorScheme="kartoza">
+                                      <HStack spacing={2}>
+                                        <Icon as={FiDroplet} color="pink.500" />
+                                        <Text fontWeight={defaultStyle === style.name ? '600' : 'normal'}>
+                                          {style.name}
+                                        </Text>
+                                      </HStack>
+                                    </Radio>
+                                    {defaultStyle === style.name && (
+                                      <Badge colorScheme="kartoza" ml="auto">
+                                        <HStack spacing={1}>
+                                          <Icon as={FiStar} boxSize={3} />
+                                          <Text>Default</Text>
+                                        </HStack>
+                                      </Badge>
+                                    )}
+                                  </HStack>
+                                </Box>
+                              ))}
+                            </Stack>
+                          </RadioGroup>
+                          {(!availableStyles || availableStyles.length === 0) && (
+                            <Text fontSize="sm" color="gray.500" fontStyle="italic">
+                              No styles available in this workspace
+                            </Text>
+                          )}
+                        </Box>
+
+                        <Divider />
+
+                        {/* Additional Styles */}
+                        <Box>
+                          <Text fontWeight="600" mb={3}>Additional Styles</Text>
+                          <Text fontSize="xs" color="gray.500" mb={3}>
+                            Additional styles that users can choose from when viewing this layer
+                          </Text>
+                          <VStack align="stretch" spacing={2}>
+                            {availableStyles?.filter((s) => s.name !== defaultStyle).map((style) => (
+                              <Box
+                                key={style.name}
+                                p={3}
+                                bg={additionalStyles.includes(style.name) ? 'green.50' : 'gray.50'}
+                                borderRadius="lg"
+                                border="2px solid"
+                                borderColor={additionalStyles.includes(style.name) ? 'green.500' : 'transparent'}
+                                _hover={{ borderColor: 'green.300' }}
+                                transition="all 0.15s"
+                              >
+                                <Checkbox
+                                  isChecked={additionalStyles.includes(style.name)}
+                                  onChange={() => handleToggleAdditionalStyle(style.name)}
+                                  colorScheme="green"
+                                >
+                                  <HStack spacing={2}>
+                                    <Icon as={FiDroplet} color="pink.500" />
+                                    <Text>{style.name}</Text>
+                                  </HStack>
+                                </Checkbox>
+                              </Box>
+                            ))}
+                          </VStack>
+                        </Box>
+
+                        {/* Save Styles Button */}
+                        {stylesChanged && (
+                          <Button
+                            colorScheme="kartoza"
+                            onClick={handleStylesSubmit}
+                            isLoading={updateStylesMutation.isPending}
+                            leftIcon={<Icon as={FiDroplet} />}
+                          >
+                            Save Style Changes
+                          </Button>
+                        )}
+                      </>
+                    )}
                   </VStack>
                 </TabPanel>
 

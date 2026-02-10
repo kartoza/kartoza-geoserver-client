@@ -395,20 +395,52 @@ After successful upload (vector layers only):
 
 ## Layer Preview
 
-### Activation
+### TUI Preview (Terminal)
 
-Press `o` on a layer, layer group, or store to open preview:
-- Status message shown: "Opening preview for [name] in browser..."
-- Local HTTP server starts (if not already running)
-- Browser opens to preview page
+Press `o` on a layer, layer group, or store to open inline preview:
 
-### Preview Features
+#### Image Rendering Protocols
+Automatically detects and uses the best available protocol:
+1. **Kitty Graphics Protocol** - Native image support in Kitty terminal
+2. **Sixel** - Uses img2sixel if available for wide terminal support
+3. **Chafa** - Unicode block art for color terminals
+4. **ASCII Art** - Fallback grayscale rendering for any terminal
+
+#### Map Controls (Side Panel)
+- **Zoom**: `+`/`-` keys to zoom in/out
+- **Pan**: Arrow keys or `h`/`j`/`k`/`l` to pan
+- **Style**: `s`/`S` to cycle through available styles
+- **Refresh**: `r` to reload the map
+- **Close**: `Esc` or `q` to close preview
+
+#### Display Features
+- WMS GetMap requests to GeoServer
+- Automatic authentication with saved credentials
+- Current zoom level display
+- Bounding box coordinates
+- Style selector showing all available layer styles
+- Status bar with loading indicator
+
+### Web UI Preview (Browser)
+
+MapLibre GL JS-based interactive map viewer:
 
 #### MapLibre GL View
 - Hardware-accelerated WebGL rendering
 - OpenStreetMap base map
 - WMS tile layer overlay from GeoServer
 - Auto-zoom to layer extent
+
+#### View Modes
+- **2D Mode**: Flat map view with pitch locked to 0
+- **3D Mode**: 45-degree pitch with rotation enabled
+- **Globe Mode**: Full 3D globe view at zoom level 1
+
+#### Style Picker
+- Dropdown menu showing all available layer styles
+- Default style highlighted with badge
+- Style changes update WMS tiles automatically
+- Map refreshes when style is changed
 
 #### Layer Controls
 - Opacity slider
@@ -440,12 +472,71 @@ Press `o` on a layer, layer group, or store to open preview:
 
 ---
 
+## Universal Search
+
+The application provides a universal search feature that allows quick navigation to any resource across all connected GeoServer instances.
+
+### Activation
+
+- **TUI**: Press `Ctrl+K` or `/` from any screen
+- **Web UI**: Press `Ctrl+K` (or `Cmd+K` on macOS) or click the search bar in the header
+
+### Search Behavior
+
+- Searches across all active GeoServer connections
+- Minimum 2 characters required to trigger search
+- Real-time results as you type
+- Fuzzy matching on resource names
+
+### Searchable Resources
+
+| Resource Type | Icon | Badge Color |
+|--------------|------|-------------|
+| Workspace | 📁 | Blue |
+| Data Store | 💾 | Green |
+| Coverage Store | 🖼️ | Orange |
+| Layer | 🗺️ | Teal |
+| Style | 🎨 | Purple |
+| Layer Group | 📚 | Cyan |
+
+### Result Display
+
+Each search result shows:
+- **Icon**: Monochrome Nerd Font icon representing resource type
+- **Name**: Resource name (highlighted matching text)
+- **Tags**: Resource type and additional metadata (e.g., format, "Global")
+- **Location**: Server name • Workspace path
+
+### Navigation
+
+- **TUI**:
+  - `↑`/`↓` or `Ctrl+P`/`Ctrl+N`: Navigate results
+  - `Enter`: Select and navigate to resource
+  - `PgUp`/`PgDn`: Page through results
+  - `Esc`: Close search modal
+
+- **Web UI**:
+  - `↑`/`↓`: Navigate results
+  - `Enter`: Select and navigate to resource
+  - `Esc`: Close search modal
+
+### Result Selection
+
+When a result is selected:
+1. The search modal closes
+2. The tree view navigates to the selected resource
+3. Parent nodes are automatically expanded
+4. The selected resource is highlighted
+
+---
+
 ## Keyboard Shortcuts
 
 ### Global
 
 | Key | Action |
 |-----|--------|
+| `Ctrl+K` / `/` | Open universal search modal |
 | `Tab` | Switch panel focus |
 | `?` / `F1` | Toggle help overlay |
 | `q` / `Ctrl+C` | Quit application |
@@ -648,6 +739,7 @@ Used for layer preview:
 | 0.3.0 | 2024 | Multi-connection support, layer preview |
 | 0.4.0 | 2025 | Server info dialog, code reorganization |
 | 0.5.0 | 2025 | Style Editor with visual/code editing (TUI + Web UI) |
+| 0.6.0 | 2025 | MapLibre GL viewer (Web), TUI map preview with Kitty/Sixel/Chafa support |
 
 ---
 

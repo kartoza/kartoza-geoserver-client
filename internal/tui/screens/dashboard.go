@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kartoza/kartoza-geoserver-client/internal/api"
 	"github.com/kartoza/kartoza-geoserver-client/internal/config"
+	"github.com/kartoza/kartoza-geoserver-client/internal/tui/styles"
 )
 
 const (
@@ -109,7 +110,7 @@ type DashboardScreen struct {
 func NewDashboardScreen(cfg *config.Config) *DashboardScreen {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#38B2AC"))
+	s.Style = lipgloss.NewStyle().Foreground(styles.KartozaBlue)
 
 	return &DashboardScreen{
 		config:      cfg,
@@ -304,20 +305,25 @@ func (d *DashboardScreen) View() string {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	// Header
+	// Dashboard title - Kartoza branded
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#38B2AC")).
-		MarginBottom(1)
+		Foreground(styles.KartozaBlue).
+		Align(lipgloss.Center).
+		Width(d.width)
 
-	header := headerStyle.Render("📊 Server Dashboard")
+	header := headerStyle.Render("\uf201 Server Dashboard") // fa-line-chart
 
 	// Loading indicator
 	if d.loading && len(d.statuses) == 0 {
+		loadingStyle := lipgloss.NewStyle().
+			Foreground(styles.Muted).
+			Align(lipgloss.Center).
+			Width(d.width)
 		return lipgloss.JoinVertical(
-			lipgloss.Left,
+			lipgloss.Center,
 			header,
-			d.spinner.View()+" Loading server status...",
+			loadingStyle.Render(d.spinner.View()+" Loading server status..."),
 		)
 	}
 
@@ -338,16 +344,39 @@ func (d *DashboardScreen) View() string {
 	}
 
 	summaryStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#888888")).
-		MarginBottom(1)
+		Foreground(styles.Muted).
+		Align(lipgloss.Center).
+		Width(d.width)
 
-	summary := summaryStyle.Render(fmt.Sprintf(
-		"✓ %d Online  ✗ %d Offline  📦 %d Layers  🗄 %d Stores  ⏱ Refresh: %ds",
-		onlineCount, offlineCount, totalLayers, totalStores, d.config.GetPingInterval(),
-	))
+	var summaryText string
+	if d.loading {
+		summaryText = fmt.Sprintf(
+			"\uf00c %d Online  \uf00d %d Offline  \uf5fd %d Layers  \uf1c0 %d Stores  %s Refreshing...",
+			onlineCount, offlineCount, totalLayers, totalStores, d.spinner.View(),
+		)
+	} else {
+		summaryText = fmt.Sprintf(
+			"\uf00c %d Online  \uf00d %d Offline  \uf5fd %d Layers  \uf1c0 %d Stores  \uf017 %s",
+			onlineCount, offlineCount, totalLayers, totalStores, d.lastRefresh.Format("15:04:05"),
+		)
+	}
+	summary := summaryStyle.Render(summaryText)
 
-	// Alert section for offline servers
-	var alertSection string
+	if len(d.statuses) == 0 {
+		emptyStyle := lipgloss.NewStyle().
+			Foreground(styles.Muted).
+			Italic(true).
+			Align(lipgloss.Center).
+			Width(d.width)
+		return lipgloss.JoinVertical(
+			lipgloss.Center,
+			header,
+			"",
+			emptyStyle.Render("No servers configured. Press 'c' to add a connection."),
+		)
+	}
+
+	// Build card grid - cards will be centered
 	var alertServers []ServerStatus
 	var healthyServers []ServerStatus
 
@@ -359,75 +388,66 @@ func (d *DashboardScreen) View() string {
 		}
 	}
 
+	// Calculate card width and grid layout
+	cardWidth := 76
+	if d.width < 85 {
+		cardWidth = d.width - 8
+	}
+
+	// Build server cards
+	var cardRows []string
+
+	// Alert servers section
 	if len(alertServers) > 0 {
 		alertHeaderStyle := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#FF6B6B")).
-			MarginTop(1).
-			MarginBottom(1)
+			Foreground(styles.Danger).
+			Align(lipgloss.Center).
+			Width(d.width)
 
-		alertSection = alertHeaderStyle.Render(fmt.Sprintf("⚠️  Servers Requiring Attention (%d)", len(alertServers)))
+		cardRows = append(cardRows, alertHeaderStyle.Render(fmt.Sprintf("\uf071 Servers Requiring Attention (%d)", len(alertServers))))
 
 		for i, server := range alertServers {
-			alertSection += "\n" + d.renderServerCard(server, d.selectedIdx == i, true)
+			card := d.renderServerCard(server, d.selectedIdx == i, true, cardWidth)
+			// Center the card
+			centeredCard := lipgloss.PlaceHorizontal(d.width, lipgloss.Center, card)
+			cardRows = append(cardRows, centeredCard)
 		}
-		alertSection += "\n"
 	}
 
 	// Healthy servers section
-	var healthySection string
 	if len(healthyServers) > 0 {
-		healthyHeaderStyle := lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#48BB78")).
-			MarginTop(1).
-			MarginBottom(1)
-
 		if len(alertServers) > 0 {
-			healthySection = healthyHeaderStyle.Render(fmt.Sprintf("✓ Online Servers (%d)", len(healthyServers)))
+			healthyHeaderStyle := lipgloss.NewStyle().
+				Bold(true).
+				Foreground(styles.Success).
+				Align(lipgloss.Center).
+				Width(d.width)
+			cardRows = append(cardRows, healthyHeaderStyle.Render(fmt.Sprintf("\uf00c Online Servers (%d)", len(healthyServers))))
 		}
 
 		startIdx := len(alertServers)
 		for i, server := range healthyServers {
-			healthySection += "\n" + d.renderServerCard(server, d.selectedIdx == startIdx+i, false)
+			card := d.renderServerCard(server, d.selectedIdx == startIdx+i, false, cardWidth)
+			// Center the card
+			centeredCard := lipgloss.PlaceHorizontal(d.width, lipgloss.Center, card)
+			cardRows = append(cardRows, centeredCard)
 		}
 	}
 
-	if len(d.statuses) == 0 {
-		emptyStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#888888")).
-			Italic(true)
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
-			header,
-			emptyStyle.Render("No servers configured. Press 'c' to add a connection."),
-		)
-	}
-
-	// Help text
-	helpStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#888888")).
-		MarginTop(2)
-
-	var helpText string
-	if d.loading {
-		helpText = helpStyle.Render(d.spinner.View() + " Refreshing...")
-	} else {
-		helpText = helpStyle.Render(fmt.Sprintf("↑↓: navigate • r: refresh • Last update: %s", d.lastRefresh.Format("15:04:05")))
-	}
+	// Join all cards vertically
+	cardsContent := lipgloss.JoinVertical(lipgloss.Center, cardRows...)
 
 	return lipgloss.JoinVertical(
-		lipgloss.Left,
+		lipgloss.Center,
 		header,
 		summary,
-		alertSection,
-		healthySection,
-		helpText,
+		"",
+		cardsContent,
 	)
 }
 
-func (d *DashboardScreen) renderServerCard(server ServerStatus, selected bool, isAlert bool) string {
-	cardWidth := d.width - 4
+func (d *DashboardScreen) renderServerCard(server ServerStatus, selected bool, isAlert bool, cardWidth int) string {
 	if cardWidth < 40 {
 		cardWidth = 40
 	}
@@ -435,14 +455,14 @@ func (d *DashboardScreen) renderServerCard(server ServerStatus, selected bool, i
 		cardWidth = 80
 	}
 
-	// Border color based on status and selection
+	// Border color based on status and selection - Kartoza branded
 	var borderColor lipgloss.Color
 	if selected {
-		borderColor = lipgloss.Color("#38B2AC")
+		borderColor = styles.KartozaBlue
 	} else if isAlert {
-		borderColor = lipgloss.Color("#FF6B6B")
+		borderColor = styles.Danger
 	} else {
-		borderColor = lipgloss.Color("#48BB78")
+		borderColor = styles.Success
 	}
 
 	cardStyle := lipgloss.NewStyle().
@@ -451,17 +471,13 @@ func (d *DashboardScreen) renderServerCard(server ServerStatus, selected bool, i
 		Width(cardWidth).
 		Padding(0, 1)
 
-	if selected {
-		cardStyle = cardStyle.Background(lipgloss.Color("#2D3748"))
-	}
-
-	// Server name and status
+	// Server name and status - Kartoza branded
 	nameStyle := lipgloss.NewStyle().Bold(true)
-	statusIcon := "✓"
-	statusColor := lipgloss.Color("#48BB78")
+	statusIcon := "\uf00c" // fa-check
+	statusColor := styles.Success
 	if !server.Online {
-		statusIcon = "✗"
-		statusColor = lipgloss.Color("#FF6B6B")
+		statusIcon = "\uf00d" // fa-times
+		statusColor = styles.Danger
 	}
 
 	statusStyle := lipgloss.NewStyle().Foreground(statusColor)
@@ -469,12 +485,12 @@ func (d *DashboardScreen) renderServerCard(server ServerStatus, selected bool, i
 	header := nameStyle.Render(server.ConnectionName) + " " + statusStyle.Render(statusIcon)
 
 	// URL
-	urlStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Italic(true)
+	urlStyle := lipgloss.NewStyle().Foreground(styles.Muted).Italic(true)
 	urlLine := urlStyle.Render(server.URL)
 
 	if !server.Online {
 		// Show error for offline servers
-		errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B"))
+		errorStyle := lipgloss.NewStyle().Foreground(styles.Danger)
 		errorMsg := server.Error
 		if errorMsg == "" {
 			errorMsg = "Server is offline"
@@ -491,10 +507,10 @@ func (d *DashboardScreen) renderServerCard(server ServerStatus, selected bool, i
 		return cardStyle.Render(content)
 	}
 
-	// Version badge
+	// Version badge - Kartoza branded
 	versionStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#4299E1")).
-		Background(lipgloss.Color("#2B6CB0")).
+		Foreground(styles.TextBright).
+		Background(styles.KartozaBlueDark).
 		Padding(0, 1)
 
 	version := ""
@@ -503,11 +519,11 @@ func (d *DashboardScreen) renderServerCard(server ServerStatus, selected bool, i
 	}
 
 	// Stats
-	statsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#A0AEC0"))
+	statsStyle := lipgloss.NewStyle().Foreground(styles.Text)
 	stats := statsStyle.Render(fmt.Sprintf(
-		"📦 %d layers  🗄 %d stores  📁 %d workspaces",
+		"\uf5fd %d layers  \uf1c0 %d stores  \uf07b %d workspaces",
 		server.LayerCount, server.DataStoreCount, server.WorkspaceCount,
-	))
+	)) // fa-layer-group, fa-database, fa-folder
 
 	// Memory bar
 	var memoryLine string
@@ -542,8 +558,8 @@ func (d *DashboardScreen) renderServerCard(server ServerStatus, selected bool, i
 }
 
 func (d *DashboardScreen) renderResponseWithSparkline(connectionID string, currentMs int64, width int) string {
-	responseStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#718096"))
-	sparklineStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#38B2AC"))
+	responseStyle := lipgloss.NewStyle().Foreground(styles.Muted)
+	sparklineStyle := lipgloss.NewStyle().Foreground(styles.KartozaBlue)
 
 	// Get ping history for this server
 	history, exists := d.pingHistory[connectionID]
@@ -578,22 +594,23 @@ func (d *DashboardScreen) renderMemoryBar(percent float64, width int) string {
 	filled := int(percent * float64(barWidth) / 100)
 	empty := barWidth - filled
 
+	// Kartoza branded memory bar colors
 	var barColor lipgloss.Color
 	if percent > 80 {
-		barColor = lipgloss.Color("#FF6B6B")
+		barColor = styles.Danger
 	} else if percent > 60 {
-		barColor = lipgloss.Color("#FFD93D")
+		barColor = styles.KartozaOrange
 	} else {
-		barColor = lipgloss.Color("#48BB78")
+		barColor = styles.Success
 	}
 
 	filledStyle := lipgloss.NewStyle().Foreground(barColor)
-	emptyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#4A5568"))
+	emptyStyle := lipgloss.NewStyle().Foreground(styles.Border)
 
 	bar := "[" + filledStyle.Render(strings.Repeat("█", filled)) +
 		emptyStyle.Render(strings.Repeat("░", empty)) + "]"
 
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#A0AEC0"))
+	labelStyle := lipgloss.NewStyle().Foreground(styles.Text)
 	return labelStyle.Render("Memory: ") + bar + labelStyle.Render(fmt.Sprintf(" %.0f%%", percent))
 }
 

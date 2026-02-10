@@ -446,7 +446,7 @@ func (w *StoreWizard) View() string {
 	dialog := dialogStyle.Render(b.String())
 
 	if w.animOpacity < 1.0 {
-		fadedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
+		fadedStyle := lipgloss.NewStyle().Foreground(styles.Muted)
 		if w.animOpacity > 0.5 {
 			dialog = lipgloss.NewStyle().Render(dialog)
 		} else {
@@ -468,9 +468,9 @@ func (w *StoreWizard) renderTypeSelection() string {
 		for i, storeType := range w.dataStoreTypes {
 			var indicator string
 			if i == w.selectedTypeIndex {
-				indicator = styles.ConnectedStyle.Render("● ")
+				indicator = styles.ConnectedStyle.Render("\uf111 ") // fa-circle (filled)
 			} else {
-				indicator = styles.MutedStyle.Render("○ ")
+				indicator = styles.MutedStyle.Render("\uf10c ") // fa-circle-o (empty)
 			}
 
 			var lineStyle lipgloss.Style
@@ -488,9 +488,9 @@ func (w *StoreWizard) renderTypeSelection() string {
 		for i, storeType := range w.coverageStoreTypes {
 			var indicator string
 			if i == w.selectedTypeIndex {
-				indicator = styles.ConnectedStyle.Render("● ")
+				indicator = styles.ConnectedStyle.Render("\uf111 ") // fa-circle (filled)
 			} else {
-				indicator = styles.MutedStyle.Render("○ ")
+				indicator = styles.MutedStyle.Render("\uf10c ") // fa-circle-o (empty)
 			}
 
 			var lineStyle lipgloss.Style
@@ -554,9 +554,9 @@ func (w *StoreWizard) renderField(index int, label string, required bool) string
 	var indicator string
 	if index == w.focusIndex {
 		if w.editingField {
-			indicator = styles.ConnectedStyle.Render("▶ ")
+			indicator = styles.ConnectedStyle.Render("\uf0da ") // fa-caret-right
 		} else {
-			indicator = styles.SelectedItemStyle.Render("● ")
+			indicator = styles.SelectedItemStyle.Render("\uf111 ") // fa-circle
 		}
 	} else {
 		indicator = "  "

@@ -75,6 +75,9 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	// API routes - layer metadata (comprehensive)
 	mux.HandleFunc("/api/layermetadata/", s.handleLayerMetadata)
 
+	// API routes - layer styles association
+	mux.HandleFunc("/api/layerstyles/", s.handleLayerStyles)
+
 	// API routes - styles
 	mux.HandleFunc("/api/styles/", s.handleStyles)
 
@@ -121,6 +124,10 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	// API routes - Download (export resources)
 	mux.HandleFunc("/api/download/logs/", s.handleDownloadLogs)
 	mux.HandleFunc("/api/download/", s.handleDownload)
+
+	// API routes - Universal Search
+	mux.HandleFunc("/api/search", s.handleSearch)
+	mux.HandleFunc("/api/search/suggestions", s.handleSearchSuggestions)
 
 	// Serve static files (React app)
 	mux.HandleFunc("/", s.serveStatic)

@@ -30,8 +30,9 @@ type LayerUpdateRequest struct {
 
 // handleLayers handles layer related requests
 // Pattern: /api/layers/{connId}/{workspace} or /api/layers/{connId}/{workspace}/{layer}
+// Also handles: /api/layers/{connId}/{workspace}/{layer}/count
 func (s *Server) handleLayers(w http.ResponseWriter, r *http.Request) {
-	connID, workspace, layer := parsePathParams(r.URL.Path, "/api/layers")
+	connID, workspace, layer, action := parseStorePathParams(r.URL.Path, "/api/layers")
 
 	if connID == "" || workspace == "" {
 		s.jsonError(w, "Connection ID and workspace are required", http.StatusBadRequest)
@@ -42,6 +43,15 @@ func (s *Server) handleLayers(w http.ResponseWriter, r *http.Request) {
 	if client == nil {
 		s.jsonError(w, "Connection not found", http.StatusNotFound)
 		return
+	}
+
+	// Handle actions on specific layers
+	if layer != "" && action != "" {
+		switch action {
+		case "count":
+			s.handleLayerFeatureCount(w, r, client, workspace, layer)
+			return
+		}
 	}
 
 	if layer == "" {
@@ -156,9 +166,10 @@ func (s *Server) updateLayer(w http.ResponseWriter, r *http.Request, client *api
 	})
 }
 
-// deleteLayer deletes a layer
+// deleteLayer deletes a layer and cleans up its GWC cache
 func (s *Server) deleteLayer(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, layer string) {
-	if err := client.DeleteLayer(workspace, layer); err != nil {
+	// Use cleanup method to also remove GWC cache
+	if err := client.DeleteLayerWithCleanup(workspace, layer); err != nil {
 		s.jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -522,4 +533,105 @@ func (s *Server) updateLayerMetadata(w http.ResponseWriter, r *http.Request, cli
 
 	// Return updated metadata
 	s.getLayerMetadata(w, r, client, workspace, layer)
+}
+
+// LayerStylesResponse represents the styles associated with a layer
+type LayerStylesResponse struct {
+	DefaultStyle     string   `json:"defaultStyle"`
+	AdditionalStyles []string `json:"additionalStyles"`
+}
+
+// LayerStylesUpdateRequest represents a request to update layer styles
+type LayerStylesUpdateRequest struct {
+	DefaultStyle     string   `json:"defaultStyle"`
+	AdditionalStyles []string `json:"additionalStyles"`
+}
+
+// handleLayerStyles handles layer style association requests
+// Pattern: /api/layerstyles/{connId}/{workspace}/{layer}
+func (s *Server) handleLayerStyles(w http.ResponseWriter, r *http.Request) {
+	connID, workspace, layer := parsePathParams(r.URL.Path, "/api/layerstyles")
+
+	if connID == "" || workspace == "" || layer == "" {
+		s.jsonError(w, "Connection ID, workspace, and layer name are required", http.StatusBadRequest)
+		return
+	}
+
+	client := s.getClient(connID)
+	if client == nil {
+		s.jsonError(w, "Connection not found", http.StatusNotFound)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		s.getLayerStyles(w, r, client, workspace, layer)
+	case http.MethodPut:
+		s.updateLayerStyles(w, r, client, workspace, layer)
+	case http.MethodOptions:
+		s.handleCORS(w)
+	default:
+		s.jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// getLayerStyles returns the styles associated with a layer
+func (s *Server) getLayerStyles(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, layer string) {
+	styles, err := client.GetLayerStyles(workspace, layer)
+	if err != nil {
+		s.jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	s.jsonResponse(w, LayerStylesResponse{
+		DefaultStyle:     styles.DefaultStyle,
+		AdditionalStyles: styles.AdditionalStyles,
+	})
+}
+
+// updateLayerStyles updates the styles associated with a layer
+func (s *Server) updateLayerStyles(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, layer string) {
+	var req LayerStylesUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.DefaultStyle == "" {
+		s.jsonError(w, "Default style is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := client.UpdateLayerStyles(workspace, layer, req.DefaultStyle, req.AdditionalStyles); err != nil {
+		s.jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	s.jsonResponse(w, LayerStylesResponse{
+		DefaultStyle:     req.DefaultStyle,
+		AdditionalStyles: req.AdditionalStyles,
+	})
+}
+
+// handleLayerFeatureCount handles feature count requests
+// Pattern: /api/layers/{connId}/{workspace}/{layer}/count
+func (s *Server) handleLayerFeatureCount(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, layer string) {
+	if r.Method == http.MethodOptions {
+		s.handleCORS(w)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		s.jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	count, err := client.GetFeatureCount(workspace, layer)
+	if err != nil {
+		// Return -1 for layers where count cannot be determined (e.g., raster)
+		s.jsonResponse(w, map[string]int64{"count": -1})
+		return
+	}
+
+	s.jsonResponse(w, map[string]int64{"count": count})
 }

@@ -199,8 +199,13 @@ func (s *Server) createStyle(w http.ResponseWriter, r *http.Request, client *api
 		req.Format = "sld" // Default to SLD
 	}
 
+	if workspace == "" {
+		s.jsonError(w, "Workspace is required for style creation", http.StatusBadRequest)
+		return
+	}
+
 	if err := client.CreateStyle(workspace, req.Name, req.Content, req.Format); err != nil {
-		s.jsonError(w, err.Error(), http.StatusInternalServerError)
+		s.jsonError(w, "Failed to create style: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

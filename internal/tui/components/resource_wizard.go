@@ -497,7 +497,7 @@ func (w *ResourceWizard) View() string {
 	dialog := dialogStyle.Render(b.String())
 
 	if w.animOpacity < 1.0 {
-		fadedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
+		fadedStyle := lipgloss.NewStyle().Foreground(styles.Muted)
 		if w.animOpacity > 0.5 {
 			dialog = lipgloss.NewStyle().Render(dialog)
 		} else {
@@ -562,9 +562,9 @@ func (w *ResourceWizard) renderInputField(index int, label, inputView string) st
 	var indicator string
 	if isFocused {
 		if w.editingField {
-			indicator = styles.ConnectedStyle.Render("▶ ")
+			indicator = styles.ConnectedStyle.Render("\uf0da ") // fa-caret-right
 		} else {
-			indicator = styles.SelectedItemStyle.Render("● ")
+			indicator = styles.SelectedItemStyle.Render("\uf111 ") // fa-circle
 		}
 	} else {
 		indicator = "  "
@@ -597,14 +597,14 @@ func (w *ResourceWizard) renderCheckbox(label string, checked bool, index int) s
 
 	var indicator string
 	if isFocused {
-		indicator = styles.SelectedItemStyle.Render("● ")
+		indicator = styles.SelectedItemStyle.Render("\uf111 ") // fa-circle
 	} else {
 		indicator = "  "
 	}
 
 	var checkbox string
 	if checked {
-		checkbox = styles.ConnectedStyle.Render("[x] ")
+		checkbox = styles.ConnectedStyle.Render("[\uf00c] ") // fa-check
 	} else {
 		checkbox = styles.MutedStyle.Render("[ ] ")
 	}

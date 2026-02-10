@@ -244,6 +244,13 @@ export async function getLayerFullMetadata(connId: string, workspace: string, na
   return handleResponse<LayerMetadata>(response)
 }
 
+// Feature count for vector layers
+export async function getLayerFeatureCount(connId: string, workspace: string, name: string): Promise<number> {
+  const response = await fetch(`${API_BASE}/layers/${connId}/${workspace}/${name}/count`)
+  const data = await handleResponse<{ count: number }>(response)
+  return data.count
+}
+
 export async function updateLayerMetadata(
   connId: string,
   workspace: string,
@@ -270,6 +277,32 @@ export async function deleteStyle(connId: string, workspace: string, name: strin
     method: 'DELETE',
   })
   return handleResponse<void>(response)
+}
+
+// Layer styles association
+export interface LayerStyles {
+  defaultStyle: string
+  additionalStyles: string[]
+}
+
+export async function getLayerStyles(connId: string, workspace: string, layer: string): Promise<LayerStyles> {
+  const response = await fetch(`${API_BASE}/layerstyles/${connId}/${workspace}/${layer}`)
+  return handleResponse<LayerStyles>(response)
+}
+
+export async function updateLayerStyles(
+  connId: string,
+  workspace: string,
+  layer: string,
+  defaultStyle: string,
+  additionalStyles: string[]
+): Promise<LayerStyles> {
+  const response = await fetch(`${API_BASE}/layerstyles/${connId}/${workspace}/${layer}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ defaultStyle, additionalStyles }),
+  })
+  return handleResponse<LayerStyles>(response)
 }
 
 // Style content for editor
@@ -731,4 +764,43 @@ export function downloadGeoTiff(
 export function downloadSyncLogs(taskId: string): void {
   const url = `${API_BASE}/download/logs/${taskId}`
   window.open(url, '_blank')
+}
+
+// ============================================================================
+// Universal Search API
+// ============================================================================
+
+export interface SearchResult {
+  type: 'workspace' | 'datastore' | 'coveragestore' | 'layer' | 'style' | 'layergroup'
+  name: string
+  workspace?: string
+  storeName?: string
+  storeType?: string
+  connectionId: string
+  serverName: string
+  tags: string[]
+  description?: string
+  icon: string
+}
+
+export interface SearchResponse {
+  query: string
+  results: SearchResult[]
+  total: number
+}
+
+// Search across all connections and resources
+export async function search(query: string, connectionId?: string): Promise<SearchResponse> {
+  let url = `${API_BASE}/search?q=${encodeURIComponent(query)}`
+  if (connectionId) {
+    url += `&connection=${encodeURIComponent(connectionId)}`
+  }
+  const response = await fetch(url)
+  return handleResponse<SearchResponse>(response)
+}
+
+// Get search suggestions
+export async function getSearchSuggestions(): Promise<{ suggestions: string[] }> {
+  const response = await fetch(`${API_BASE}/search/suggestions`)
+  return handleResponse<{ suggestions: string[] }>(response)
 }

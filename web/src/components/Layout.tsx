@@ -7,9 +7,10 @@ import { useUIStore } from '../stores/uiStore'
 
 interface LayoutProps {
   children: ReactNode
+  onSearchClick?: () => void
 }
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children, onSearchClick }: LayoutProps) {
   const sidebarWidth = useUIStore((state) => state.sidebarWidth)
   const setSidebarWidth = useUIStore((state) => state.setSidebarWidth)
   const bgColor = useColorModeValue('gray.50', 'gray.900')
@@ -48,7 +49,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <Flex direction="column" h="100vh" bg={bgColor}>
-      <Header />
+      <Header onSearchClick={onSearchClick} />
       <Flex flex="1" overflow="hidden" ref={containerRef}>
         <Box
           w={`${sidebarWidth}px`}

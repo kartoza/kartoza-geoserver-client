@@ -410,7 +410,7 @@ func (cs *ConnectionsScreen) View() string {
 	}
 	if cs.statusMsg != "" {
 		b.WriteString("\n")
-		b.WriteString(styles.SuccessStyle.Render("✓ " + cs.statusMsg))
+		b.WriteString(styles.SuccessStyle.Render("\uf00c " + cs.statusMsg)) // fa-check
 	}
 
 	// Help
@@ -456,9 +456,9 @@ func (cs *ConnectionsScreen) renderList() string {
 
 		// Status indicator
 		if isActive {
-			line = styles.ConnectedStyle.Render("● ") + info
+			line = styles.ConnectedStyle.Render("\uf111 ") + info // fa-circle (filled)
 		} else {
-			line = styles.MutedStyle.Render("○ ") + info
+			line = styles.MutedStyle.Render("\uf10c ") + info // fa-circle-o (empty)
 		}
 
 		b.WriteString(style.Render(line))
@@ -479,9 +479,9 @@ func (cs *ConnectionsScreen) renderForm(title string) string {
 		var indicator string
 		if i == cs.focusIndex {
 			if cs.editingField {
-				indicator = styles.ConnectedStyle.Render("▶ ") // Editing
+				indicator = styles.ConnectedStyle.Render("\uf0da ") // fa-caret-right - Editing
 			} else {
-				indicator = styles.SelectedItemStyle.Render("● ") // Selected but not editing
+				indicator = styles.SelectedItemStyle.Render("\uf111 ") // fa-circle - Selected but not editing
 			}
 		} else {
 			indicator = "  "

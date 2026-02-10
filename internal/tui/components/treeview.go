@@ -502,9 +502,9 @@ func (tv *TreeView) View() string {
 
 	var header string
 	if tv.connected {
-		header = styles.ConnectedStyle.Render("●") + " " + tv.serverName
+		header = styles.ConnectedStyle.Render("\uf111") + " " + tv.serverName // fa-circle (filled)
 	} else {
-		header = styles.DisconnectedStyle.Render("○") + " Not connected"
+		header = styles.DisconnectedStyle.Render("\uf10c") + " Not connected" // fa-circle-o (empty)
 	}
 	b.WriteString(headerStyle.Render(header))
 	b.WriteString("\n")
@@ -577,9 +577,9 @@ func (tv *TreeView) renderNode(fn FlatNode, selected bool) string {
 	var indicator string
 	if len(node.Children) > 0 || tv.canLoadChildren(node) {
 		if node.Expanded {
-			indicator = styles.ExpandedNodeStyle.Render("▼")
+			indicator = styles.ExpandedNodeStyle.Render("\uf078") // fa-chevron-down
 		} else {
-			indicator = styles.CollapsedNodeStyle.Render("▶")
+			indicator = styles.CollapsedNodeStyle.Render("\uf054") // fa-chevron-right
 		}
 	} else {
 		indicator = " "
@@ -587,12 +587,12 @@ func (tv *TreeView) renderNode(fn FlatNode, selected bool) string {
 
 	// Loading indicator
 	if node.IsLoading {
-		indicator = styles.LoadingStyle.Render("◌")
+		indicator = styles.LoadingStyle.Render("\uf110") // fa-spinner
 	}
 
 	// Error indicator
 	if node.HasError {
-		indicator = styles.ErrorStyle.Render("✗")
+		indicator = styles.ErrorStyle.Render("\uf00d") // fa-times
 	}
 
 	// Icon and name
@@ -615,9 +615,9 @@ func (tv *TreeView) renderNode(fn FlatNode, selected bool) string {
 	var enabledIndicator string
 	if node.Enabled != nil {
 		if *node.Enabled {
-			enabledIndicator = styles.SuccessStyle.Render(" ✓")
+			enabledIndicator = styles.SuccessStyle.Render(" \uf00c") // fa-check
 		} else {
-			enabledIndicator = styles.ErrorStyle.Render(" ✗")
+			enabledIndicator = styles.ErrorStyle.Render(" \uf00d") // fa-times
 		}
 	}
 

@@ -357,14 +357,14 @@ func (w *CacheWizard) View() string {
 	for i, field := range fields {
 		prefix := "  "
 		if i == w.currentField {
-			prefix = "▸ "
+			prefix = "\uf0da " // fa-caret-right
 		}
 
 		label := styles.HelpTextStyle.Width(12).Render(field.label + ":")
 		value := field.value
 
 		if i == w.currentField {
-			value = styles.ActiveItemStyle.Render("◄ " + value + " ►")
+			value = styles.ActiveItemStyle.Render("\uf053 " + value + " \uf054") // fa-chevron-left/right
 		} else {
 			value = styles.ItemStyle.Render("  " + value + "  ")
 		}

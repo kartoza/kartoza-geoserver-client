@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Box,
   Flex,
@@ -13,8 +13,11 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  Checkbox,
+  Button,
+  useToast,
 } from '@chakra-ui/react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   FiChevronRight,
   FiChevronDown,
@@ -31,6 +34,8 @@ import {
   FiGrid,
   FiFileText,
   FiMap,
+  FiPlus,
+  FiUpload,
 } from 'react-icons/fi'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useTreeStore, generateNodeId } from '../stores/treeStore'
@@ -39,7 +44,7 @@ import * as api from '../api/client'
 import type { TreeNode, NodeType } from '../types'
 
 // Get the icon component for each node type
-function getNodeIconComponent(type: NodeType) {
+function getNodeIconComponent(type: NodeType | 'featuretype' | 'coverage') {
   switch (type) {
     case 'connection':
       return FiServer
@@ -60,13 +65,17 @@ function getNodeIconComponent(type: NodeType) {
     case 'layergroups':
     case 'layergroup':
       return FiGrid
+    case 'featuretype':
+      return FiFileText
+    case 'coverage':
+      return FiMap
     default:
       return FiFolder
   }
 }
 
 // Get color for each node type
-function getNodeColor(type: NodeType): string {
+function getNodeColor(type: NodeType | 'featuretype' | 'coverage'): string {
   switch (type) {
     case 'connection':
       return 'kartoza.500'
@@ -87,6 +96,10 @@ function getNodeColor(type: NodeType): string {
     case 'layergroups':
     case 'layergroup':
       return 'cyan.500'
+    case 'featuretype':
+      return 'teal.500'
+    case 'coverage':
+      return 'orange.500'
     default:
       return 'gray.500'
   }
@@ -404,10 +417,55 @@ interface ItemNodeProps {
 
 function ItemNode({ connectionId, workspace, name, type, storeType }: ItemNodeProps) {
   const nodeId = generateNodeId(type, connectionId, workspace, name)
+  const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
+  const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const openDialog = useUIStore((state) => state.openDialog)
   const setPreview = useUIStore((state) => state.setPreview)
+
+  // For datastores and coveragestores, we can expand to show feature types / coverages
+  const isExpandable = type === 'datastore' || type === 'coveragestore'
+
+  // Fetch feature types for datastores
+  const { data: featureTypes, isLoading: loadingFeatureTypes, error: featureTypesError } = useQuery({
+    queryKey: ['featuretypes', connectionId, workspace, name],
+    queryFn: () => api.getFeatureTypes(connectionId, workspace, name),
+    enabled: isExpandable && type === 'datastore' && isExpanded,
+    staleTime: 30000,
+  })
+
+  // Fetch coverages for coveragestores
+  const { data: coverages, isLoading: loadingCoverages, error: coveragesError } = useQuery({
+    queryKey: ['coverages', connectionId, workspace, name],
+    queryFn: () => api.getCoverages(connectionId, workspace, name),
+    enabled: isExpandable && type === 'coveragestore' && isExpanded,
+    staleTime: 30000,
+  })
+
+  // Fetch available (unpublished) feature types for datastores
+  const { data: availableFeatureTypes, error: availableError } = useQuery({
+    queryKey: ['available-featuretypes', connectionId, workspace, name],
+    queryFn: () => api.getAvailableFeatureTypes(connectionId, workspace, name),
+    enabled: isExpandable && type === 'datastore' && isExpanded,
+    staleTime: 30000,
+  })
+
+  // Fetch feature count for vector layers only when selected (to minimize API calls)
+  const isSelected = selectedNode?.id === nodeId
+  const { data: featureCount } = useQuery({
+    queryKey: ['feature-count', connectionId, workspace, name],
+    queryFn: () => api.getLayerFeatureCount(connectionId, workspace, name),
+    enabled: type === 'layer' && storeType !== 'coveragestore' && isSelected,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    retry: false, // Don't retry on failure (e.g., for raster layers)
+  })
+
+  // Log errors for debugging
+  if (featureTypesError) console.error('Feature types error:', featureTypesError)
+  if (coveragesError) console.error('Coverages error:', coveragesError)
+  if (availableError) console.error('Available feature types error:', availableError)
 
   const node: TreeNode = {
     id: nodeId,
@@ -419,10 +477,13 @@ function ItemNode({ connectionId, workspace, name, type, storeType }: ItemNodePr
     storeType,
   }
 
-  const isSelected = selectedNode?.id === nodeId
+  const isLoading = loadingFeatureTypes || loadingCoverages
 
   const handleClick = () => {
     selectNode(node)
+    if (isExpandable) {
+      toggleNode(nodeId)
+    }
   }
 
   const handlePreview = (e: React.MouseEvent) => {
@@ -441,6 +502,7 @@ function ItemNode({ connectionId, workspace, name, type, storeType }: ItemNodePr
         url,
         layerName: name,
         workspace,
+        connectionId,
         storeName: name,
         storeType,
         layerType,
@@ -510,22 +572,464 @@ function ItemNode({ connectionId, workspace, name, type, storeType }: ItemNodePr
   // Edit is available for styles and layers
   const canEdit = type === 'style' || type === 'layer'
 
+  // Combine published and available feature types count
+  const totalCount = type === 'datastore'
+    ? (featureTypes?.length || 0) + (availableFeatureTypes?.length || 0)
+    : type === 'coveragestore'
+    ? coverages?.length
+    : type === 'layer' && featureCount !== undefined && featureCount >= 0
+    ? featureCount
+    : undefined
+
   return (
-    <TreeNodeRow
-      node={node}
-      isExpanded={false}
-      isSelected={isSelected}
-      isLoading={false}
-      onClick={handleClick}
-      onEdit={canEdit ? handleEdit : undefined}
-      onPreview={type === 'layer' || type === 'datastore' || type === 'coveragestore' ? handlePreview : undefined}
-      onDownloadConfig={canDownloadConfig ? handleDownloadConfig : undefined}
-      onDownloadData={canDownloadData ? handleDownloadData : undefined}
-      downloadDataLabel={downloadDataLabel}
-      onDelete={handleDelete}
-      level={3}
-      isLeaf
-    />
+    <Box>
+      <TreeNodeRow
+        node={node}
+        isExpanded={isExpanded}
+        isSelected={isSelected}
+        isLoading={isLoading}
+        onClick={handleClick}
+        onEdit={canEdit ? handleEdit : undefined}
+        onPreview={type === 'layer' || type === 'datastore' || type === 'coveragestore' ? handlePreview : undefined}
+        onDownloadConfig={canDownloadConfig ? handleDownloadConfig : undefined}
+        onDownloadData={canDownloadData ? handleDownloadData : undefined}
+        downloadDataLabel={downloadDataLabel}
+        onDelete={handleDelete}
+        level={3}
+        isLeaf={!isExpandable}
+        count={totalCount}
+      />
+      {isExpanded && type === 'datastore' && (
+        <Box pl={4}>
+          {featureTypesError ? (
+            <Text fontSize="xs" color="red.500" px={2} py={2}>
+              Error loading datasets: {(featureTypesError as Error).message}
+            </Text>
+          ) : (
+            <DataStoreContentsNode
+              connectionId={connectionId}
+              workspace={workspace}
+              storeName={name}
+              featureTypes={featureTypes || []}
+              availableFeatureTypes={availableFeatureTypes || []}
+            />
+          )}
+        </Box>
+      )}
+      {isExpanded && type === 'coveragestore' && (
+        <Box pl={4}>
+          {coveragesError ? (
+            <Text fontSize="xs" color="red.500" px={2} py={2}>
+              Error loading coverages: {(coveragesError as Error).message}
+            </Text>
+          ) : (
+            <CoverageStoreContentsNode
+              connectionId={connectionId}
+              workspace={workspace}
+              storeName={name}
+              coverages={coverages || []}
+            />
+          )}
+        </Box>
+      )}
+    </Box>
+  )
+}
+
+// Component to show datastore contents with publish functionality
+interface DataStoreContentsNodeProps {
+  connectionId: string
+  workspace: string
+  storeName: string
+  featureTypes: { name: string }[]
+  availableFeatureTypes: string[]
+}
+
+function DataStoreContentsNode({
+  connectionId,
+  workspace,
+  storeName,
+  featureTypes,
+  availableFeatureTypes,
+}: DataStoreContentsNodeProps) {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [selectedForPublish, setSelectedForPublish] = useState<Set<string>>(new Set())
+  const [isPublishing, setIsPublishing] = useState(false)
+  const setPreview = useUIStore((state) => state.setPreview)
+
+  const toggleSelection = (name: string) => {
+    const newSelection = new Set(selectedForPublish)
+    if (newSelection.has(name)) {
+      newSelection.delete(name)
+    } else {
+      newSelection.add(name)
+    }
+    setSelectedForPublish(newSelection)
+  }
+
+  const selectAll = () => {
+    setSelectedForPublish(new Set(availableFeatureTypes))
+  }
+
+  const handlePublishSelected = async () => {
+    if (selectedForPublish.size === 0) return
+
+    setIsPublishing(true)
+    try {
+      const result = await api.publishFeatureTypes(
+        connectionId,
+        workspace,
+        storeName,
+        Array.from(selectedForPublish)
+      )
+
+      if (result.published.length > 0) {
+        toast({
+          title: 'Layers Published',
+          description: `Successfully published ${result.published.length} layer(s)`,
+          status: 'success',
+          duration: 3000,
+        })
+        // Refresh queries
+        queryClient.invalidateQueries({ queryKey: ['featuretypes', connectionId, workspace, storeName] })
+        queryClient.invalidateQueries({ queryKey: ['available-featuretypes', connectionId, workspace, storeName] })
+        queryClient.invalidateQueries({ queryKey: ['layers', connectionId, workspace] })
+        setSelectedForPublish(new Set())
+      }
+
+      if (result.errors.length > 0) {
+        toast({
+          title: 'Some layers failed to publish',
+          description: result.errors.join(', '),
+          status: 'warning',
+          duration: 5000,
+        })
+      }
+    } catch (error) {
+      toast({
+        title: 'Failed to publish layers',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        status: 'error',
+        duration: 5000,
+      })
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  const handlePublishSingle = async (featureTypeName: string) => {
+    try {
+      await api.publishFeatureType(connectionId, workspace, storeName, featureTypeName)
+      toast({
+        title: 'Layer Published',
+        description: `Successfully published ${featureTypeName}`,
+        status: 'success',
+        duration: 3000,
+      })
+      // Refresh queries
+      queryClient.invalidateQueries({ queryKey: ['featuretypes', connectionId, workspace, storeName] })
+      queryClient.invalidateQueries({ queryKey: ['available-featuretypes', connectionId, workspace, storeName] })
+      queryClient.invalidateQueries({ queryKey: ['layers', connectionId, workspace] })
+    } catch (error) {
+      toast({
+        title: 'Failed to publish layer',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        status: 'error',
+        duration: 5000,
+      })
+    }
+  }
+
+  const handlePreviewPublished = (featureTypeName: string) => {
+    api.startPreview({
+      connId: connectionId,
+      workspace,
+      layerName: featureTypeName,
+      storeName,
+      storeType: 'datastore',
+      layerType: 'vector',
+    }).then(({ url }) => {
+      setPreview({
+        url,
+        layerName: featureTypeName,
+        workspace,
+        connectionId,
+        storeName,
+        storeType: 'datastore',
+        layerType: 'vector',
+      })
+    }).catch((err) => {
+      toast({
+        title: 'Preview failed',
+        description: err.message,
+        status: 'error',
+        duration: 3000,
+      })
+    })
+  }
+
+  const bgAvailable = useColorModeValue('yellow.50', 'yellow.900')
+  const bgPublished = useColorModeValue('green.50', 'green.900')
+
+  return (
+    <Box>
+      {/* Published feature types */}
+      {featureTypes.length > 0 && (
+        <Box mb={2}>
+          <Text fontSize="xs" fontWeight="600" color="gray.500" px={2} py={1}>
+            Published ({featureTypes.length})
+          </Text>
+          {featureTypes.map((ft) => (
+            <DatasetRow
+              key={ft.name}
+              name={ft.name}
+              isPublished
+              bg={bgPublished}
+              onPreview={() => handlePreviewPublished(ft.name)}
+            />
+          ))}
+        </Box>
+      )}
+
+      {/* Unpublished feature types */}
+      {availableFeatureTypes.length > 0 && (
+        <Box>
+          <Flex align="center" justify="space-between" px={2} py={1}>
+            <Text fontSize="xs" fontWeight="600" color="gray.500">
+              Available to Publish ({availableFeatureTypes.length})
+            </Text>
+            <Flex gap={1}>
+              <Button
+                size="xs"
+                variant="ghost"
+                onClick={selectAll}
+                isDisabled={selectedForPublish.size === availableFeatureTypes.length}
+              >
+                Select All
+              </Button>
+              {selectedForPublish.size > 0 && (
+                <Button
+                  size="xs"
+                  colorScheme="kartoza"
+                  leftIcon={<FiUpload size={12} />}
+                  onClick={handlePublishSelected}
+                  isLoading={isPublishing}
+                >
+                  Publish ({selectedForPublish.size})
+                </Button>
+              )}
+            </Flex>
+          </Flex>
+          {availableFeatureTypes.map((ftName) => (
+            <DatasetRow
+              key={ftName}
+              name={ftName}
+              isPublished={false}
+              bg={bgAvailable}
+              isSelected={selectedForPublish.has(ftName)}
+              onToggleSelect={() => toggleSelection(ftName)}
+              onPublish={() => handlePublishSingle(ftName)}
+            />
+          ))}
+        </Box>
+      )}
+
+      {featureTypes.length === 0 && availableFeatureTypes.length === 0 && (
+        <Text fontSize="xs" color="gray.500" px={2} py={2} fontStyle="italic">
+          No datasets in this store
+        </Text>
+      )}
+    </Box>
+  )
+}
+
+// Component to show coveragestore contents
+interface CoverageStoreContentsNodeProps {
+  connectionId: string
+  workspace: string
+  storeName: string
+  coverages: { name: string }[]
+}
+
+function CoverageStoreContentsNode({
+  connectionId,
+  workspace,
+  storeName,
+  coverages,
+}: CoverageStoreContentsNodeProps) {
+  const setPreview = useUIStore((state) => state.setPreview)
+  const toast = useToast()
+
+  const handlePreview = (coverageName: string) => {
+    api.startPreview({
+      connId: connectionId,
+      workspace,
+      layerName: coverageName,
+      storeName,
+      storeType: 'coveragestore',
+      layerType: 'raster',
+    }).then(({ url }) => {
+      setPreview({
+        url,
+        layerName: coverageName,
+        workspace,
+        connectionId,
+        storeName,
+        storeType: 'coveragestore',
+        layerType: 'raster',
+      })
+    }).catch((err) => {
+      toast({
+        title: 'Preview failed',
+        description: err.message,
+        status: 'error',
+        duration: 3000,
+      })
+    })
+  }
+
+  const bgPublished = useColorModeValue('purple.50', 'purple.900')
+
+  return (
+    <Box>
+      {coverages.length > 0 && (
+        <Box>
+          <Text fontSize="xs" fontWeight="600" color="gray.500" px={2} py={1}>
+            Coverages ({coverages.length})
+          </Text>
+          {coverages.map((cov) => (
+            <DatasetRow
+              key={cov.name}
+              name={cov.name}
+              isPublished
+              isCoverage
+              bg={bgPublished}
+              onPreview={() => handlePreview(cov.name)}
+            />
+          ))}
+        </Box>
+      )}
+
+      {coverages.length === 0 && (
+        <Text fontSize="xs" color="gray.500" px={2} py={2} fontStyle="italic">
+          No coverages in this store
+        </Text>
+      )}
+    </Box>
+  )
+}
+
+// Reusable row component for datasets (feature types and coverages)
+interface DatasetRowProps {
+  name: string
+  isPublished: boolean
+  isCoverage?: boolean
+  bg: string
+  isSelected?: boolean
+  onToggleSelect?: () => void
+  onPublish?: () => void
+  onPreview?: () => void
+}
+
+function DatasetRow({
+  name,
+  isPublished,
+  isCoverage = false,
+  bg,
+  isSelected,
+  onToggleSelect,
+  onPublish,
+  onPreview,
+}: DatasetRowProps) {
+  const hoverBg = useColorModeValue('gray.100', 'gray.600')
+  const iconType = isCoverage ? 'coverage' : 'featuretype'
+  const NodeIcon = getNodeIconComponent(iconType)
+  const nodeColor = getNodeColor(iconType)
+
+  return (
+    <Flex
+      align="center"
+      py={1.5}
+      px={2}
+      pl={6}
+      bg={bg}
+      _hover={{ bg: hoverBg }}
+      borderRadius="md"
+      mx={1}
+      my={0.5}
+      role="group"
+    >
+      {!isPublished && onToggleSelect && (
+        <Checkbox
+          size="sm"
+          isChecked={isSelected}
+          onChange={onToggleSelect}
+          mr={2}
+          colorScheme="kartoza"
+        />
+      )}
+      <Box
+        p={1}
+        borderRadius="md"
+        mr={2}
+      >
+        <Icon
+          as={NodeIcon}
+          boxSize={3.5}
+          color={nodeColor}
+        />
+      </Box>
+      <Text
+        flex="1"
+        fontSize="sm"
+        noOfLines={1}
+      >
+        {name}
+      </Text>
+      {isPublished && (
+        <Badge colorScheme="green" fontSize="2xs" mr={2}>
+          Published
+        </Badge>
+      )}
+      <Flex
+        gap={1}
+        opacity={0}
+        _groupHover={{ opacity: 1 }}
+        transition="opacity 0.15s"
+      >
+        {onPreview && (
+          <Tooltip label="Preview" fontSize="xs">
+            <IconButton
+              aria-label="Preview"
+              icon={<FiEye size={12} />}
+              size="xs"
+              variant="ghost"
+              colorScheme="kartoza"
+              onClick={(e) => {
+                e.stopPropagation()
+                onPreview()
+              }}
+            />
+          </Tooltip>
+        )}
+        {!isPublished && onPublish && (
+          <Tooltip label="Publish as Layer" fontSize="xs">
+            <IconButton
+              aria-label="Publish"
+              icon={<FiPlus size={12} />}
+              size="xs"
+              variant="ghost"
+              colorScheme="green"
+              onClick={(e) => {
+                e.stopPropagation()
+                onPublish()
+              }}
+            />
+          </Tooltip>
+        )}
+      </Flex>
+    </Flex>
   )
 }
 

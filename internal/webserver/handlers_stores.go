@@ -271,11 +271,12 @@ func (s *Server) updateDataStore(w http.ResponseWriter, r *http.Request, client 
 	})
 }
 
-// deleteDataStore deletes a data store
+// deleteDataStore deletes a data store and cleans up associated GWC caches
 func (s *Server) deleteDataStore(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, store string) {
 	recurse := r.URL.Query().Get("recurse") == "true"
 
-	if err := client.DeleteDataStore(workspace, store, recurse); err != nil {
+	// Use cleanup method to also remove GWC caches
+	if err := client.DeleteDataStoreWithCleanup(workspace, store, recurse); err != nil {
 		s.jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -442,11 +443,12 @@ func (s *Server) updateCoverageStore(w http.ResponseWriter, r *http.Request, cli
 	})
 }
 
-// deleteCoverageStore deletes a coverage store
+// deleteCoverageStore deletes a coverage store and cleans up associated GWC caches
 func (s *Server) deleteCoverageStore(w http.ResponseWriter, r *http.Request, client *api.Client, workspace, store string) {
 	recurse := r.URL.Query().Get("recurse") == "true"
 
-	if err := client.DeleteCoverageStore(workspace, store, recurse); err != nil {
+	// Use cleanup method to also remove GWC caches
+	if err := client.DeleteCoverageStoreWithCleanup(workspace, store, recurse); err != nil {
 		s.jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

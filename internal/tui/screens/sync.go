@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kartoza/kartoza-geoserver-client/internal/config"
 	"github.com/kartoza/kartoza-geoserver-client/internal/sync"
+	"github.com/kartoza/kartoza-geoserver-client/internal/tui/styles"
 )
 
 // SyncKeyMap defines the key bindings for the sync screen
@@ -107,7 +108,7 @@ type SyncScreen struct {
 func NewSyncScreen(cfg *config.Config) *SyncScreen {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#38B2AC"))
+	s.Style = lipgloss.NewStyle().Foreground(styles.KartozaBlue)
 
 	return &SyncScreen{
 		config:        cfg,
@@ -310,7 +311,7 @@ func (s *SyncScreen) View() string {
 	// Header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#38B2AC")).
+		Foreground(styles.KartozaBlue).
 		MarginBottom(1)
 
 	header := headerStyle.Render("🔄 Server Synchronization")
@@ -341,7 +342,7 @@ func (s *SyncScreen) View() string {
 
 	// Help text
 	helpStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#888888")).
+		Foreground(styles.Muted).
 		MarginTop(1)
 
 	var helpText string
@@ -353,7 +354,7 @@ func (s *SyncScreen) View() string {
 
 	// Status message
 	statusStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFD700")).
+		Foreground(styles.KartozaOrange).
 		MarginTop(1)
 
 	status := ""
@@ -372,9 +373,9 @@ func (s *SyncScreen) View() string {
 }
 
 func (s *SyncScreen) renderSourcePanel(width int) string {
-	borderColor := lipgloss.Color("#888888")
+	borderColor := styles.Border
 	if s.activePanel == PanelSource {
-		borderColor = lipgloss.Color("#38B2AC")
+		borderColor = styles.KartozaBlue
 	}
 
 	panelStyle := lipgloss.NewStyle().
@@ -385,7 +386,7 @@ func (s *SyncScreen) renderSourcePanel(width int) string {
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#48BB78")).
+		Foreground(styles.Success).
 		MarginBottom(1)
 
 	title := titleStyle.Render("📤 Source (Read Only)")
@@ -398,7 +399,7 @@ func (s *SyncScreen) renderSourcePanel(width int) string {
 		}
 		style := lipgloss.NewStyle()
 		if i == s.sourceIdx && s.activePanel == PanelSource {
-			style = style.Background(lipgloss.Color("#38B2AC")).Foreground(lipgloss.Color("#FFFFFF"))
+			style = style.Background(styles.KartozaBlue).Foreground(styles.TextBright)
 		}
 		items = append(items, style.Render(marker+conn.Name))
 	}
@@ -415,9 +416,9 @@ func (s *SyncScreen) renderConnector() string {
 }
 
 func (s *SyncScreen) renderDestinationsPanel(width int) string {
-	borderColor := lipgloss.Color("#888888")
+	borderColor := styles.Border
 	if s.activePanel == PanelDestinations {
-		borderColor = lipgloss.Color("#38B2AC")
+		borderColor = styles.KartozaBlue
 	}
 
 	panelStyle := lipgloss.NewStyle().
@@ -428,7 +429,7 @@ func (s *SyncScreen) renderDestinationsPanel(width int) string {
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#4299E1")).
+		Foreground(styles.KartozaBlueLight).
 		MarginBottom(1)
 
 	title := titleStyle.Render("📥 Destinations")
@@ -446,21 +447,21 @@ func (s *SyncScreen) renderDestinationsPanel(width int) string {
 
 		marker := "[ ] "
 		if s.selectedDests[conn.ID] {
-			marker = "[✓] "
+			marker = "[\uf00c] " // fa-check
 		}
 		if i == s.destIdx && s.activePanel == PanelDestinations {
-			marker = "→" + marker[1:]
+			marker = "\uf0da" + marker[1:] // fa-caret-right
 		}
 
 		style := lipgloss.NewStyle()
 		if i == s.destIdx && s.activePanel == PanelDestinations {
-			style = style.Background(lipgloss.Color("#4299E1")).Foreground(lipgloss.Color("#FFFFFF"))
+			style = style.Background(styles.KartozaBlueLight).Foreground(styles.TextBright)
 		}
 		items = append(items, style.Render(marker+conn.Name))
 	}
 
 	if len(items) == 0 {
-		items = append(items, lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("No other servers available"))
+		items = append(items, lipgloss.NewStyle().Foreground(styles.Muted).Render("No other servers available"))
 	}
 
 	content := title + "\n" + strings.Join(items, "\n")
@@ -468,9 +469,9 @@ func (s *SyncScreen) renderDestinationsPanel(width int) string {
 }
 
 func (s *SyncScreen) renderOptionsPanel(width int) string {
-	borderColor := lipgloss.Color("#888888")
+	borderColor := styles.Border
 	if s.activePanel == PanelOptions {
-		borderColor = lipgloss.Color("#38B2AC")
+		borderColor = styles.KartozaBlue
 	}
 
 	panelStyle := lipgloss.NewStyle().
@@ -481,10 +482,10 @@ func (s *SyncScreen) renderOptionsPanel(width int) string {
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#D69E2E")).
+		Foreground(styles.KartozaOrange).
 		MarginBottom(1)
 
-	title := titleStyle.Render("⚙️  Sync Options")
+	title := titleStyle.Render("\uf013  Sync Options") // fa-cog
 
 	options := []struct {
 		name    string
@@ -502,15 +503,15 @@ func (s *SyncScreen) renderOptionsPanel(width int) string {
 	for i, opt := range options {
 		marker := "[ ] "
 		if opt.enabled {
-			marker = "[✓] "
+			marker = "[\uf00c] " // fa-check
 		}
 		if i == s.optionIdx && s.activePanel == PanelOptions {
-			marker = "→" + marker[1:]
+			marker = "\uf0da" + marker[1:] // fa-caret-right
 		}
 
 		style := lipgloss.NewStyle()
 		if i == s.optionIdx && s.activePanel == PanelOptions {
-			style = style.Background(lipgloss.Color("#D69E2E")).Foreground(lipgloss.Color("#FFFFFF"))
+			style = style.Background(styles.KartozaOrange).Foreground(styles.TextBright)
 		}
 		items = append(items, style.Render(marker+opt.name))
 	}
@@ -527,7 +528,7 @@ func (s *SyncScreen) renderProgress() string {
 
 	progressStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#38B2AC")).
+		BorderForeground(styles.KartozaBlue).
 		Padding(0, 1).
 		MarginTop(1)
 
@@ -539,14 +540,14 @@ func (s *SyncScreen) renderProgress() string {
 		progress := task.GetProgress()
 		currentItem := task.GetCurrentItem()
 
-		statusIcon := "⏳"
+		statusIcon := "\uf110" // fa-spinner
 		switch status {
 		case "completed":
-			statusIcon = "✅"
+			statusIcon = "\uf00c" // fa-check
 		case "failed":
-			statusIcon = "❌"
+			statusIcon = "\uf00d" // fa-times
 		case "stopped":
-			statusIcon = "⏹️"
+			statusIcon = "\uf04d" // fa-stop
 		}
 
 		progressBar := s.renderProgressBar(int(progress), 20)

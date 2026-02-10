@@ -1142,7 +1142,7 @@ func (d *InfoDialog) View() string {
 	if d.animOpacity < 1.0 && d.animOpacity > 0.5 {
 		dialog = lipgloss.NewStyle().Render(dialog)
 	} else if d.animOpacity <= 0.5 {
-		fadedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
+		fadedStyle := lipgloss.NewStyle().Foreground(styles.Muted)
 		dialog = fadedStyle.Render(dialog)
 	}
 

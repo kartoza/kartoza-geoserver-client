@@ -316,11 +316,11 @@ func (d *ProgressDialog) View() string {
 	// Progress info
 	if d.err != nil {
 		// Error state
-		errorIcon := styles.ErrorStyle.Render("✗")
+		errorIcon := styles.ErrorStyle.Render("\uf00d") // fa-times
 		b.WriteString(fmt.Sprintf("%s Error: %v\n\n", errorIcon, d.err))
 	} else if d.done {
 		// Complete state
-		successIcon := styles.SuccessStyle.Render("✓")
+		successIcon := styles.SuccessStyle.Render("\uf00c") // fa-check
 		b.WriteString(fmt.Sprintf("%s Complete! Uploaded %d file(s)\n\n", successIcon, d.totalItems))
 
 		// Show verification results if available
@@ -382,7 +382,7 @@ func (d *ProgressDialog) View() string {
 	if d.animOpacity < 1.0 && d.animOpacity > 0.5 {
 		dialog = lipgloss.NewStyle().Render(dialog)
 	} else if d.animOpacity <= 0.5 {
-		fadedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
+		fadedStyle := lipgloss.NewStyle().Foreground(styles.Muted)
 		dialog = fadedStyle.Render(dialog)
 	}
 

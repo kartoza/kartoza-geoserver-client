@@ -677,6 +677,8 @@
                 if (!layer) return;
 
                 const layerName = `${layer.workspace}:${layer.name}`;
+                // WMS URL - defined outside if/else so it's available for GetFeatureInfo
+                const wmsUrl = `${layer.geoserver_url}/${layer.workspace}/wms`;
 
                 let sourceConfig;
                 let sourceId = 'geoserver-layer';
@@ -700,7 +702,6 @@
                     layerId = 'geoserver-wmts';
                 } else {
                     // Use WMS (uncached)
-                    const wmsUrl = `${layer.geoserver_url}/${layer.workspace}/wms`;
                     sourceConfig = {
                         type: 'raster',
                         tiles: [

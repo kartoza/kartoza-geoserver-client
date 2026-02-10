@@ -579,7 +579,7 @@ func (r *VerificationResult) FormatResult() string {
 
 func statusIcon(ok bool) string {
 	if ok {
-		return "✓"
+		return "\uf00c" // fa-check
 	}
-	return "✗"
+	return "\uf00d" // fa-times
 }

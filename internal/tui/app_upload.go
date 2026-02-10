@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kartoza/kartoza-geoserver-client/internal/config"
 	"github.com/kartoza/kartoza-geoserver-client/internal/models"
-	"github.com/kartoza/kartoza-geoserver-client/internal/preview"
 	"github.com/kartoza/kartoza-geoserver-client/internal/tui/components"
 	"github.com/kartoza/kartoza-geoserver-client/internal/verify"
 )
@@ -359,84 +358,95 @@ func (a *App) publishLayerFromStore(node *models.TreeNode) tea.Cmd {
 	}
 }
 
-// openLayerPreview opens the layer preview in the browser
+// openLayerPreview opens the layer preview in the TUI
 func (a *App) openLayerPreview(node *models.TreeNode) tea.Cmd {
 	client := a.getClientForNode(node)
 	conn := a.getConnectionForNode(node)
 
-	return func() tea.Msg {
-		if client == nil {
-			return errMsg{err: fmt.Errorf("no connection for selected node")}
-		}
-
-		var layerName string
-		var layerType string
-		var storeName string
-		var storeType string
-
-		switch node.Type {
-		case models.NodeTypeLayer:
-			layerName = node.Name
-			storeName = node.StoreName
-			storeType = node.StoreType
-			layerType = "vector"
-			if node.StoreType == "coveragestore" {
-				layerType = "raster"
-			}
-		case models.NodeTypeLayerGroup:
-			layerName = node.Name
-			layerType = "group"
-		case models.NodeTypeDataStore:
-			// For data stores, use the store name as layer name (GeoServer convention)
-			layerName = node.Name
-			storeName = node.Name
-			storeType = "datastore"
-			layerType = "vector"
-		case models.NodeTypeCoverageStore:
-			// For coverage stores, use the store name as layer name
-			layerName = node.Name
-			storeName = node.Name
-			storeType = "coveragestore"
-			layerType = "raster"
-		default:
-			return errMsg{err: fmt.Errorf("can only preview layers, layer groups, and stores")}
-		}
-
-		// Get connection credentials
-		username := ""
-		password := ""
-		if conn != nil {
-			username = conn.Username
-			password = conn.Password
-		}
-
-		// Create layer info
-		layerInfo := &preview.LayerInfo{
-			Name:         layerName,
-			Workspace:    node.Workspace,
-			StoreName:    storeName,
-			StoreType:    storeType,
-			GeoServerURL: client.BaseURL(),
-			Type:         layerType,
-			Username:     username,
-			Password:     password,
-		}
-
-		// Start or update preview server
-		if a.previewServer == nil {
-			a.previewServer = preview.NewServer()
-		}
-
-		url, err := a.previewServer.Start(layerInfo)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to start preview server: %w", err)}
-		}
-
-		// Open browser
-		if err := preview.OpenBrowser(url); err != nil {
-			return errMsg{err: fmt.Errorf("failed to open browser: %w", err)}
-		}
-
+	if client == nil {
+		a.errorMsg = "No connection for selected node"
 		return nil
+	}
+
+	var layerName string
+
+	switch node.Type {
+	case models.NodeTypeLayer:
+		layerName = node.Name
+	case models.NodeTypeLayerGroup:
+		layerName = node.Name
+	case models.NodeTypeDataStore:
+		layerName = node.Name
+	case models.NodeTypeCoverageStore:
+		layerName = node.Name
+	default:
+		a.errorMsg = "Can only preview layers, layer groups, and stores"
+		return nil
+	}
+
+	// Get connection credentials
+	username := ""
+	password := ""
+	if conn != nil {
+		username = conn.Username
+		password = conn.Password
+	}
+
+	// Create inline map preview
+	a.mapPreview = components.NewMapPreview(
+		client.BaseURL(),
+		username,
+		password,
+		node.Workspace,
+		layerName,
+	)
+	a.mapPreview.SetSize(a.width, a.height)
+	a.mapPreview.SetOnClose(func() {
+		a.mapPreview = nil
+	})
+
+	// Try to get layer styles
+	return tea.Batch(
+		a.mapPreview.Init(),
+		a.fetchLayerStylesForPreview(node),
+	)
+}
+
+// fetchLayerStylesForPreview fetches available styles for the layer preview
+func (a *App) fetchLayerStylesForPreview(node *models.TreeNode) tea.Cmd {
+	client := a.getClientForNode(node)
+	if client == nil {
+		// Return metadata msg with default values to trigger map fetch
+		return func() tea.Msg {
+			return components.MapPreviewMetadataMsg{}
+		}
+	}
+
+	return func() tea.Msg {
+		var metadataMsg components.MapPreviewMetadataMsg
+
+		// Try to get layer styles
+		layerStyles, err := client.GetLayerStyles(node.Workspace, node.Name)
+		if err == nil {
+			styles := []string{}
+			if layerStyles.DefaultStyle != "" {
+				styles = append(styles, layerStyles.DefaultStyle)
+			}
+			styles = append(styles, layerStyles.AdditionalStyles...)
+			metadataMsg.Styles = styles
+		}
+
+		// Try to get layer metadata for bounds
+		metadata, err := client.GetLayerMetadata(node.Workspace, node.Name)
+		if err == nil && metadata.LatLonBoundingBox != nil {
+			metadataMsg.Bounds = &[4]float64{
+				metadata.LatLonBoundingBox.MinX,
+				metadata.LatLonBoundingBox.MinY,
+				metadata.LatLonBoundingBox.MaxX,
+				metadata.LatLonBoundingBox.MaxY,
+			}
+		}
+
+		return metadataMsg
 	}
 }

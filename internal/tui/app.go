@@ -59,6 +59,7 @@ type AppKeyMap struct {
 	Refresh     key.Binding
 	Escape      key.Binding
 	Sync        key.Binding
+	Search      key.Binding
 }
 
 // DefaultAppKeyMap returns the default key bindings
@@ -95,6 +96,10 @@ func DefaultAppKeyMap() AppKeyMap {
 		Sync: key.NewBinding(
 			key.WithKeys("S"),
 			key.WithHelp("S", "sync servers"),
+		),
+		Search: key.NewBinding(
+			key.WithKeys("ctrl+k", "/"),
+			key.WithHelp("Ctrl+K", "search"),
 		),
 	}
 }
@@ -204,6 +209,12 @@ type App struct {
 
 	// Style wizard state
 	styleWizard *components.StyleWizard
+
+	// Map preview state
+	mapPreview *components.MapPreview
+
+	// Search modal state
+	searchModal *components.SearchModal
 }
 
 // NewApp creates a new TUI application
@@ -400,6 +411,34 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, tea.Batch(cmds...)
 		}
 
+		// If we have a map preview open, forward keys there first
+		if a.mapPreview != nil && a.mapPreview.IsVisible() {
+			var cmd tea.Cmd
+			a.mapPreview, cmd = a.mapPreview.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			// Check if preview was closed
+			if !a.mapPreview.IsVisible() {
+				a.mapPreview = nil
+			}
+			return a, tea.Batch(cmds...)
+		}
+
+		// If we have a search modal open, forward keys there first
+		if a.searchModal != nil && a.searchModal.IsVisible() {
+			var cmd tea.Cmd
+			a.searchModal, cmd = a.searchModal.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			// Check if modal was closed
+			if !a.searchModal.IsVisible() {
+				a.searchModal = nil
+			}
+			return a, tea.Batch(cmds...)
+		}
+
 		// If we have a CRUD dialog open, forward keys there first
 		if a.crudDialog != nil && a.crudDialog.IsVisible() {
 			var cmd tea.Cmd
@@ -496,6 +535,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.screen = ScreenSync
 				return a, a.syncScreen.Init()
 			}
+
+		case key.Matches(msg, a.keyMap.Search):
+			// Open search modal
+			return a, a.openSearchModal()
 
 		}
 
@@ -1127,6 +1170,50 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	case components.MapPreviewMsg:
+		// Forward to map preview if we have one
+		if a.mapPreview != nil {
+			var cmd tea.Cmd
+			a.mapPreview, cmd = a.mapPreview.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+
+	case components.MapPreviewMetadataMsg:
+		// Forward metadata to map preview - this triggers the initial map fetch
+		if a.mapPreview != nil {
+			var cmd tea.Cmd
+			a.mapPreview, cmd = a.mapPreview.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+
+	case components.SearchAnimationMsg:
+		// Forward to search modal if we have one
+		if a.searchModal != nil && a.searchModal.IsVisible() {
+			var cmd tea.Cmd
+			a.searchModal, cmd = a.searchModal.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			// Check if modal was closed during animation
+			if !a.searchModal.IsVisible() {
+				a.searchModal = nil
+			}
+		}
+
+	case components.SearchResultsMsg:
+		// Forward search results to search modal
+		if a.searchModal != nil {
+			var cmd tea.Cmd
+			a.searchModal, cmd = a.searchModal.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+
 	case errMsg:
 		a.loading = false
 		a.errorMsg = msg.err.Error()
@@ -1210,6 +1297,18 @@ func (a *App) View() string {
 		content = a.styleWizard.View()
 	}
 
+	// Render map preview overlay
+	if a.mapPreview != nil && a.mapPreview.IsVisible() {
+		a.mapPreview.SetSize(a.width, a.height)
+		content = a.mapPreview.View()
+	}
+
+	// Render search modal overlay (high priority)
+	if a.searchModal != nil && a.searchModal.IsVisible() {
+		a.searchModal.SetSize(a.width, a.height)
+		content = a.searchModal.View()
+	}
+
 	// Render progress dialog overlay (highest priority)
 	if a.progressDialog != nil && a.progressDialog.IsVisible() {
 		a.progressDialog.SetSize(a.width, a.height)
@@ -1237,7 +1336,7 @@ func (a *App) renderMainScreen() string {
 	panels := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 
 	// Title bar
-	title := styles.TitleStyle.Render(" 🌍 Kartoza GeoServer Client")
+	title := styles.TitleStyle.Render(" \uf0ac Kartoza GeoServer Client") // fa-globe
 	titleBar := lipgloss.PlaceHorizontal(a.width, lipgloss.Left, title)
 
 	// Status bar
@@ -1257,9 +1356,9 @@ func (a *App) renderStatusBar() string {
 	if a.loading {
 		status = a.spinner.View() + " Loading..."
 	} else if a.errorMsg != "" {
-		status = styles.ErrorStyle.Render("✗ " + a.errorMsg)
+		status = styles.ErrorStyle.Render("\uf00d " + a.errorMsg) // fa-times
 	} else if a.statusMsg != "" {
-		status = styles.SuccessStyle.Render("✓ " + a.statusMsg)
+		status = styles.SuccessStyle.Render("\uf00c " + a.statusMsg) // fa-check
 	} else {
 		// Show current selection info
 		if a.activePanel == PanelLeft {
@@ -1305,6 +1404,7 @@ func (a *App) renderHelpBar() string {
 		}
 	}
 
+	items = append(items, styles.RenderHelpKey("^K", "search"))
 	items = append(items, styles.RenderHelpKey("c", "connections"))
 	items = append(items, styles.RenderHelpKey("u", "upload"))
 	items = append(items, styles.RenderHelpKey("S", "sync"))
@@ -1327,10 +1427,50 @@ func (a *App) renderSyncScreen() string {
 	return a.syncScreen.View()
 }
 
-// renderDashboardScreen renders the dashboard screen
+// renderDashboardScreen renders the dashboard screen with proper header/footer
 func (a *App) renderDashboardScreen() string {
-	a.dashboardScreen.SetSize(a.width, a.height)
-	return a.dashboardScreen.View()
+	// Title bar (same as main screen)
+	title := styles.TitleStyle.Render(" \uf0ac Kartoza GeoServer Client") // fa-globe
+	titleBar := lipgloss.PlaceHorizontal(a.width, lipgloss.Left, title)
+
+	// Help bar
+	helpBar := a.renderDashboardHelpBar()
+
+	// Calculate content height (total height - title bar - help bar)
+	contentHeight := a.height - 2 // -1 for title bar, -1 for help bar
+
+	// Get dashboard content and set its size
+	a.dashboardScreen.SetSize(a.width, contentHeight)
+	dashboardContent := a.dashboardScreen.View()
+
+	// Center the dashboard content vertically
+	centeredContent := lipgloss.Place(
+		a.width,
+		contentHeight,
+		lipgloss.Center,
+		lipgloss.Center,
+		dashboardContent,
+	)
+
+	// Combine with proper layout
+	return styles.JoinVertical(titleBar, centeredContent, helpBar)
+}
+
+// renderDashboardHelpBar renders the help bar for the dashboard screen
+func (a *App) renderDashboardHelpBar() string {
+	var items []string
+
+	items = append(items, styles.RenderHelpKey("↑↓", "navigate"))
+	items = append(items, styles.RenderHelpKey("Enter", "select"))
+	items = append(items, styles.RenderHelpKey("Tab", "main"))
+	items = append(items, styles.RenderHelpKey("^K", "search"))
+	items = append(items, styles.RenderHelpKey("c", "connections"))
+	items = append(items, styles.RenderHelpKey("S", "sync"))
+	items = append(items, styles.RenderHelpKey("r", "refresh"))
+	items = append(items, styles.RenderHelpKey("?", "help"))
+	items = append(items, styles.RenderHelpKey("q", "quit"))
+
+	return styles.HelpBarStyle.Width(a.width).Render(strings.Join(items, "  "))
 }
 
 // renderHelpScreen renders the help screen
@@ -1418,6 +1558,79 @@ func (a *App) updateSizes() {
 
 	a.fileBrowser.SetSize(panelWidth, panelHeight)
 	a.treeView.SetSize(panelWidth, panelHeight)
+}
+
+// openSearchModal opens the universal search modal
+func (a *App) openSearchModal() tea.Cmd {
+	a.searchModal = components.NewSearchModal(a.config, a.clients)
+	a.searchModal.SetSize(a.width, a.height)
+	a.searchModal.SetCallbacks(
+		func(result components.SearchResult) {
+			// Navigate to the selected result in the tree
+			node := result.ToTreeNode()
+			a.navigateToSearchResult(node)
+		},
+		func() {
+			// Cancel callback - just close the modal
+		},
+	)
+	return a.searchModal.Init()
+}
+
+// navigateToSearchResult navigates to a search result in the tree
+func (a *App) navigateToSearchResult(node *models.TreeNode) {
+	if node == nil {
+		return
+	}
+
+	// Make sure we're on the main screen
+	a.screen = ScreenMain
+	a.activePanel = PanelRight
+	a.fileBrowser.SetActive(false)
+	a.treeView.SetActive(true)
+
+	// Navigate to the path in the tree
+	path := a.buildSearchResultPath(node)
+	a.treeView.NavigateToPath(path)
+	a.statusMsg = fmt.Sprintf("Navigated to %s", node.Name)
+}
+
+// buildSearchResultPath builds a tree path for a search result
+func (a *App) buildSearchResultPath(node *models.TreeNode) string {
+	// Build path based on node type
+	var pathParts []string
+
+	// Add connection name
+	for _, conn := range a.config.Connections {
+		if conn.ID == node.ConnectionID {
+			pathParts = append(pathParts, conn.Name)
+			break
+		}
+	}
+
+	// Add workspace if present
+	if node.Workspace != "" {
+		pathParts = append(pathParts, node.Workspace)
+	}
+
+	// Add container folder based on type
+	switch node.Type {
+	case models.NodeTypeDataStore:
+		pathParts = append(pathParts, "Data Stores")
+	case models.NodeTypeCoverageStore:
+		pathParts = append(pathParts, "Coverage Stores")
+	case models.NodeTypeLayer:
+		pathParts = append(pathParts, "Layers")
+	case models.NodeTypeStyle:
+		pathParts = append(pathParts, "Styles")
+	case models.NodeTypeLayerGroup:
+		pathParts = append(pathParts, "Layer Groups")
+	}
+
+	// Add the item name
+	pathParts = append(pathParts, node.Name)
+
+	return strings.Join(pathParts, "/")
 }
 
 // showSettingsWizard shows the settings wizard for a connection

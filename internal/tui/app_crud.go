@@ -541,15 +541,18 @@ func (a *App) executeCRUDDelete() tea.Cmd {
 
 		case models.NodeTypeDataStore:
 			operation = "Delete data store"
-			err = client.DeleteDataStore(workspace, nodeName, true)
+			// Use cleanup method to also remove GWC caches
+			err = client.DeleteDataStoreWithCleanup(workspace, nodeName, true)
 
 		case models.NodeTypeCoverageStore:
 			operation = "Delete coverage store"
-			err = client.DeleteCoverageStore(workspace, nodeName, true)
+			// Use cleanup method to also remove GWC caches
+			err = client.DeleteCoverageStoreWithCleanup(workspace, nodeName, true)
 
 		case models.NodeTypeLayer:
 			operation = "Delete layer"
-			err = client.DeleteLayer(workspace, nodeName)
+			// Use cleanup method to also remove GWC cache
+			err = client.DeleteLayerWithCleanup(workspace, nodeName)
 
 		case models.NodeTypeStyle:
 			operation = "Delete style"

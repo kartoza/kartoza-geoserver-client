@@ -28,6 +28,7 @@ interface PreviewState {
   url: string
   layerName: string
   workspace: string
+  connectionId: string
   storeName?: string
   storeType?: string
   layerType?: string

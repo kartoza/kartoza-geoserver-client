@@ -45,7 +45,7 @@ import {
   Stack,
 } from '@chakra-ui/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FiLayers, FiEye, FiSearch, FiInfo, FiGlobe, FiLink, FiPlus, FiTrash2, FiDroplet, FiStar } from 'react-icons/fi'
+import { FiLayers, FiEye, FiSearch, FiInfo, FiGlobe, FiLink, FiPlus, FiTrash2, FiDroplet, FiStar, FiEdit3, FiRefreshCw } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import { useTreeStore } from '../../stores/treeStore'
 import * as api from '../../api/client'
@@ -55,6 +55,7 @@ export default function LayerDialog() {
   const activeDialog = useUIStore((state) => state.activeDialog)
   const dialogData = useUIStore((state) => state.dialogData)
   const closeDialog = useUIStore((state) => state.closeDialog)
+  const openDialog = useUIStore((state) => state.openDialog)
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -238,6 +239,42 @@ export default function LayerDialog() {
     if (additionalStyles.includes(styleName)) {
       setAdditionalStyles(additionalStyles.filter((s) => s !== styleName))
     }
+  }
+
+  const handleCreateNewStyle = () => {
+    // Close this dialog and open the style dialog in create mode
+    closeDialog()
+    openDialog('style', {
+      mode: 'create',
+      data: {
+        connectionId,
+        workspace,
+        // Pass the layer name so the style dialog can optionally assign it after creation
+        forLayer: layerName,
+      },
+    })
+  }
+
+  const handleEditStyle = (styleName: string) => {
+    closeDialog()
+    openDialog('style', {
+      mode: 'edit',
+      data: {
+        connectionId,
+        workspace,
+        name: styleName,
+      },
+    })
+  }
+
+  const handleRefreshStyles = () => {
+    queryClient.invalidateQueries({ queryKey: ['styles', connectionId, workspace] })
+    queryClient.invalidateQueries({ queryKey: ['layerStyles', connectionId, workspace, layerName] })
+    toast({
+      title: 'Styles refreshed',
+      status: 'info',
+      duration: 2000,
+    })
   }
 
   if (!isOpen) return null
@@ -447,6 +484,25 @@ export default function LayerDialog() {
                       </Text>
                     </Box>
 
+                    {/* Action buttons */}
+                    <HStack spacing={2}>
+                      <Button
+                        size="sm"
+                        colorScheme="kartoza"
+                        leftIcon={<Icon as={FiPlus} />}
+                        onClick={handleCreateNewStyle}
+                      >
+                        Create New Style
+                      </Button>
+                      <IconButton
+                        aria-label="Refresh styles"
+                        icon={<FiRefreshCw />}
+                        size="sm"
+                        variant="outline"
+                        onClick={handleRefreshStyles}
+                      />
+                    </HStack>
+
                     {loadingStyles ? (
                       <VStack py={6}>
                         <Spinner size="md" color="kartoza.500" />
@@ -454,99 +510,155 @@ export default function LayerDialog() {
                       </VStack>
                     ) : (
                       <>
-                        {/* Default Style Selection */}
-                        <Box>
-                          <Text fontWeight="600" mb={3}>Default Style</Text>
-                          <Text fontSize="xs" color="gray.500" mb={3}>
-                            The style used when no specific style is requested
-                          </Text>
-                          <RadioGroup value={defaultStyle} onChange={handleSetDefaultStyle}>
-                            <Stack spacing={2}>
-                              {availableStyles?.map((style) => (
-                                <Box
-                                  key={style.name}
-                                  p={3}
-                                  bg={defaultStyle === style.name ? 'kartoza.50' : 'gray.50'}
-                                  borderRadius="lg"
-                                  border="2px solid"
-                                  borderColor={defaultStyle === style.name ? 'kartoza.500' : 'transparent'}
-                                  _hover={{ borderColor: 'kartoza.300' }}
-                                  transition="all 0.15s"
-                                >
-                                  <HStack>
-                                    <Radio value={style.name} colorScheme="kartoza">
-                                      <HStack spacing={2}>
-                                        <Icon as={FiDroplet} color="pink.500" />
-                                        <Text fontWeight={defaultStyle === style.name ? '600' : 'normal'}>
-                                          {style.name}
-                                        </Text>
-                                      </HStack>
-                                    </Radio>
-                                    {defaultStyle === style.name && (
-                                      <Badge colorScheme="kartoza" ml="auto">
-                                        <HStack spacing={1}>
-                                          <Icon as={FiStar} boxSize={3} />
-                                          <Text>Default</Text>
-                                        </HStack>
-                                      </Badge>
-                                    )}
-                                  </HStack>
-                                </Box>
-                              ))}
-                            </Stack>
-                          </RadioGroup>
-                          {(!availableStyles || availableStyles.length === 0) && (
-                            <Text fontSize="sm" color="gray.500" fontStyle="italic">
-                              No styles available in this workspace
-                            </Text>
-                          )}
-                        </Box>
-
-                        <Divider />
-
-                        {/* Additional Styles */}
-                        <Box>
-                          <Text fontWeight="600" mb={3}>Additional Styles</Text>
-                          <Text fontSize="xs" color="gray.500" mb={3}>
-                            Additional styles that users can choose from when viewing this layer
-                          </Text>
-                          <VStack align="stretch" spacing={2}>
-                            {availableStyles?.filter((s) => s.name !== defaultStyle).map((style) => (
-                              <Box
-                                key={style.name}
-                                p={3}
-                                bg={additionalStyles.includes(style.name) ? 'green.50' : 'gray.50'}
-                                borderRadius="lg"
-                                border="2px solid"
-                                borderColor={additionalStyles.includes(style.name) ? 'green.500' : 'transparent'}
-                                _hover={{ borderColor: 'green.300' }}
-                                transition="all 0.15s"
-                              >
-                                <Checkbox
-                                  isChecked={additionalStyles.includes(style.name)}
-                                  onChange={() => handleToggleAdditionalStyle(style.name)}
-                                  colorScheme="green"
-                                >
-                                  <HStack spacing={2}>
-                                    <Icon as={FiDroplet} color="pink.500" />
-                                    <Text>{style.name}</Text>
-                                  </HStack>
-                                </Checkbox>
-                              </Box>
-                            ))}
-                          </VStack>
-                        </Box>
-
-                        {/* Save Styles Button */}
-                        {stylesChanged && (
-                          <Button
-                            colorScheme="kartoza"
-                            onClick={handleStylesSubmit}
-                            isLoading={updateStylesMutation.isPending}
-                            leftIcon={<Icon as={FiDroplet} />}
+                        {/* No styles message */}
+                        {(!availableStyles || availableStyles.length === 0) ? (
+                          <Box
+                            p={6}
+                            bg="orange.50"
+                            borderRadius="lg"
+                            border="2px dashed"
+                            borderColor="orange.200"
+                            textAlign="center"
                           >
-                            Save Style Changes
-                          </Button>
+                            <Icon as={FiDroplet} boxSize={8} color="orange.400" mb={3} />
+                            <Text fontWeight="600" color="orange.700" mb={2}>
+                              No Styles Available
+                            </Text>
+                            <Text fontSize="sm" color="orange.600" mb={4}>
+                              This workspace doesn't have any styles yet. Create a new style to customize how your layer appears on the map.
+                            </Text>
+                            <Button
+                              colorScheme="orange"
+                              leftIcon={<Icon as={FiPlus} />}
+                              onClick={handleCreateNewStyle}
+                            >
+                              Create Your First Style
+                            </Button>
+                          </Box>
+                        ) : (
+                          <>
+                            {/* Default Style Selection */}
+                            <Box>
+                              <Text fontWeight="600" mb={3}>Default Style</Text>
+                              <Text fontSize="xs" color="gray.500" mb={3}>
+                                The style used when no specific style is requested
+                              </Text>
+                              <RadioGroup value={defaultStyle} onChange={handleSetDefaultStyle}>
+                                <Stack spacing={2}>
+                                  {availableStyles?.map((style) => (
+                                    <Box
+                                      key={style.name}
+                                      p={3}
+                                      bg={defaultStyle === style.name ? 'kartoza.50' : 'gray.50'}
+                                      borderRadius="lg"
+                                      border="2px solid"
+                                      borderColor={defaultStyle === style.name ? 'kartoza.500' : 'transparent'}
+                                      _hover={{ borderColor: 'kartoza.300' }}
+                                      transition="all 0.15s"
+                                    >
+                                      <HStack justify="space-between">
+                                        <Radio value={style.name} colorScheme="kartoza" flex="1">
+                                          <HStack spacing={2}>
+                                            <Icon as={FiDroplet} color="pink.500" />
+                                            <Text fontWeight={defaultStyle === style.name ? '600' : 'normal'}>
+                                              {style.name}
+                                            </Text>
+                                          </HStack>
+                                        </Radio>
+                                        <HStack spacing={2}>
+                                          {defaultStyle === style.name && (
+                                            <Badge colorScheme="kartoza">
+                                              <HStack spacing={1}>
+                                                <Icon as={FiStar} boxSize={3} />
+                                                <Text>Default</Text>
+                                              </HStack>
+                                            </Badge>
+                                          )}
+                                          <IconButton
+                                            aria-label="Edit style"
+                                            icon={<FiEdit3 />}
+                                            size="xs"
+                                            variant="ghost"
+                                            colorScheme="blue"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleEditStyle(style.name)
+                                            }}
+                                          />
+                                        </HStack>
+                                      </HStack>
+                                    </Box>
+                                  ))}
+                                </Stack>
+                              </RadioGroup>
+                            </Box>
+
+                            <Divider />
+
+                            {/* Additional Styles */}
+                            <Box>
+                              <Text fontWeight="600" mb={3}>Additional Styles</Text>
+                              <Text fontSize="xs" color="gray.500" mb={3}>
+                                Additional styles that users can choose from when viewing this layer
+                              </Text>
+                              <VStack align="stretch" spacing={2}>
+                                {availableStyles?.filter((s) => s.name !== defaultStyle).map((style) => (
+                                  <Box
+                                    key={style.name}
+                                    p={3}
+                                    bg={additionalStyles.includes(style.name) ? 'green.50' : 'gray.50'}
+                                    borderRadius="lg"
+                                    border="2px solid"
+                                    borderColor={additionalStyles.includes(style.name) ? 'green.500' : 'transparent'}
+                                    _hover={{ borderColor: 'green.300' }}
+                                    transition="all 0.15s"
+                                  >
+                                    <HStack justify="space-between">
+                                      <Checkbox
+                                        isChecked={additionalStyles.includes(style.name)}
+                                        onChange={() => handleToggleAdditionalStyle(style.name)}
+                                        colorScheme="green"
+                                        flex="1"
+                                      >
+                                        <HStack spacing={2}>
+                                          <Icon as={FiDroplet} color="pink.500" />
+                                          <Text>{style.name}</Text>
+                                        </HStack>
+                                      </Checkbox>
+                                      <IconButton
+                                        aria-label="Edit style"
+                                        icon={<FiEdit3 />}
+                                        size="xs"
+                                        variant="ghost"
+                                        colorScheme="blue"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleEditStyle(style.name)
+                                        }}
+                                      />
+                                    </HStack>
+                                  </Box>
+                                ))}
+                              </VStack>
+                              {availableStyles?.filter((s) => s.name !== defaultStyle).length === 0 && (
+                                <Text fontSize="sm" color="gray.500" fontStyle="italic" mt={2}>
+                                  All available styles are either set as default or not yet created
+                                </Text>
+                              )}
+                            </Box>
+
+                            {/* Save Styles Button */}
+                            {stylesChanged && (
+                              <Button
+                                colorScheme="kartoza"
+                                onClick={handleStylesSubmit}
+                                isLoading={updateStylesMutation.isPending}
+                                leftIcon={<Icon as={FiDroplet} />}
+                              >
+                                Save Style Changes
+                              </Button>
+                            )}
+                          </>
                         )}
                       </>
                     )}

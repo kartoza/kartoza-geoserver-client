@@ -2912,6 +2912,8 @@ func (c *Client) GetLayerMetadata(workspace, layerName string) (*models.LayerMet
 	// Extract store name from href
 	storeName := c.extractStoreNameFromHref(layerResult.Layer.Resource.Href, isFeatureType)
 	metadata.Store = storeName
+	fmt.Printf("[API] GetLayerMetadata: layer=%s, resource.href=%s, extracted store=%s, isFeatureType=%v\n",
+		layerName, layerResult.Layer.Resource.Href, storeName, isFeatureType)
 	if isFeatureType {
 		metadata.StoreType = "datastore"
 	} else {
@@ -3134,6 +3136,14 @@ func (c *Client) GetFeatureCount(workspace, layerName string) (int64, error) {
 func (c *Client) UpdateLayerMetadata(workspace string, metadata *models.LayerMetadata) error {
 	isFeatureType := metadata.StoreType == "datastore"
 
+	// Validate store name is present
+	if metadata.Store == "" {
+		return fmt.Errorf("store name is empty for layer %s (storeType: %s)", metadata.Name, metadata.StoreType)
+	}
+
+	fmt.Printf("[API] UpdateLayerMetadata: workspace=%s, layer=%s, store=%s, storeType=%s\n",
+		workspace, metadata.Name, metadata.Store, metadata.StoreType)
+
 	// Build update body for the resource
 	var resourcePath string
 	var resourceBody map[string]interface{}
@@ -3186,6 +3196,8 @@ func (c *Client) UpdateLayerMetadata(workspace string, metadata *models.LayerMet
 		}
 	}
 
+	fmt.Printf("[API] UpdateLayerMetadata: PUT %s\n", resourcePath)
+
 	resp, err := c.doJSONRequest("PUT", resourcePath, resourceBody)
 	if err != nil {
 		return err
@@ -3194,6 +3206,7 @@ func (c *Client) UpdateLayerMetadata(workspace string, metadata *models.LayerMet
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
+		fmt.Printf("[API] UpdateLayerMetadata failed: status=%d, body=%s\n", resp.StatusCode, string(bodyBytes))
 		return fmt.Errorf("failed to update layer metadata: %s", string(bodyBytes))
 	}
 

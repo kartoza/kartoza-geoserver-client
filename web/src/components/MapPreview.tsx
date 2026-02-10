@@ -103,13 +103,15 @@ export default function MapPreview({
   // Fetch layer info from preview server (includes geoserver_url)
   useEffect(() => {
     if (previewUrl) {
+      console.log('[MapPreview] Fetching layer info from:', `${previewUrl}/api/layer`)
       fetch(`${previewUrl}/api/layer`)
         .then((res) => res.json())
         .then((data: LayerInfo) => {
+          console.log('[MapPreview] Received layer info:', data)
           setLayerInfo(data)
         })
         .catch((err) => {
-          console.error('Failed to fetch layer info:', err)
+          console.error('[MapPreview] Failed to fetch layer info:', err)
         })
     }
   }, [previewUrl])
@@ -117,14 +119,17 @@ export default function MapPreview({
   // Fetch metadata immediately (not just when panel is shown)
   useEffect(() => {
     if (previewUrl) {
+      console.log('[MapPreview] Fetching metadata from:', `${previewUrl}/api/metadata`)
       setIsLoadingMeta(true)
       fetch(`${previewUrl}/api/metadata`)
         .then((res) => res.json())
         .then((data) => {
+          console.log('[MapPreview] Received metadata:', data)
           setMetadata(data)
           setIsLoadingMeta(false)
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error('[MapPreview] Failed to fetch metadata:', err)
           setIsLoadingMeta(false)
         })
     }
@@ -186,6 +191,8 @@ export default function MapPreview({
     const wmsUrl = `${info.geoserver_url}/${info.workspace}/wms`
 
     // Build WMS tile URL for MapLibre
+    // Note: We can't use URLSearchParams for the full URL because it encodes
+    // the {bbox-epsg-3857} placeholder which MapLibre needs unencoded
     const params = new URLSearchParams({
       SERVICE: 'WMS',
       VERSION: '1.1.1',
@@ -196,14 +203,14 @@ export default function MapPreview({
       SRS: 'EPSG:3857',
       WIDTH: '256',
       HEIGHT: '256',
-      BBOX: '{bbox-epsg-3857}',
     })
 
     if (style) {
       params.set('STYLES', style)
     }
 
-    return `${wmsUrl}?${params.toString()}`
+    // Append BBOX with the unencoded MapLibre placeholder
+    return `${wmsUrl}?${params.toString()}&BBOX={bbox-epsg-3857}`
   }
 
   // Initialize map - only depends on layerInfo, creates map once
@@ -271,6 +278,18 @@ export default function MapPreview({
 
     const wmsTileUrl = buildWmsTileUrl(layerInfo, currentStyle)
 
+    // Log the WMS URL for debugging
+    console.log('[MapPreview] Layer info:', {
+      workspace: layerInfo.workspace,
+      name: layerInfo.name,
+      geoserver_url: layerInfo.geoserver_url,
+      store_type: layerInfo.store_type,
+      type: layerInfo.type,
+      use_cache: layerInfo.use_cache,
+    })
+    console.log('[MapPreview] WMS tile URL template:', wmsTileUrl)
+    console.log('[MapPreview] Current style:', currentStyle || '(default)')
+
     // Remove existing layer and source if they exist
     if (map.current.getLayer('wms-layer')) {
       map.current.removeLayer('wms-layer')
@@ -304,9 +323,13 @@ export default function MapPreview({
         metadata.latlon_bbox.maxy,
       ]
 
+      console.log('[MapPreview] Layer bounds (lat/lon):', newBounds)
+
       // Check if current view overlaps with new layer bounds
       // If they overlap, keep the current view; otherwise, fit to new bounds
       const shouldFitBounds = !currentViewOverlapsBounds(newBounds)
+
+      console.log('[MapPreview] Should fit to bounds:', shouldFitBounds)
 
       if (shouldFitBounds) {
         map.current.fitBounds(newBounds, { padding: 50, maxZoom: 15 })
@@ -314,6 +337,8 @@ export default function MapPreview({
 
       // Store the new bounds for future reference
       lastBoundsRef.current = newBounds
+    } else {
+      console.log('[MapPreview] No bounds available in metadata')
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapLoaded, layerInfo, currentStyle, metadata?.latlon_bbox])

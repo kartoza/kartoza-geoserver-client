@@ -54,9 +54,15 @@ func (s *Server) Start(layer *LayerInfo) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	fmt.Printf("[Preview] Starting preview for layer: %s:%s\n", layer.Workspace, layer.Name)
+	fmt.Printf("[Preview] GeoServer URL: %s\n", layer.GeoServerURL)
+	fmt.Printf("[Preview] Store: %s (type: %s)\n", layer.StoreName, layer.StoreType)
+	fmt.Printf("[Preview] Layer type: %s, use_cache: %v\n", layer.Type, layer.UseCache)
+
 	// If already running, update layer and return existing URL
 	if s.running {
 		s.layer = layer
+		fmt.Printf("[Preview] Server already running on port %d, updated layer\n", s.port)
 		return fmt.Sprintf("http://localhost:%d", s.port), nil
 	}
 
@@ -183,10 +189,13 @@ func (s *Server) handleLayerInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	if layer == nil {
+		fmt.Println("[Preview] /api/layer request - no layer configured")
 		http.Error(w, `{"error": "no layer configured"}`, http.StatusNotFound)
 		return
 	}
 
+	fmt.Printf("[Preview] /api/layer request - returning layer: %s:%s (geoserver: %s)\n",
+		layer.Workspace, layer.Name, layer.GeoServerURL)
 	json.NewEncoder(w).Encode(layer)
 }
 
@@ -257,9 +266,12 @@ func (s *Server) handleMetadata(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	if layer == nil {
+		fmt.Println("[Preview] /api/metadata request - no layer configured")
 		http.Error(w, `{"error": "no layer configured"}`, http.StatusNotFound)
 		return
 	}
+
+	fmt.Printf("[Preview] /api/metadata request for layer: %s:%s\n", layer.Workspace, layer.Name)
 
 	metadata := &ExtendedMetadata{
 		Errors: []string{},
@@ -272,6 +284,10 @@ func (s *Server) handleMetadata(w http.ResponseWriter, r *http.Request) {
 
 	// Fetch layer/featuretype/coverage information
 	s.fetchLayerMetadata(client, layer, metadata)
+
+	fmt.Printf("[Preview] Metadata result - bounds: [%.4f, %.4f, %.4f, %.4f], errors: %v\n",
+		metadata.LatLonBBox.MinX, metadata.LatLonBBox.MinY,
+		metadata.LatLonBBox.MaxX, metadata.LatLonBBox.MaxY, metadata.Errors)
 
 	json.NewEncoder(w).Encode(metadata)
 }

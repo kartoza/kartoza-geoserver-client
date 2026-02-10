@@ -451,12 +451,13 @@ function ItemNode({ connectionId, workspace, name, type, storeType }: ItemNodePr
     staleTime: 30000,
   })
 
-  // Fetch feature count for vector layers only when selected (to minimize API calls)
+  // Fetch feature count for layers when selected (to minimize API calls)
+  // The API returns -1 for layers that can't be counted (e.g., raster layers)
   const isSelected = selectedNode?.id === nodeId
   const { data: featureCount } = useQuery({
     queryKey: ['feature-count', connectionId, workspace, name],
     queryFn: () => api.getLayerFeatureCount(connectionId, workspace, name),
-    enabled: type === 'layer' && storeType !== 'coveragestore' && isSelected,
+    enabled: type === 'layer' && isSelected,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     retry: false, // Don't retry on failure (e.g., for raster layers)

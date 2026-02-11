@@ -2906,12 +2906,16 @@ func (c *Client) GetLayerMetadata(workspace, layerName string) (*models.LayerMet
 	}
 	metadata.DefaultStyle = layerResult.Layer.DefaultStyle.Name
 
-	// Determine if featuretype or coverage
-	isFeatureType := strings.Contains(layerResult.Layer.Resource.Class, "FeatureType")
-
-	// Extract store name from href
-	storeName := c.extractStoreNameFromHref(layerResult.Layer.Resource.Href, isFeatureType)
+	// Extract store name and type from href (more reliable than Resource.Class)
+	storeName, isFeatureType := c.extractStoreNameFromHref(layerResult.Layer.Resource.Href)
 	metadata.Store = storeName
+
+	// Fall back to Resource.Class if href extraction didn't work
+	if storeName == "" {
+		isFeatureType = strings.Contains(layerResult.Layer.Resource.Class, "FeatureType")
+		fmt.Printf("[API] GetLayerMetadata: WARNING - could not extract store from href, falling back to Resource.Class\n")
+	}
+
 	fmt.Printf("[API] GetLayerMetadata: layer=%s, resource.href=%s, extracted store=%s, isFeatureType=%v\n",
 		layerName, layerResult.Layer.Resource.Href, storeName, isFeatureType)
 	if isFeatureType {
@@ -3231,30 +3235,27 @@ func (c *Client) UpdateLayerMetadata(workspace string, metadata *models.LayerMet
 // extractStoreNameFromHref extracts the store name from a GeoServer resource href
 // href format: .../workspaces/{ws}/datastores/{store}/featuretypes/{name}.json
 // or: .../workspaces/{ws}/coveragestores/{store}/coverages/{name}.json
-func (c *Client) extractStoreNameFromHref(href string, isFeatureType bool) string {
-	var storeType string
-	if isFeatureType {
-		storeType = "datastores"
-	} else {
-		storeType = "coveragestores"
+// Returns storeName and actualIsFeatureType (true if datastore, false if coveragestore)
+func (c *Client) extractStoreNameFromHref(href string) (string, bool) {
+	// Try datastores first
+	if parts := strings.Split(href, "/datastores/"); len(parts) >= 2 {
+		storePart := parts[1]
+		storeNameParts := strings.Split(storePart, "/")
+		if len(storeNameParts) >= 1 && storeNameParts[0] != "" {
+			return storeNameParts[0], true // isFeatureType = true
+		}
 	}
 
-	// Split by the store type path segment
-	parts := strings.Split(href, "/"+storeType+"/")
-	if len(parts) < 2 {
-		return ""
+	// Try coveragestores
+	if parts := strings.Split(href, "/coveragestores/"); len(parts) >= 2 {
+		storePart := parts[1]
+		storeNameParts := strings.Split(storePart, "/")
+		if len(storeNameParts) >= 1 && storeNameParts[0] != "" {
+			return storeNameParts[0], false // isFeatureType = false
+		}
 	}
 
-	// Get the part after datastores/ or coveragestores/
-	storePart := parts[1]
-
-	// The store name is before the next /
-	storeNameParts := strings.Split(storePart, "/")
-	if len(storeNameParts) < 1 {
-		return ""
-	}
-
-	return storeNameParts[0]
+	return "", false
 }
 
 // ============================================================================

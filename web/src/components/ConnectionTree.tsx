@@ -36,6 +36,7 @@ import {
   FiMap,
   FiPlus,
   FiUpload,
+  FiExternalLink,
 } from 'react-icons/fi'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useTreeStore, generateNodeId } from '../stores/treeStore'
@@ -134,6 +135,7 @@ export default function ConnectionTree() {
           key={conn.id}
           connectionId={conn.id}
           name={conn.name}
+          url={conn.url}
         />
       ))}
     </Box>
@@ -143,9 +145,10 @@ export default function ConnectionTree() {
 interface ConnectionNodeProps {
   connectionId: string
   name: string
+  url: string
 }
 
-function ConnectionNode({ connectionId, name }: ConnectionNodeProps) {
+function ConnectionNode({ connectionId, name, url }: ConnectionNodeProps) {
   const nodeId = generateNodeId('connection', connectionId)
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
@@ -188,6 +191,13 @@ function ConnectionNode({ connectionId, name }: ConnectionNodeProps) {
     })
   }
 
+  const handleOpenAdmin = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    // GeoServer admin URL is typically the base URL + /web
+    const adminUrl = url.replace(/\/rest\/?$/, '/web')
+    window.open(adminUrl, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <Box>
       <TreeNodeRow
@@ -198,6 +208,7 @@ function ConnectionNode({ connectionId, name }: ConnectionNodeProps) {
         onClick={handleClick}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onOpenAdmin={handleOpenAdmin}
         level={0}
         count={workspaces?.length}
       />
@@ -1043,6 +1054,7 @@ interface TreeNodeRowProps {
   onEdit?: (e: React.MouseEvent) => void
   onDelete?: (e: React.MouseEvent) => void
   onPreview?: (e: React.MouseEvent) => void
+  onOpenAdmin?: (e: React.MouseEvent) => void
   onDownloadConfig?: (e: React.MouseEvent) => void
   onDownloadData?: (e: React.MouseEvent) => void
   downloadDataLabel?: string // "Shapefile" or "GeoTIFF"
@@ -1060,6 +1072,7 @@ function TreeNodeRow({
   onEdit,
   onDelete,
   onPreview,
+  onOpenAdmin,
   onDownloadConfig,
   onDownloadData,
   downloadDataLabel,
@@ -1148,6 +1161,21 @@ function TreeNodeRow({
         >
           {count}
         </Badge>
+      )}
+      {/* Admin link - always visible for connections */}
+      {onOpenAdmin && (
+        <Tooltip label="Open GeoServer Admin" fontSize="xs">
+          <IconButton
+            aria-label="Open Admin"
+            icon={<FiExternalLink size={14} />}
+            size="xs"
+            variant="ghost"
+            colorScheme="blue"
+            onClick={onOpenAdmin}
+            _hover={{ bg: 'blue.50' }}
+            mr={1}
+          />
+        </Tooltip>
       )}
       <Flex
         gap={1}

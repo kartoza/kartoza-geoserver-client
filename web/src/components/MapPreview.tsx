@@ -71,6 +71,46 @@ interface LayerInfo {
 
 type ViewMode = '2d' | '3d' | 'globe'
 
+// Component to display a style legend icon using GeoServer's GetLegendGraphic
+function StyleLegendIcon({
+  geoserverUrl,
+  workspace,
+  layerName,
+  styleName,
+  size = 20
+}: {
+  geoserverUrl: string
+  workspace: string
+  layerName: string
+  styleName: string
+  size?: number
+}) {
+  const [hasError, setHasError] = useState(false)
+  const legendUrl = `${geoserverUrl}/${workspace}/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetLegendGraphic&LAYER=${workspace}:${layerName}&STYLE=${styleName}&FORMAT=image/png&WIDTH=${size}&HEIGHT=${size}&LEGEND_OPTIONS=forceLabels:off;fontAntiAliasing:true`
+
+  if (hasError) {
+    return <Icon as={FiDroplet} color="pink.500" boxSize={`${size}px`} />
+  }
+
+  return (
+    <Box
+      as="img"
+      src={legendUrl}
+      alt={styleName}
+      w={`${size}px`}
+      h={`${size}px`}
+      minW={`${size}px`}
+      minH={`${size}px`}
+      borderRadius="sm"
+      objectFit="contain"
+      bg="white"
+      border="1px solid"
+      borderColor="gray.200"
+      onError={() => setHasError(true)}
+    />
+  )
+}
+
 export default function MapPreview({
   previewUrl,
   layerName,
@@ -436,22 +476,27 @@ export default function MapPreview({
               {workspace}:{layerName}
             </Text>
           </VStack>
-          <HStack spacing={1}>
-            {/* Style Picker */}
-            {availableStyles.length > 1 && (
+          <HStack spacing={2}>
+            {/* Style Picker Dropdown */}
+            {availableStyles.length > 0 && (
               <Menu>
-                <Tooltip label="Change Style">
-                  <MenuButton
-                    as={IconButton}
-                    aria-label="Style"
-                    icon={<FiDroplet />}
-                    size="sm"
-                    variant="ghost"
-                    color="white"
-                    _hover={{ bg: 'whiteAlpha.200' }}
-                  />
-                </Tooltip>
-                <MenuList color="gray.800">
+                <MenuButton
+                  as={Button}
+                  size="sm"
+                  variant="solid"
+                  bg="whiteAlpha.200"
+                  color="white"
+                  _hover={{ bg: 'whiteAlpha.300' }}
+                  _active={{ bg: 'whiteAlpha.400' }}
+                  rightIcon={<FiChevronDown />}
+                  leftIcon={<FiDroplet />}
+                  maxW="180px"
+                >
+                  <Text isTruncated fontSize="xs">
+                    {currentStyle || 'Default Style'}
+                  </Text>
+                </MenuButton>
+                <MenuList color="gray.800" zIndex={1000}>
                   {availableStyles.map((style) => (
                     <MenuItem
                       key={style}
@@ -460,10 +505,20 @@ export default function MapPreview({
                       bg={currentStyle === style ? 'kartoza.50' : undefined}
                     >
                       <HStack>
-                        <Icon as={FiDroplet} color="pink.500" />
+                        {layerInfo?.geoserver_url ? (
+                          <StyleLegendIcon
+                            geoserverUrl={layerInfo.geoserver_url}
+                            workspace={workspace}
+                            layerName={layerName}
+                            styleName={style}
+                            size={20}
+                          />
+                        ) : (
+                          <Icon as={FiDroplet} color="pink.500" />
+                        )}
                         <Text>{style}</Text>
                         {style === defaultStyle && (
-                          <Badge colorScheme="kartoza" size="sm">Default</Badge>
+                          <Badge colorScheme="kartoza" size="sm" ml={2}>Default</Badge>
                         )}
                       </HStack>
                     </MenuItem>

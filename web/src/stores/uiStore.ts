@@ -73,7 +73,7 @@ export const useUIStore = create<UIState>((set) => ({
   errorMessage: null,
   successMessage: null,
   isLoading: false,
-  sidebarWidth: 300,
+  sidebarWidth: 420,
 
   openDialog: (type, data) => {
     set({ activeDialog: type, dialogData: data ?? null })

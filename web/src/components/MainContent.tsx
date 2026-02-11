@@ -33,8 +33,9 @@ import {
   FiUpload,
   FiEye,
   FiSettings,
+  FiDroplet,
 } from 'react-icons/fi'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTreeStore } from '../stores/treeStore'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useQuery } from '@tanstack/react-query'
@@ -477,6 +478,62 @@ function LayersDashboard({
   )
 }
 
+// Style Legend Preview component
+// GeoServer's GetLegendGraphic requires a LAYER parameter, so we need to find
+// a layer that uses this style. We'll query the layers and find one using this style.
+function StyleLegendPreview({
+  connectionId,
+  workspace,
+  styleName,
+  size = 24
+}: {
+  connectionId: string
+  workspace: string
+  styleName: string
+  size?: number
+}) {
+  const [hasError, setHasError] = useState(false)
+  const connections = useConnectionStore((state) => state.connections)
+  const connection = connections.find((c) => c.id === connectionId)
+
+  // Find a layer that uses this style
+  const { data: layers } = useQuery({
+    queryKey: ['layers', connectionId, workspace],
+    queryFn: () => api.getLayers(connectionId, workspace),
+    staleTime: 60000,
+  })
+
+  // Find a layer that has this style as default style
+  const layerWithStyle = layers?.find(layer => layer.defaultStyle === styleName)
+
+  if (!connection || hasError || !layerWithStyle) {
+    return <Icon as={FiDroplet} color="pink.500" boxSize={`${size}px`} />
+  }
+
+  // Build the GeoServer base URL from connection URL (remove /rest suffix)
+  const geoserverUrl = connection.url.replace(/\/rest\/?$/, '')
+  // Use the layer we found with STYLE parameter to get the specific style's legend
+  const legendUrl = `${geoserverUrl}/${workspace}/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetLegendGraphic&LAYER=${workspace}:${layerWithStyle.name}&STYLE=${styleName}&FORMAT=image/png&WIDTH=${size}&HEIGHT=${size}&LEGEND_OPTIONS=forceLabels:off;fontAntiAliasing:true`
+
+  return (
+    <Box
+      as="img"
+      src={legendUrl}
+      alt={styleName}
+      w={`${size}px`}
+      h={`${size}px`}
+      minW={`${size}px`}
+      minH={`${size}px`}
+      borderRadius="sm"
+      objectFit="contain"
+      bg="white"
+      border="1px solid"
+      borderColor="gray.200"
+      onError={() => setHasError(true)}
+    />
+  )
+}
+
 // Dashboard for Styles
 function StylesDashboard({
   connectionId,
@@ -563,7 +620,12 @@ function StylesDashboard({
                   >
                     <CardBody py={3} px={4}>
                       <HStack>
-                        <Icon as={FiEdit3} color="kartoza.500" />
+                        <StyleLegendPreview
+                          connectionId={connectionId}
+                          workspace={workspace}
+                          styleName={style.name}
+                          size={24}
+                        />
                         <Text fontWeight="medium">{style.name}</Text>
                         {style.format && (
                           <Badge colorScheme="blue" size="sm">{style.format}</Badge>

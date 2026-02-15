@@ -154,6 +154,13 @@ func (s *Server) handlePGServiceByName(w http.ResponseWriter, r *http.Request) {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	case "schemas":
+		// Returns schema info formatted for SQL autocompletion
+		if r.Method == http.MethodGet {
+			s.handleGetPGSchemasForCompletion(w, r, name)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	case "":
 		// No action - DELETE the service
 		if r.Method == http.MethodDelete {
@@ -268,6 +275,129 @@ func (s *Server) handleGetPGSchemaByName(w http.ResponseWriter, r *http.Request,
 	}
 
 	json.NewEncoder(w).Encode(cache)
+}
+
+// ColumnInfoForCompletion represents column info for SQL autocompletion
+type ColumnInfoForCompletion struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Nullable bool   `json:"nullable"`
+}
+
+// TableInfoForCompletion represents table info for SQL autocompletion
+type TableInfoForCompletion struct {
+	Name    string                    `json:"name"`
+	Schema  string                    `json:"schema,omitempty"`
+	Columns []ColumnInfoForCompletion `json:"columns"`
+}
+
+// SchemaInfoForCompletion represents schema info for SQL autocompletion
+type SchemaInfoForCompletion struct {
+	Name   string                   `json:"name"`
+	Tables []TableInfoForCompletion `json:"tables"`
+}
+
+// handleGetPGSchemasForCompletion returns schema info formatted for SQL autocompletion
+func (s *Server) handleGetPGSchemasForCompletion(w http.ResponseWriter, r *http.Request, name string) {
+	services, err := postgres.ParsePGServiceFile()
+	if err != nil {
+		http.Error(w, "Failed to parse pg_service.conf", http.StatusInternalServerError)
+		return
+	}
+
+	svc, err := postgres.GetServiceByName(services, name)
+	if err != nil {
+		http.Error(w, "Service not found", http.StatusNotFound)
+		return
+	}
+
+	db, err := svc.Connect()
+	if err != nil {
+		http.Error(w, "Failed to connect: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// Get all schemas
+	schemaQuery := `
+		SELECT schema_name
+		FROM information_schema.schemata
+		WHERE schema_name NOT LIKE 'pg_%'
+		  AND schema_name != 'information_schema'
+		ORDER BY schema_name
+	`
+	schemaRows, err := db.Query(schemaQuery)
+	if err != nil {
+		http.Error(w, "Failed to query schemas: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer schemaRows.Close()
+
+	var schemas []SchemaInfoForCompletion
+	var schemaNames []string
+
+	for schemaRows.Next() {
+		var schemaName string
+		if err := schemaRows.Scan(&schemaName); err != nil {
+			continue
+		}
+		schemaNames = append(schemaNames, schemaName)
+		schemas = append(schemas, SchemaInfoForCompletion{
+			Name:   schemaName,
+			Tables: []TableInfoForCompletion{},
+		})
+	}
+
+	// Get tables and columns for each schema
+	for i, schemaName := range schemaNames {
+		tableQuery := `
+			SELECT t.table_name, c.column_name, c.data_type, c.is_nullable
+			FROM information_schema.tables t
+			JOIN information_schema.columns c
+				ON t.table_schema = c.table_schema
+				AND t.table_name = c.table_name
+			WHERE t.table_schema = $1
+			  AND t.table_type IN ('BASE TABLE', 'VIEW')
+			ORDER BY t.table_name, c.ordinal_position
+		`
+
+		rows, err := db.Query(tableQuery, schemaName)
+		if err != nil {
+			continue
+		}
+
+		tableMap := make(map[string]*TableInfoForCompletion)
+		for rows.Next() {
+			var tableName, colName, dataType, isNullable string
+			if err := rows.Scan(&tableName, &colName, &dataType, &isNullable); err != nil {
+				continue
+			}
+
+			if _, exists := tableMap[tableName]; !exists {
+				tableMap[tableName] = &TableInfoForCompletion{
+					Name:    tableName,
+					Schema:  schemaName,
+					Columns: []ColumnInfoForCompletion{},
+				}
+			}
+
+			tableMap[tableName].Columns = append(tableMap[tableName].Columns, ColumnInfoForCompletion{
+				Name:     colName,
+				Type:     dataType,
+				Nullable: isNullable == "YES",
+			})
+		}
+		rows.Close()
+
+		// Convert map to slice
+		for _, table := range tableMap {
+			schemas[i].Tables = append(schemas[i].Tables, *table)
+		}
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"schemas": schemas,
+	})
 }
 
 // handleDeletePGServiceByName deletes a PostgreSQL service entry

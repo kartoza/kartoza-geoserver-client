@@ -1,0 +1,449 @@
+import React, { useMemo, useEffect, useState } from 'react';
+import CodeMirror from '@uiw/react-codemirror';
+import { sql, PostgreSQL } from '@codemirror/lang-sql';
+import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import { EditorView } from '@codemirror/view';
+
+// Schema information for autocompletion
+interface ColumnInfo {
+  name: string;
+  type: string;
+  nullable?: boolean;
+}
+
+interface TableInfo {
+  name: string;
+  columns: ColumnInfo[];
+  schema?: string;
+}
+
+interface SchemaInfo {
+  name: string;
+  tables: TableInfo[];
+}
+
+interface SQLEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  height?: string;
+  minHeight?: string;
+  maxHeight?: string;
+  schemas?: SchemaInfo[];
+  serviceName?: string;
+  readOnly?: boolean;
+  className?: string;
+}
+
+// PostgreSQL keywords for completion
+const PG_KEYWORDS = [
+  'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IN', 'BETWEEN', 'LIKE', 'ILIKE',
+  'IS', 'NULL', 'TRUE', 'FALSE', 'AS', 'ON', 'JOIN', 'LEFT', 'RIGHT', 'INNER',
+  'OUTER', 'FULL', 'CROSS', 'NATURAL', 'USING', 'GROUP', 'BY', 'HAVING', 'ORDER',
+  'ASC', 'DESC', 'NULLS', 'FIRST', 'LAST', 'LIMIT', 'OFFSET', 'DISTINCT', 'ALL',
+  'UNION', 'INTERSECT', 'EXCEPT', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'CAST',
+  'COALESCE', 'NULLIF', 'EXISTS', 'ANY', 'SOME', 'WITH', 'RECURSIVE', 'OVER',
+  'PARTITION', 'WINDOW', 'ROWS', 'RANGE', 'UNBOUNDED', 'PRECEDING', 'FOLLOWING',
+  'CURRENT', 'ROW', 'FILTER', 'WITHIN', 'LATERAL', 'FETCH', 'NEXT', 'ONLY',
+];
+
+// PostgreSQL functions
+const PG_FUNCTIONS = [
+  // Aggregate functions
+  'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'ARRAY_AGG', 'STRING_AGG', 'BOOL_AND',
+  'BOOL_OR', 'BIT_AND', 'BIT_OR', 'EVERY', 'PERCENTILE_CONT', 'PERCENTILE_DISC',
+  // String functions
+  'LENGTH', 'LOWER', 'UPPER', 'TRIM', 'LTRIM', 'RTRIM', 'SUBSTRING', 'POSITION',
+  'REPLACE', 'CONCAT', 'CONCAT_WS', 'SPLIT_PART', 'REGEXP_REPLACE', 'REGEXP_MATCHES',
+  'LEFT', 'RIGHT', 'REVERSE', 'REPEAT', 'LPAD', 'RPAD', 'INITCAP', 'FORMAT',
+  // Numeric functions
+  'ABS', 'CEIL', 'CEILING', 'FLOOR', 'ROUND', 'TRUNC', 'MOD', 'POWER', 'SQRT',
+  'EXP', 'LN', 'LOG', 'RANDOM', 'SIGN', 'GREATEST', 'LEAST',
+  // Date/time functions
+  'NOW', 'CURRENT_DATE', 'CURRENT_TIME', 'CURRENT_TIMESTAMP', 'DATE_PART',
+  'DATE_TRUNC', 'EXTRACT', 'AGE', 'INTERVAL', 'TO_CHAR', 'TO_DATE', 'TO_TIMESTAMP',
+  // JSON functions
+  'JSON_AGG', 'JSONB_AGG', 'JSON_BUILD_OBJECT', 'JSONB_BUILD_OBJECT',
+  'JSON_OBJECT_AGG', 'JSONB_OBJECT_AGG', 'ROW_TO_JSON', 'JSON_ARRAY_LENGTH',
+  // Array functions
+  'ARRAY_LENGTH', 'ARRAY_TO_STRING', 'STRING_TO_ARRAY', 'UNNEST', 'ARRAY_CAT',
+  // Type conversion
+  'CAST', 'TO_NUMBER', 'TO_TEXT',
+];
+
+// PostGIS functions
+const POSTGIS_FUNCTIONS = [
+  // Geometry constructors
+  'ST_Point', 'ST_MakePoint', 'ST_MakeLine', 'ST_MakePolygon', 'ST_MakeEnvelope',
+  'ST_GeomFromText', 'ST_GeomFromWKB', 'ST_GeomFromGeoJSON', 'ST_GeogFromText',
+  'ST_SetSRID', 'ST_Transform', 'ST_Collect', 'ST_Union', 'ST_Buffer',
+  // Geometry accessors
+  'ST_X', 'ST_Y', 'ST_Z', 'ST_M', 'ST_SRID', 'ST_GeometryType', 'ST_Dimension',
+  'ST_CoordDim', 'ST_NPoints', 'ST_NRings', 'ST_NumGeometries', 'ST_NumPoints',
+  'ST_ExteriorRing', 'ST_InteriorRingN', 'ST_GeometryN', 'ST_PointN', 'ST_StartPoint',
+  'ST_EndPoint', 'ST_Centroid', 'ST_PointOnSurface', 'ST_Envelope', 'ST_Boundary',
+  // Geometry outputs
+  'ST_AsText', 'ST_AsBinary', 'ST_AsGeoJSON', 'ST_AsKML', 'ST_AsSVG', 'ST_AsGML',
+  'ST_AsEWKT', 'ST_AsEWKB', 'ST_AsMVT', 'ST_AsMVTGeom',
+  // Spatial relationships
+  'ST_Intersects', 'ST_Contains', 'ST_Within', 'ST_Overlaps', 'ST_Touches',
+  'ST_Crosses', 'ST_Disjoint', 'ST_Equals', 'ST_Covers', 'ST_CoveredBy',
+  'ST_ContainsProperly', 'ST_DWithin', 'ST_Distance', 'ST_3DDistance',
+  // Spatial measurements
+  'ST_Area', 'ST_Perimeter', 'ST_Length', 'ST_Length2D', 'ST_3DLength',
+  'ST_Distance', 'ST_MaxDistance', 'ST_HausdorffDistance', 'ST_FrechetDistance',
+  // Geometry processing
+  'ST_Simplify', 'ST_SimplifyPreserveTopology', 'ST_SimplifyVW', 'ST_ChaikinSmoothing',
+  'ST_ConvexHull', 'ST_ConcaveHull', 'ST_Buffer', 'ST_OffsetCurve', 'ST_Difference',
+  'ST_Intersection', 'ST_SymDifference', 'ST_Split', 'ST_Subdivide', 'ST_MakeValid',
+  'ST_Snap', 'ST_SnapToGrid', 'ST_Segmentize', 'ST_LineMerge', 'ST_UnaryUnion',
+  // Clustering
+  'ST_ClusterDBSCAN', 'ST_ClusterKMeans', 'ST_ClusterWithin', 'ST_ClusterIntersecting',
+  // Aggregates
+  'ST_Extent', 'ST_3DExtent', 'ST_MemUnion', 'ST_Collect', 'ST_MakeLine',
+  // Bounding box
+  'ST_MakeBox2D', 'ST_XMin', 'ST_XMax', 'ST_YMin', 'ST_YMax', 'ST_ZMin', 'ST_ZMax',
+  'ST_Expand', 'ST_EstimatedExtent', 'Box2D', 'Box3D',
+  // Linear referencing
+  'ST_LineInterpolatePoint', 'ST_LineInterpolatePoints', 'ST_LineLocatePoint',
+  'ST_LineSubstring', 'ST_LocateAlong', 'ST_LocateBetween', 'ST_AddMeasure',
+  // Miscellaneous
+  'ST_IsValid', 'ST_IsSimple', 'ST_IsEmpty', 'ST_IsClosed', 'ST_IsRing',
+  'ST_IsCollection', 'ST_HasArc', 'ST_NumPatches', 'ST_Force2D', 'ST_Force3D',
+  'ST_ForceRHR', 'ST_Reverse', 'ST_FlipCoordinates', 'ST_OrientedEnvelope',
+];
+
+// Data types
+const PG_TYPES = [
+  'integer', 'int', 'int4', 'bigint', 'int8', 'smallint', 'int2',
+  'numeric', 'decimal', 'real', 'float4', 'double precision', 'float8',
+  'text', 'varchar', 'char', 'character varying', 'character',
+  'boolean', 'bool', 'date', 'time', 'timestamp', 'timestamptz', 'interval',
+  'json', 'jsonb', 'uuid', 'bytea', 'array', 'point', 'line', 'polygon',
+  'geometry', 'geography', 'box', 'circle', 'inet', 'cidr', 'macaddr',
+];
+
+export const SQLEditor: React.FC<SQLEditorProps> = ({
+  value,
+  onChange,
+  placeholder = 'Enter SQL query...',
+  height = '150px',
+  minHeight,
+  maxHeight,
+  schemas = [],
+  serviceName,
+  readOnly = false,
+  className = '',
+}) => {
+  const [loadedSchemas, setLoadedSchemas] = useState<SchemaInfo[]>(schemas);
+
+  // Load schema information if serviceName is provided and schemas are empty
+  useEffect(() => {
+    if (serviceName && schemas.length === 0) {
+      loadSchemaInfo(serviceName);
+    }
+  }, [serviceName, schemas]);
+
+  const loadSchemaInfo = async (service: string) => {
+    try {
+      // Try to load schema information from the API
+      const response = await fetch(`/api/pg/services/${service}/schemas`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.schemas) {
+          setLoadedSchemas(data.schemas);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load schema info:', err);
+    }
+  };
+
+  // Build completion source with schema awareness
+  const schemaCompletion = useMemo(() => {
+    return (context: CompletionContext): CompletionResult | null => {
+      const word = context.matchBefore(/[\w.]+/);
+      if (!word || (word.from === word.to && !context.explicit)) {
+        return null;
+      }
+
+      const text = word.text.toLowerCase();
+      const options: { label: string; type: string; detail?: string; boost?: number }[] = [];
+
+      // Check if we're completing after a dot (schema.table or table.column)
+      const dotIndex = text.lastIndexOf('.');
+      if (dotIndex >= 0) {
+        const prefix = text.substring(0, dotIndex);
+        const partial = text.substring(dotIndex + 1);
+
+        // Look for matching schema or table
+        for (const schema of loadedSchemas) {
+          if (schema.name.toLowerCase() === prefix) {
+            // Complete tables in this schema
+            for (const table of schema.tables) {
+              if (table.name.toLowerCase().startsWith(partial)) {
+                options.push({
+                  label: table.name,
+                  type: 'class',
+                  detail: `table in ${schema.name}`,
+                  boost: 10,
+                });
+              }
+            }
+          }
+          // Check if prefix is a table name
+          for (const table of schema.tables) {
+            const fullTableName = `${schema.name}.${table.name}`.toLowerCase();
+            const shortTableName = table.name.toLowerCase();
+            if (prefix === fullTableName || prefix === shortTableName) {
+              // Complete columns in this table
+              for (const col of table.columns) {
+                if (col.name.toLowerCase().startsWith(partial)) {
+                  options.push({
+                    label: col.name,
+                    type: 'property',
+                    detail: col.type,
+                    boost: 15,
+                  });
+                }
+              }
+            }
+          }
+        }
+      } else {
+        // Complete keywords, functions, schemas, and tables
+
+        // Keywords (high priority after SELECT, FROM, WHERE, etc.)
+        for (const kw of PG_KEYWORDS) {
+          if (kw.toLowerCase().startsWith(text)) {
+            options.push({
+              label: kw,
+              type: 'keyword',
+              boost: 5,
+            });
+          }
+        }
+
+        // PostgreSQL functions
+        for (const fn of PG_FUNCTIONS) {
+          if (fn.toLowerCase().startsWith(text)) {
+            options.push({
+              label: fn + '()',
+              type: 'function',
+              detail: 'PostgreSQL',
+              boost: 3,
+            });
+          }
+        }
+
+        // PostGIS functions
+        for (const fn of POSTGIS_FUNCTIONS) {
+          if (fn.toLowerCase().startsWith(text)) {
+            options.push({
+              label: fn + '()',
+              type: 'function',
+              detail: 'PostGIS',
+              boost: 4,
+            });
+          }
+        }
+
+        // Data types
+        for (const t of PG_TYPES) {
+          if (t.toLowerCase().startsWith(text)) {
+            options.push({
+              label: t,
+              type: 'type',
+              boost: 1,
+            });
+          }
+        }
+
+        // Schemas
+        for (const schema of loadedSchemas) {
+          if (schema.name.toLowerCase().startsWith(text)) {
+            options.push({
+              label: schema.name,
+              type: 'namespace',
+              detail: 'schema',
+              boost: 6,
+            });
+          }
+
+          // Tables
+          for (const table of schema.tables) {
+            if (table.name.toLowerCase().startsWith(text)) {
+              options.push({
+                label: table.name,
+                type: 'class',
+                detail: `table in ${schema.name}`,
+                boost: 8,
+              });
+            }
+            // Also offer fully qualified table names
+            const fqn = `${schema.name}.${table.name}`;
+            if (fqn.toLowerCase().startsWith(text)) {
+              options.push({
+                label: fqn,
+                type: 'class',
+                detail: 'table',
+                boost: 7,
+              });
+            }
+          }
+        }
+      }
+
+      // Sort by boost and limit results
+      options.sort((a, b) => (b.boost || 0) - (a.boost || 0));
+      const limitedOptions = options.slice(0, 50);
+
+      if (limitedOptions.length === 0) {
+        return null;
+      }
+
+      return {
+        from: word.from,
+        options: limitedOptions,
+        validFor: /^[\w.]*$/,
+      };
+    };
+  }, [loadedSchemas]);
+
+  // Build SQL dialect with schema info
+  const sqlExtension = useMemo(() => {
+    // Build schema object for CodeMirror SQL
+    const schemaObj: { [key: string]: readonly string[] } = {};
+
+    for (const schema of loadedSchemas) {
+      for (const table of schema.tables) {
+        const tableName = `${schema.name}.${table.name}`;
+        schemaObj[tableName] = table.columns.map(c => c.name);
+        // Also add without schema prefix
+        schemaObj[table.name] = table.columns.map(c => c.name);
+      }
+    }
+
+    return sql({
+      dialect: PostgreSQL,
+      schema: schemaObj,
+      upperCaseKeywords: true,
+    });
+  }, [loadedSchemas]);
+
+  // Custom theme for SQL
+  const theme = useMemo(() => EditorView.theme({
+    '&': {
+      fontSize: '14px',
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+    },
+    '.cm-content': {
+      padding: '8px 0',
+    },
+    '.cm-line': {
+      padding: '0 8px',
+    },
+    '.cm-gutters': {
+      backgroundColor: '#f7f7f7',
+      borderRight: '1px solid #e0e0e0',
+    },
+    '&.cm-focused .cm-cursor': {
+      borderLeftColor: '#3b82f6',
+    },
+    '.cm-placeholder': {
+      color: '#9ca3af',
+    },
+    '.cm-tooltip.cm-tooltip-autocomplete': {
+      backgroundColor: '#fff',
+      border: '1px solid #e5e7eb',
+      borderRadius: '6px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    },
+    '.cm-tooltip.cm-tooltip-autocomplete > ul': {
+      fontFamily: 'inherit',
+    },
+    '.cm-tooltip.cm-tooltip-autocomplete > ul > li': {
+      padding: '4px 8px',
+    },
+    '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+      backgroundColor: '#3b82f6',
+      color: '#fff',
+    },
+    '.cm-completionIcon': {
+      width: '1em',
+      marginRight: '0.5em',
+    },
+    '.cm-completionIcon-keyword': {
+      '&::after': { content: '"K"', color: '#9333ea' },
+    },
+    '.cm-completionIcon-function': {
+      '&::after': { content: '"ƒ"', color: '#2563eb' },
+    },
+    '.cm-completionIcon-class': {
+      '&::after': { content: '"T"', color: '#059669' },
+    },
+    '.cm-completionIcon-property': {
+      '&::after': { content: '"c"', color: '#d97706' },
+    },
+    '.cm-completionIcon-namespace': {
+      '&::after': { content: '"S"', color: '#dc2626' },
+    },
+    '.cm-completionIcon-type': {
+      '&::after': { content: '"t"', color: '#6366f1' },
+    },
+  }), []);
+
+  const extensions = useMemo(() => [
+    sqlExtension,
+    autocompletion({
+      override: [schemaCompletion],
+      activateOnTyping: true,
+      maxRenderedOptions: 50,
+    }),
+    EditorView.lineWrapping,
+    theme,
+  ], [sqlExtension, schemaCompletion, theme]);
+
+  return (
+    <div className={`sql-editor-wrapper border rounded ${className}`}>
+      <CodeMirror
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        height={height}
+        minHeight={minHeight}
+        maxHeight={maxHeight}
+        extensions={extensions}
+        readOnly={readOnly}
+        basicSetup={{
+          lineNumbers: true,
+          highlightActiveLineGutter: true,
+          highlightSpecialChars: true,
+          history: true,
+          foldGutter: false,
+          drawSelection: true,
+          dropCursor: true,
+          allowMultipleSelections: true,
+          indentOnInput: true,
+          syntaxHighlighting: true,
+          bracketMatching: true,
+          closeBrackets: true,
+          autocompletion: false, // We're using our own
+          rectangularSelection: true,
+          crosshairCursor: false,
+          highlightActiveLine: true,
+          highlightSelectionMatches: true,
+          closeBracketsKeymap: true,
+          defaultKeymap: true,
+          searchKeymap: true,
+          historyKeymap: true,
+          foldKeymap: false,
+          completionKeymap: true,
+          lintKeymap: true,
+        }}
+      />
+    </div>
+  );
+};
+
+export default SQLEditor;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlay, FiRefreshCw, FiAlertTriangle, FiCheck, FiCpu, FiDatabase, FiHelpCircle } from 'react-icons/fi';
+import { FiPlay, FiRefreshCw, FiAlertTriangle, FiCheck, FiCpu, FiDatabase, FiHelpCircle, FiEdit2 } from 'react-icons/fi';
+import { SQLEditor } from './SQLEditor';
 
 interface QueryResult {
   columns: { name: string; type: string; nullable: boolean }[];
@@ -39,6 +40,8 @@ export const AIQueryPanel: React.FC<AIQueryPanelProps> = ({ serviceName, schemaN
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
   const [showHelp, setShowHelp] = useState(false);
   const [autoExecute, setAutoExecute] = useState(false);
+  const [editableSQL, setEditableSQL] = useState(false);
+  const [customSQL, setCustomSQL] = useState('');
 
   // Check provider availability
   useEffect(() => {
@@ -83,7 +86,8 @@ export const AIQueryPanel: React.FC<AIQueryPanelProps> = ({ serviceName, schemaN
   };
 
   const handleExecute = async () => {
-    if (!response?.sql) return;
+    const sqlToExecute = editableSQL ? customSQL : response?.sql;
+    if (!sqlToExecute) return;
 
     setLoading(true);
 
@@ -92,7 +96,7 @@ export const AIQueryPanel: React.FC<AIQueryPanelProps> = ({ serviceName, schemaN
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sql: response.sql,
+          sql: sqlToExecute,
           service_name: serviceName,
           max_rows: 100,
         }),
@@ -226,8 +230,8 @@ export const AIQueryPanel: React.FC<AIQueryPanelProps> = ({ serviceName, schemaN
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold flex items-center gap-2">
-                  Generated SQL
-                  {response.confidence !== undefined && (
+                  {editableSQL ? 'Custom SQL' : 'Generated SQL'}
+                  {!editableSQL && response.confidence !== undefined && (
                     <span className={`text-sm px-2 py-0.5 rounded ${
                       response.confidence >= 0.8
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
@@ -239,7 +243,19 @@ export const AIQueryPanel: React.FC<AIQueryPanelProps> = ({ serviceName, schemaN
                     </span>
                   )}
                 </h3>
-                {!response.result && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (!editableSQL) {
+                        setCustomSQL(response.sql || '');
+                      }
+                      setEditableSQL(!editableSQL);
+                    }}
+                    className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
+                  >
+                    <FiEdit2 size={12} />
+                    {editableSQL ? 'Use Generated' : 'Edit SQL'}
+                  </button>
                   <button
                     onClick={handleExecute}
                     disabled={loading}
@@ -248,11 +264,16 @@ export const AIQueryPanel: React.FC<AIQueryPanelProps> = ({ serviceName, schemaN
                     <FiPlay />
                     Execute
                   </button>
-                )}
+                </div>
               </div>
-              <pre className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-x-auto text-sm">
-                {response.sql}
-              </pre>
+              <SQLEditor
+                value={editableSQL ? customSQL : response.sql}
+                onChange={editableSQL ? setCustomSQL : () => {}}
+                height="150px"
+                serviceName={serviceName}
+                readOnly={!editableSQL}
+                placeholder="Edit your SQL query..."
+              />
             </div>
           )}
 

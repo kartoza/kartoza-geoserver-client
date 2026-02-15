@@ -1221,6 +1221,91 @@ The SQLViewPublisher component provides:
 
 ---
 
+## SQL Editor
+
+The application provides an advanced SQL editor component with syntax highlighting and intelligent autocompletion.
+
+### Features
+
+- **Syntax Highlighting**: Full PostgreSQL syntax highlighting with keyword colorization
+- **Keyword Completion**: All PostgreSQL keywords (SELECT, FROM, WHERE, JOIN, etc.)
+- **Function Completion**: PostgreSQL built-in functions (COUNT, SUM, SUBSTRING, etc.)
+- **PostGIS Functions**: Complete PostGIS function library (ST_Intersects, ST_Buffer, ST_Transform, etc.)
+- **Schema-aware Completion**: Dynamically loads schema information for table and column suggestions
+- **Type Completion**: PostgreSQL data types (integer, text, geometry, etc.)
+- **Line Numbers**: Optional line number gutter
+- **Read-only Mode**: View-only mode for displaying generated SQL
+
+### Autocompletion Categories
+
+| Category | Examples | Boost Priority |
+|----------|----------|----------------|
+| Columns | `name`, `geom`, `population` | Highest (15) |
+| Tables | `countries`, `cities`, `roads` | High (8-10) |
+| Schemas | `public`, `topology`, `tiger` | Medium-High (6) |
+| Keywords | `SELECT`, `FROM`, `WHERE` | Medium (5) |
+| PostGIS Functions | `ST_Intersects()`, `ST_Buffer()` | Medium (4) |
+| PostgreSQL Functions | `COUNT()`, `SUM()`, `LOWER()` | Medium (3) |
+| Data Types | `integer`, `geometry`, `text` | Low (1) |
+
+### Context-aware Completion
+
+The editor provides intelligent completion based on context:
+
+- **After schema dot**: Suggests tables in that schema (e.g., `public.` → table names)
+- **After table dot**: Suggests columns in that table (e.g., `countries.` → column names)
+- **Partial match**: Filters options based on typed characters
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/pg/services/{name}/schemas` | GET | Get schema info for autocompletion |
+
+### Schema Response
+
+```json
+{
+  "schemas": [
+    {
+      "name": "public",
+      "tables": [
+        {
+          "name": "countries",
+          "schema": "public",
+          "columns": [
+            {"name": "id", "type": "integer", "nullable": false},
+            {"name": "name", "type": "text", "nullable": true},
+            {"name": "geom", "type": "geometry", "nullable": true}
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Web UI Components Using SQL Editor
+
+- **QueryDesigner**: Visual query builder with SQL preview/edit mode
+- **AIQueryPanel**: AI-generated SQL display with edit capability
+- **SQLViewPublisher**: SQL input for creating GeoServer views
+
+### Usage
+
+```tsx
+<SQLEditor
+  value={sql}
+  onChange={setSQL}
+  height="150px"
+  serviceName="my_pg_service"  // Enables schema-aware completion
+  readOnly={false}
+  placeholder="Enter SQL query..."
+/>
+```
+
+---
+
 ## Terria Integration
 
 The application integrates with TerriaJS, a powerful open-source framework for web-based 2D/3D geospatial visualization. This enables viewing GeoServer data in a 3D globe interface.
@@ -1322,6 +1407,7 @@ https://map.terria.io/#http://localhost:8080/api/terria/init/CONNECTION_ID.json
 | 0.8.0 | 2025 | Renamed to Kartoza CloudBench, PostgreSQL integration, ogr2ogr import, PG to GeoServer bridge |
 | 0.9.0 | 2025 | Visual Query Designer with SQL generation, PostGIS support, query saving |
 | 0.10.0 | 2025 | SQL View Layers: publish queries as GeoServer WMS/WFS layers |
+| 0.11.0 | 2025 | SQL Editor with syntax highlighting and schema-aware autocompletion |
 
 ---
 

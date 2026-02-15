@@ -9,6 +9,7 @@ import {
   FiExternalLink,
   FiCode,
 } from 'react-icons/fi';
+import { SQLEditor } from './SQLEditor';
 
 interface GeoServerConnection {
   id: string;
@@ -403,11 +404,12 @@ export const SQLViewPublisher: React.FC<SQLViewPublisherProps> = ({
             </div>
 
             {showSQL ? (
-              <textarea
+              <SQLEditor
                 value={sql}
-                onChange={e => setSQL(e.target.value)}
+                onChange={setSQL}
+                height="150px"
+                serviceName={pgServiceName}
                 placeholder="SELECT * FROM my_table WHERE ..."
-                className="w-full border rounded px-3 py-2 font-mono text-sm h-32"
               />
             ) : (
               <div className="bg-gray-50 rounded p-3 font-mono text-sm text-gray-700 max-h-32 overflow-auto">

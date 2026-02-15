@@ -12,7 +12,9 @@ import {
   FiArrowDown,
   FiCode,
   FiRefreshCw,
+  FiEdit2,
 } from 'react-icons/fi';
+import { SQLEditor } from './SQLEditor';
 
 interface Column {
   name: string;
@@ -105,6 +107,8 @@ export const QueryDesigner: React.FC<QueryDesignerProps> = ({ serviceName, onClo
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
   const [showSQL, setShowSQL] = useState(false);
+  const [editableSQL, setEditableSQL] = useState(false);
+  const [customSQL, setCustomSQL] = useState('');
   const [queryName, setQueryName] = useState('');
 
   // Load schema info
@@ -579,13 +583,43 @@ export const QueryDesigner: React.FC<QueryDesignerProps> = ({ serviceName, onClo
           {/* Generated SQL */}
           {showSQL && generatedSQL && (
             <div>
-              <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-                <FiCode />
-                Generated SQL
-              </h4>
-              <pre className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap">
-                {generatedSQL}
-              </pre>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium text-sm flex items-center gap-1">
+                  <FiCode />
+                  {editableSQL ? 'Custom SQL' : 'Generated SQL'}
+                </h4>
+                <button
+                  onClick={() => {
+                    if (!editableSQL) {
+                      setCustomSQL(generatedSQL);
+                    }
+                    setEditableSQL(!editableSQL);
+                  }}
+                  className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
+                >
+                  <FiEdit2 size={12} />
+                  {editableSQL ? 'Use Visual' : 'Edit SQL'}
+                </button>
+              </div>
+              {editableSQL ? (
+                <SQLEditor
+                  value={customSQL}
+                  onChange={setCustomSQL}
+                  height="150px"
+                  serviceName={serviceName}
+                  schemas={schemas}
+                  placeholder="Enter your SQL query..."
+                />
+              ) : (
+                <SQLEditor
+                  value={generatedSQL}
+                  onChange={() => {}}
+                  height="120px"
+                  serviceName={serviceName}
+                  schemas={schemas}
+                  readOnly={true}
+                />
+              )}
             </div>
           )}
 

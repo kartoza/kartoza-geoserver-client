@@ -140,6 +140,10 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/pg/detect-layers", s.handlePGDetectLayers)
 	mux.HandleFunc("/api/pg/ogr2ogr/status", s.handleOgr2ogrStatus)
 
+	// API routes - PostgreSQL to GeoServer Bridge
+	mux.HandleFunc("/api/bridge", s.handleBridge)
+	mux.HandleFunc("/api/bridge/", s.handleBridge)
+
 	// API routes - Terria Integration (3D globe viewer, catalog export)
 	mux.HandleFunc("/api/terria/connection/", s.handleTerriaConnection)
 	mux.HandleFunc("/api/terria/workspace/", s.handleTerriaWorkspace)

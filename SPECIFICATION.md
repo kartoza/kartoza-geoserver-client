@@ -774,6 +774,177 @@ Used for layer preview:
 
 ---
 
+## PostgreSQL Integration
+
+The application provides comprehensive PostgreSQL database management through the standard `pg_service.conf` file.
+
+### pg_service.conf Support
+
+PostgreSQL services are read from the standard `~/.pg_service.conf` file:
+
+```ini
+[mydb]
+host=localhost
+port=5432
+dbname=gisdb
+user=gis_user
+password=secret
+sslmode=prefer
+```
+
+### Features
+
+- **Service Discovery**: Automatically parses pg_service.conf entries
+- **Connection Testing**: Test connectivity to PostgreSQL services
+- **Schema Harvesting**: Parse database schemas, tables, views, and columns
+- **PostGIS Detection**: Identify spatial tables with geometry columns
+- **Geometry Type Detection**: Detect point, line, polygon, and multi-geometries
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/pg/services` | GET | List all PostgreSQL services |
+| `/api/pg/services` | POST | Create new service entry |
+| `/api/pg/services/{name}` | DELETE | Delete service entry |
+| `/api/pg/services/{name}/test` | POST | Test connection |
+| `/api/pg/services/{name}/parse` | POST | Harvest schema metadata |
+| `/api/pg/services/{name}/schema` | GET | Get harvested schema |
+
+### Schema Cache
+
+After parsing, schemas are cached with:
+- Schema names
+- Table names with geometry columns and types
+- View definitions
+- Column data types and nullability
+- Primary key information
+
+---
+
+## Data Import (ogr2ogr)
+
+The application provides a geospatial data import facility using GDAL's ogr2ogr.
+
+### Supported Formats
+
+| Extension | Format |
+|-----------|--------|
+| `.shp` | ESRI Shapefile |
+| `.geojson`, `.json` | GeoJSON |
+| `.gpkg` | GeoPackage |
+| `.kml` | KML |
+| `.kmz` | KMZ (compressed KML) |
+| `.gml` | GML |
+| `.csv` | CSV with geometry |
+| `.tab`, `.mif` | MapInfo File |
+| `.dxf` | DXF |
+| `.gpx` | GPX |
+| `.sqlite`, `.db` | SQLite |
+| `.gdb` | FileGDB |
+
+### Import Features
+
+- **Layer Detection**: Detect available layers in multi-layer sources
+- **SRID Auto-detection**: Automatically detect source coordinate system
+- **Reprojection**: Optionally reproject to target SRID
+- **Overwrite/Append**: Replace or append to existing tables
+- **Progress Tracking**: Real-time import progress updates
+- **Background Jobs**: Async import with job status tracking
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/pg/ogr2ogr/status` | GET | Check ogr2ogr availability |
+| `/api/pg/import` | POST | Start import job |
+| `/api/pg/import/{jobId}` | GET | Get job status |
+| `/api/pg/import/upload` | POST | Upload file for import |
+| `/api/pg/detect-layers` | POST | Detect layers in file |
+
+### Import Request
+
+```json
+{
+  "source_file": "/tmp/data.gpkg",
+  "target_service": "mydb",
+  "target_schema": "public",
+  "table_name": "imported_data",
+  "srid": 4326,
+  "target_srid": 3857,
+  "overwrite": true,
+  "append": false,
+  "source_layer": "layer_name"
+}
+```
+
+---
+
+## PostgreSQL to GeoServer Bridge
+
+The application enables seamless integration between PostgreSQL databases and GeoServer through PostGIS data stores.
+
+### Features
+
+- **PostGIS Store Creation**: Create GeoServer PostGIS stores from pg_service.conf entries
+- **Table Publishing**: Automatically publish spatial tables as GeoServer layers
+- **Connection Bridging**: Link PostgreSQL services to GeoServer workspaces
+- **JDBC Configuration**: Proper SSL mode mapping and connection pooling
+
+### Bridge Wizard (TUI)
+
+Press `b` to launch the bridge wizard:
+
+1. **Select PostgreSQL Service**: Choose from pg_service.conf entries
+2. **Select GeoServer**: Choose target GeoServer connection
+3. **Select Workspace**: Choose or create target workspace
+4. **Enter Store Name**: Name for the PostGIS data store
+5. **Select Schema**: Choose PostgreSQL schema (default: public)
+6. **Select Tables**: Optionally select tables to auto-publish as layers
+7. **Confirm**: Review configuration and create bridge
+
+### Bridge Wizard (Web UI)
+
+Click the "Create Bridge" button to open the wizard modal with the same workflow.
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/bridge` | POST | Create PostgreSQL to GeoServer bridge |
+| `/api/bridge/tables` | GET | Get available tables for a service |
+
+### Bridge Request
+
+```json
+{
+  "pg_service_name": "mydb",
+  "geoserver_connection_id": "conn_1",
+  "workspace": "cite",
+  "store_name": "mydb_store",
+  "schema": "public",
+  "tables": ["countries", "cities"],
+  "publish_layers": true
+}
+```
+
+### PostGIS Store Parameters
+
+The bridge creates PostGIS stores with optimized defaults:
+
+| Parameter | Default |
+|-----------|---------|
+| Min Connections | 1 |
+| Max Connections | 10 |
+| Connection Timeout | 20s |
+| Validate Connections | true |
+| Fetch Size | 1000 |
+| Expose Primary Keys | true |
+| Loose BBox | true |
+| Prepared Statements | true |
+
+---
+
 ## Terria Integration
 
 The application integrates with TerriaJS, a powerful open-source framework for web-based 2D/3D geospatial visualization. This enables viewing GeoServer data in a 3D globe interface.
@@ -844,6 +1015,12 @@ https://map.terria.io/#http://localhost:8080/api/terria/init/CONNECTION_ID.json
 8. **Raster Verification**: WCS-based verification for coverage uploads
 9. ~~**Terria Integration**: 3D globe viewer support~~ (Implemented in v0.7.0)
 10. **Embedded TerriaMap**: Self-hosted Terria viewer (setup script available)
+11. ~~**PostgreSQL Integration**: pg_service.conf support~~ (Implemented in v0.8.0)
+12. ~~**Data Import**: ogr2ogr-based import~~ (Implemented in v0.8.0)
+13. ~~**PG to GeoServer Bridge**: PostGIS store creation~~ (Implemented in v0.8.0)
+14. **AI Query Engine**: Natural language to SQL (Planned)
+15. **Visual Query Designer**: Metabase-style query builder (Planned)
+16. **SQL View Layers**: Publish queries as GeoServer layers (Planned)
 
 ### Known Limitations
 
@@ -866,6 +1043,7 @@ https://map.terria.io/#http://localhost:8080/api/terria/init/CONNECTION_ID.json
 | 0.5.0 | 2025 | Style Editor with visual/code editing (TUI + Web UI) |
 | 0.6.0 | 2025 | MapLibre GL viewer (Web), TUI map preview with Kitty/Sixel/Chafa support |
 | 0.7.0 | 2025 | Terria 3D globe integration, catalog export, CORS proxy |
+| 0.8.0 | 2025 | Renamed to Kartoza CloudBench, PostgreSQL integration, ogr2ogr import, PG to GeoServer bridge |
 
 ---
 

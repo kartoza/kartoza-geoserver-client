@@ -1,10 +1,11 @@
+// Package progress provides a simple progress bar for Bubble Tea applications.
 package progress
 
 import (
 	"fmt"
 	"math"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,17 +18,10 @@ import (
 
 // Internal ID management. Used during animating to assure that frame messages
 // can only be received by progress components that sent them.
-var (
-	lastID int
-	idMtx  sync.Mutex
-)
+var lastID int64
 
-// Return the next ID we should use on the model.
 func nextID() int {
-	idMtx.Lock()
-	defer idMtx.Unlock()
-	lastID++
-	return lastID
+	return int(atomic.AddInt64(&lastID, 1))
 }
 
 const (
@@ -342,7 +336,7 @@ func (m Model) percentageView(percent float64) string {
 		return ""
 	}
 	percent = math.Max(0, math.Min(1, percent))
-	percentage := fmt.Sprintf(m.PercentFormat, percent*100) //nolint:gomnd
+	percentage := fmt.Sprintf(m.PercentFormat, percent*100) //nolint:mnd
 	percentage = m.PercentageStyle.Inline(true).Render(percentage)
 	return percentage
 }
@@ -364,22 +358,8 @@ func (m Model) color(c string) termenv.Color {
 	return m.colorProfile.Color(c)
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // IsAnimating returns false if the progress bar reached equilibrium and is no longer animating.
 func (m *Model) IsAnimating() bool {
 	dist := math.Abs(m.percentShown - m.targetPercent)
 	return !(dist < 0.001 && m.velocity < 0.01)
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

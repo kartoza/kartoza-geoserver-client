@@ -147,6 +147,9 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	// API routes - AI Query Engine
 	mux.HandleFunc("/api/ai/", s.handleAI)
 
+	// API routes - Visual Query Designer
+	mux.HandleFunc("/api/query/", s.handleQuery)
+
 	// API routes - Terria Integration (3D globe viewer, catalog export)
 	mux.HandleFunc("/api/terria/connection/", s.handleTerriaConnection)
 	mux.HandleFunc("/api/terria/workspace/", s.handleTerriaWorkspace)

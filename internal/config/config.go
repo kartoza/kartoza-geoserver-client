@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const (
@@ -80,6 +81,15 @@ type PGServiceState struct {
 	// SchemaCache is stored separately to avoid bloating the main config
 }
 
+// SavedQuery represents a saved visual query definition
+type SavedQuery struct {
+	Name        string      `json:"name"`
+	ServiceName string      `json:"service_name"`
+	Definition  interface{} `json:"definition"` // query.QueryDefinition
+	CreatedAt   string      `json:"created_at"`
+	UpdatedAt   string      `json:"updated_at,omitempty"`
+}
+
 // Config holds the application configuration
 type Config struct {
 	Connections      []Connection        `json:"connections"`
@@ -89,6 +99,7 @@ type Config struct {
 	SyncConfigs      []SyncConfiguration `json:"sync_configs,omitempty"`
 	PingIntervalSecs int                 `json:"ping_interval_secs,omitempty"` // Dashboard refresh interval, default 60
 	PGServiceStates  []PGServiceState    `json:"pg_services,omitempty"`        // PostgreSQL service states
+	SavedQueries     []SavedQuery        `json:"saved_queries,omitempty"`      // Visual query definitions
 }
 
 // GetPingInterval returns the ping interval in seconds, with a default of 60
@@ -342,6 +353,63 @@ func (c *Config) RemovePGServiceState(name string) {
 	for i := range c.PGServiceStates {
 		if c.PGServiceStates[i].Name == name {
 			c.PGServiceStates = append(c.PGServiceStates[:i], c.PGServiceStates[i+1:]...)
+			return
+		}
+	}
+}
+
+// SaveQuery saves a visual query definition
+func (c *Config) SaveQuery(serviceName, queryName string, definition interface{}) {
+	now := fmt.Sprintf("%s", time.Now().Format(time.RFC3339))
+
+	// Check if query already exists
+	for i := range c.SavedQueries {
+		if c.SavedQueries[i].ServiceName == serviceName && c.SavedQueries[i].Name == queryName {
+			c.SavedQueries[i].Definition = definition
+			c.SavedQueries[i].UpdatedAt = now
+			return
+		}
+	}
+
+	// Add new query
+	c.SavedQueries = append(c.SavedQueries, SavedQuery{
+		Name:        queryName,
+		ServiceName: serviceName,
+		Definition:  definition,
+		CreatedAt:   now,
+	})
+}
+
+// GetQueries returns saved queries, optionally filtered by service
+func (c *Config) GetQueries(serviceName string) []SavedQuery {
+	if serviceName == "" {
+		return c.SavedQueries
+	}
+
+	var filtered []SavedQuery
+	for _, q := range c.SavedQueries {
+		if q.ServiceName == serviceName {
+			filtered = append(filtered, q)
+		}
+	}
+	return filtered
+}
+
+// GetQuery returns a specific saved query
+func (c *Config) GetQuery(serviceName, queryName string) *SavedQuery {
+	for i := range c.SavedQueries {
+		if c.SavedQueries[i].ServiceName == serviceName && c.SavedQueries[i].Name == queryName {
+			return &c.SavedQueries[i]
+		}
+	}
+	return nil
+}
+
+// DeleteQuery removes a saved query
+func (c *Config) DeleteQuery(serviceName, queryName string) {
+	for i := range c.SavedQueries {
+		if c.SavedQueries[i].ServiceName == serviceName && c.SavedQueries[i].Name == queryName {
+			c.SavedQueries = append(c.SavedQueries[:i], c.SavedQueries[i+1:]...)
 			return
 		}
 	}

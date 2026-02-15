@@ -36,7 +36,7 @@ Kartoza CloudBench is a unified platform for GeoServer and PostgreSQL management
 - Preview layers in a browser-based map viewer
 - **PostgreSQL Integration** (Planned): Manage PostgreSQL services via pg_service.conf
 - **AI Query Engine** (Planned): Natural language to SQL query generation
-- **Visual Query Designer** (Planned): Metabase-style visual query builder
+- **Visual Query Designer**: Metabase-style visual query builder
 
 ---
 
@@ -1033,6 +1033,96 @@ The AI Query Panel provides:
 
 ---
 
+## Visual Query Designer
+
+The application provides a Metabase-style visual query builder for constructing SQL queries without writing code.
+
+### Features
+
+- **Schema Browser**: Navigate database schemas and tables
+- **Column Selection**: Pick columns with optional aggregates (COUNT, SUM, AVG, MIN, MAX)
+- **PostGIS Aggregates**: ST_Extent, ST_Union, ST_Collect for spatial aggregations
+- **Condition Builder**: Visual WHERE clause builder with multiple operators
+- **Join Support**: INNER, LEFT, RIGHT, FULL OUTER, and CROSS joins
+- **Ordering**: Multi-column ORDER BY with ASC/DESC and NULLS FIRST/LAST
+- **Pagination**: LIMIT and OFFSET controls
+- **SQL Preview**: Live SQL generation as you build
+- **Query Execution**: Execute and view results inline
+- **Query Saving**: Save query definitions for later reuse
+
+### Supported Operators
+
+| Category | Operators |
+|----------|-----------|
+| Comparison | `=`, `!=`, `<`, `<=`, `>`, `>=` |
+| Text | `LIKE`, `ILIKE` |
+| Null | `IS NULL`, `IS NOT NULL` |
+| Set | `IN`, `NOT IN`, `BETWEEN` |
+| PostGIS | `ST_Intersects`, `ST_Contains`, `ST_Within`, `ST_DWithin`, `ST_Equals`, `ST_Touches`, `ST_Overlaps`, `ST_Crosses` |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/query/build` | POST | Generate SQL from visual definition |
+| `/api/query/execute` | POST | Execute visual query and return results |
+| `/api/query/save` | POST | Save query definition |
+| `/api/query/list` | GET | List saved queries (filter by service) |
+| `/api/query/delete` | DELETE | Delete a saved query |
+
+### Query Definition Schema
+
+```json
+{
+  "name": "My Query",
+  "schema": "public",
+  "table": "countries",
+  "columns": [
+    {"name": "name", "alias": "country_name"},
+    {"name": "population", "aggregate": "SUM", "alias": "total_pop"}
+  ],
+  "joins": [
+    {
+      "type": "LEFT JOIN",
+      "table": "regions",
+      "schema": "public",
+      "on_left": "countries.region_id",
+      "on_right": "regions.id",
+      "on_operator": "="
+    }
+  ],
+  "conditions": [
+    {"column": "population", "operator": ">", "value": 1000000, "logic": "AND"}
+  ],
+  "group_by": ["name"],
+  "order_by": [{"column": "name", "direction": "ASC"}],
+  "limit": 100,
+  "distinct": false
+}
+```
+
+### TUI Usage
+
+The Visual Query Designer in TUI provides:
+- Tab-based navigation between sections (Table, Columns, Conditions, Order By, SQL)
+- List-based selection for tables and columns
+- Live SQL preview
+- Execute with Ctrl+E from any section
+- Results displayed in scrollable viewport
+
+### Web UI Usage
+
+The QueryDesigner component provides:
+- Schema/table dropdown selection
+- Checkbox-based column selection with aggregate dropdowns
+- Dynamic condition rows with operator selection
+- Order by configuration with direction toggles
+- SQL preview panel with syntax highlighting
+- Inline results table with pagination info
+- Save query dialog for reuse
+
+---
+
 ## Terria Integration
 
 The application integrates with TerriaJS, a powerful open-source framework for web-based 2D/3D geospatial visualization. This enables viewing GeoServer data in a 3D globe interface.
@@ -1107,7 +1197,7 @@ https://map.terria.io/#http://localhost:8080/api/terria/init/CONNECTION_ID.json
 12. ~~**Data Import**: ogr2ogr-based import~~ (Implemented in v0.8.0)
 13. ~~**PG to GeoServer Bridge**: PostGIS store creation~~ (Implemented in v0.8.0)
 14. ~~**AI Query Engine**: Natural language to SQL~~ (Implemented in v0.8.0)
-15. **Visual Query Designer**: Metabase-style query builder (Planned)
+15. ~~**Visual Query Designer**: Metabase-style query builder~~ (Implemented in v0.9.0)
 16. **SQL View Layers**: Publish queries as GeoServer layers (Planned)
 
 ### Known Limitations
@@ -1132,6 +1222,7 @@ https://map.terria.io/#http://localhost:8080/api/terria/init/CONNECTION_ID.json
 | 0.6.0 | 2025 | MapLibre GL viewer (Web), TUI map preview with Kitty/Sixel/Chafa support |
 | 0.7.0 | 2025 | Terria 3D globe integration, catalog export, CORS proxy |
 | 0.8.0 | 2025 | Renamed to Kartoza CloudBench, PostgreSQL integration, ogr2ogr import, PG to GeoServer bridge |
+| 0.9.0 | 2025 | Visual Query Designer with SQL generation, PostGIS support, query saving |
 
 ---
 

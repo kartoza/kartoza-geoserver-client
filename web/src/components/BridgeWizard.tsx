@@ -31,7 +31,7 @@ export const BridgeWizard: React.FC<BridgeWizardProps> = ({ connections, onClose
   const [step, setStep] = useState<WizardStep>('pg-service');
   const [pgServices, setPgServices] = useState<PGService[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [schemas, setSchemas] = useState<string[]>(['public']);
+  const [schemas, _setSchemas] = useState<string[]>(['public']);
   const [tables, setTables] = useState<string[]>([]);
 
   const [selectedPgService, setSelectedPgService] = useState<string>('');
@@ -43,7 +43,7 @@ export const BridgeWizard: React.FC<BridgeWizardProps> = ({ connections, onClose
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState(false);
+  const [_success, setSuccess] = useState(false);
 
   // Load PostgreSQL services
   useEffect(() => {

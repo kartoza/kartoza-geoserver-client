@@ -32,7 +32,7 @@ interface AIQueryPanelProps {
   onClose?: () => void;
 }
 
-export const AIQueryPanel: React.FC<AIQueryPanelProps> = ({ serviceName, schemaName, onClose }) => {
+export const AIQueryPanel: React.FC<AIQueryPanelProps> = ({ serviceName, schemaName, onClose: _onClose }) => {
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<AIQueryResponse | null>(null);

@@ -133,6 +133,13 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/pg/services", s.handlePGServices)
 	mux.HandleFunc("/api/pg/services/", s.handlePGServiceByName)
 
+	// API routes - Data Import (ogr2ogr)
+	mux.HandleFunc("/api/pg/import", s.handlePGImport)
+	mux.HandleFunc("/api/pg/import/", s.handlePGImportStatus)
+	mux.HandleFunc("/api/pg/import/upload", s.handlePGImportUpload)
+	mux.HandleFunc("/api/pg/detect-layers", s.handlePGDetectLayers)
+	mux.HandleFunc("/api/pg/ogr2ogr/status", s.handleOgr2ogrStatus)
+
 	// API routes - Terria Integration (3D globe viewer, catalog export)
 	mux.HandleFunc("/api/terria/connection/", s.handleTerriaConnection)
 	mux.HandleFunc("/api/terria/workspace/", s.handleTerriaWorkspace)

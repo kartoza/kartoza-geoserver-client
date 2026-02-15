@@ -118,8 +118,8 @@ func (e *QueryExecutor) Execute(ctx context.Context, serviceName, sqlQuery strin
 		}
 	}
 
-	// Scan rows
-	var resultRows []map[string]any
+	// Scan rows - initialize as empty slice, not nil, for proper JSON serialization
+	resultRows := make([]map[string]any, 0)
 	scanArgs := make([]any, len(columns))
 	scanDest := make([]any, len(columns))
 	for i := range scanArgs {
@@ -220,10 +220,14 @@ func (e *QueryExecutor) validateQuery(sqlQuery string) error {
 
 // ensureLimit adds a LIMIT clause if not present
 func (e *QueryExecutor) ensureLimit(sqlQuery string) string {
+	sqlQuery = strings.TrimSpace(sqlQuery)
+	if sqlQuery == "" {
+		return sqlQuery
+	}
 	sqlUpper := strings.ToUpper(sqlQuery)
 	if !strings.Contains(sqlUpper, "LIMIT") {
 		// Remove trailing semicolon if present
-		sqlQuery = strings.TrimSuffix(strings.TrimSpace(sqlQuery), ";")
+		sqlQuery = strings.TrimSuffix(sqlQuery, ";")
 		sqlQuery = fmt.Sprintf("%s LIMIT %d", sqlQuery, e.maxRows)
 	}
 	return sqlQuery

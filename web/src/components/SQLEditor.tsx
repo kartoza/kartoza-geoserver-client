@@ -137,12 +137,19 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({
 }) => {
   const [loadedSchemas, setLoadedSchemas] = useState<SchemaInfo[]>(schemas);
 
+  // Sync loadedSchemas with schemas prop when it changes
+  useEffect(() => {
+    if (schemas.length > 0) {
+      setLoadedSchemas(schemas);
+    }
+  }, [schemas]);
+
   // Load schema information if serviceName is provided and schemas are empty
   useEffect(() => {
-    if (serviceName && schemas.length === 0) {
+    if (serviceName && schemas.length === 0 && loadedSchemas.length === 0) {
       loadSchemaInfo(serviceName);
     }
-  }, [serviceName, schemas]);
+  }, [serviceName, schemas.length, loadedSchemas.length]);
 
   const loadSchemaInfo = async (service: string) => {
     try {

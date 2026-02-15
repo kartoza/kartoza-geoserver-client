@@ -817,6 +817,8 @@ export interface PGService {
   user?: string
   sslmode?: string
   is_parsed: boolean
+  hidden: boolean
+  online?: boolean | null // null = not checked, true/false = checked
 }
 
 export interface PGServiceCreate {
@@ -867,4 +869,226 @@ export async function parsePGService(name: string): Promise<unknown> {
     method: 'POST',
   })
   return handleResponse<unknown>(response)
+}
+
+// Set hidden state for a PostgreSQL service
+export async function setPGServiceHidden(name: string, hidden: boolean): Promise<void> {
+  const response = await fetch(`${API_BASE}/pg/services/${encodeURIComponent(name)}/hide`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hidden }),
+  })
+  return handleResponse<void>(response)
+}
+
+// PostgreSQL server statistics
+export interface PGServerStats {
+  // Server info
+  version: string
+  server_start_time: string
+  uptime: string
+  host: string
+  port: string
+
+  // Database info
+  database_name: string
+  database_size: string
+  database_oid: number
+
+  // Connection stats
+  max_connections: number
+  current_connections: number
+  active_connections: number
+  idle_connections: number
+  idle_in_transaction_connections: number
+  waiting_connections: number
+  connection_percent: number
+
+  // Database stats
+  num_backends: number
+  xact_commit: number
+  xact_rollback: number
+  blks_read: number
+  blks_hit: number
+  tup_returned: number
+  tup_fetched: number
+  tup_inserted: number
+  tup_updated: number
+  tup_deleted: number
+  cache_hit_ratio: string
+  dead_tuples: number
+  live_tuples: number
+  table_count: number
+  index_count: number
+  view_count: number
+  function_count: number
+  schema_count: number
+
+  // Replication
+  is_in_recovery: boolean
+  replay_lag?: string
+
+  // Extensions
+  installed_extensions: string[]
+
+  // PostGIS specific
+  has_postgis: boolean
+  postgis_version?: string
+  geometry_columns?: number
+  raster_columns?: number
+}
+
+// Get server statistics for a PostgreSQL service
+export async function getPGServiceStats(name: string): Promise<PGServerStats> {
+  const response = await fetch(`${API_BASE}/pg/services/${encodeURIComponent(name)}/stats`)
+  return handleResponse<PGServerStats>(response)
+}
+
+// ============================================================================
+// PostgreSQL Data Import API
+// ============================================================================
+
+export interface OGR2OGRStatus {
+  available: boolean
+  version: string
+  raster_available: boolean
+  raster_version: string
+  supported_formats: string[]
+  supported_extensions: Record<string, string>
+  vector_extensions: Record<string, string>
+  raster_extensions: Record<string, string>
+}
+
+export interface LayerInfo {
+  name: string
+  geometry_type: string
+  feature_count: number
+  srid: number
+  fields: Array<{
+    name: string
+    type: string
+    width: number
+    nullable: boolean
+  }>
+  extent?: {
+    min_x: number
+    min_y: number
+    max_x: number
+    max_y: number
+  }
+}
+
+export interface ImportJob {
+  id: string
+  source_file: string
+  target_table: string
+  service: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  progress: number
+  message: string
+  started_at: string
+  completed_at?: string
+  error?: string
+}
+
+export interface ImportRequest {
+  source_file: string
+  target_service: string
+  target_schema?: string
+  table_name?: string
+  srid?: number
+  target_srid?: number
+  overwrite?: boolean
+  append?: boolean
+  source_layer?: string
+}
+
+export interface RasterImportRequest {
+  source_file: string
+  target_service: string
+  target_schema?: string
+  table_name?: string
+  srid?: number
+  tile_size?: string
+  overwrite?: boolean
+  append?: boolean
+  create_index?: boolean
+  out_of_db?: boolean
+}
+
+// Get ogr2ogr availability and supported formats
+export async function getOGR2OGRStatus(): Promise<OGR2OGRStatus> {
+  const response = await fetch(`${API_BASE}/pg/ogr2ogr/status`)
+  return handleResponse<OGR2OGRStatus>(response)
+}
+
+// Upload file for import
+export async function uploadFileForImport(
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<{ file_path: string; filename: string; message: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable && onProgress) {
+        const progress = Math.round((event.loaded / event.total) * 100)
+        onProgress(progress)
+      }
+    })
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText))
+      } else {
+        reject(new Error(JSON.parse(xhr.responseText).error || 'Upload failed'))
+      }
+    })
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Network error'))
+    })
+
+    xhr.open('POST', `${API_BASE}/pg/import/upload`)
+    xhr.send(formData)
+  })
+}
+
+// Detect layers in a file
+export async function detectLayers(filePath: string): Promise<LayerInfo[]> {
+  const response = await fetch(`${API_BASE}/pg/detect-layers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file_path: filePath }),
+  })
+  return handleResponse<LayerInfo[]>(response)
+}
+
+// Start a vector data import job
+export async function startVectorImport(request: ImportRequest): Promise<{ job_id: string; status: string; message: string }> {
+  const response = await fetch(`${API_BASE}/pg/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  return handleResponse<{ job_id: string; status: string; message: string }>(response)
+}
+
+// Start a raster data import job
+export async function startRasterImport(request: RasterImportRequest): Promise<{ job_id: string; status: string; message: string }> {
+  const response = await fetch(`${API_BASE}/pg/import/raster`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  return handleResponse<{ job_id: string; status: string; message: string }>(response)
+}
+
+// Get import job status
+export async function getImportJobStatus(jobId: string): Promise<ImportJob> {
+  const response = await fetch(`${API_BASE}/pg/import/${jobId}`)
+  return handleResponse<ImportJob>(response)
 }

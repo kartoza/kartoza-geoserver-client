@@ -45,3 +45,4 @@ Thumbs.db
 # Node.js
 node_modules/
 web/node_modules/
+cloudbench

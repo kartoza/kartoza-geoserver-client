@@ -35,10 +35,14 @@ import {
   FiHardDrive,
   FiActivity,
   FiTable,
+  FiEye,
+  FiEyeOff,
+  FiSettings,
 } from 'react-icons/fi'
 import { SiPostgresql } from 'react-icons/si'
 import * as api from '../api/client'
 import type { ServerStatus } from '../types'
+import { useUIStore } from '../stores/uiStore'
 
 // Keyframe animations
 const pulseKeyframes = keyframes`
@@ -112,18 +116,82 @@ function getPingHistory(connectionId: string): number[] {
   return pingHistoryMap.get(connectionId) || []
 }
 
+// Store for tracking online status of PG services (lazy checked)
+const pgOnlineStatusMap = new Map<string, { online: boolean | null; lastChecked: number }>()
+const PG_STATUS_CACHE_MS = 60000 // Cache status for 60 seconds
+
 // PostgreSQL Service Card
 interface PGServiceCardProps {
   service: api.PGService
   onParse: () => Promise<void>
   isParsing: boolean
+  onToggleHidden: (hidden: boolean) => Promise<void>
+  isTogglingHidden: boolean
 }
 
-function PGServiceCard({ service, onParse, isParsing }: PGServiceCardProps) {
-  const bgColor = service.is_parsed ? 'white' : 'gray.50'
-  const borderColor = service.is_parsed ? 'blue.400' : 'gray.300'
-  const statusIcon = service.is_parsed ? FiCheckCircle : FiDatabase
-  const statusColor = service.is_parsed ? 'blue.500' : 'gray.400'
+function PGServiceCard({ service, onParse, isParsing, onToggleHidden, isTogglingHidden }: PGServiceCardProps) {
+  const [onlineStatus, setOnlineStatus] = useState<boolean | null>(null)
+  const [isCheckingOnline, setIsCheckingOnline] = useState(false)
+
+  // Check online status lazily (only when card is visible and not recently checked)
+  useEffect(() => {
+    const cached = pgOnlineStatusMap.get(service.name)
+    const now = Date.now()
+
+    if (cached && now - cached.lastChecked < PG_STATUS_CACHE_MS) {
+      setOnlineStatus(cached.online)
+      return
+    }
+
+    // Don't check hidden services automatically
+    if (service.hidden) {
+      setOnlineStatus(null)
+      return
+    }
+
+    // Check status in background
+    const checkStatus = async () => {
+      setIsCheckingOnline(true)
+      try {
+        const result = await api.testPGService(service.name)
+        setOnlineStatus(result.success)
+        pgOnlineStatusMap.set(service.name, { online: result.success, lastChecked: now })
+      } catch {
+        setOnlineStatus(false)
+        pgOnlineStatusMap.set(service.name, { online: false, lastChecked: now })
+      } finally {
+        setIsCheckingOnline(false)
+      }
+    }
+
+    checkStatus()
+  }, [service.name, service.hidden])
+
+  const bgColor = service.hidden ? 'gray.100' : service.is_parsed ? 'white' : 'gray.50'
+  const borderColor = service.hidden ? 'gray.400' : onlineStatus === true ? 'green.400' : onlineStatus === false ? 'red.400' : service.is_parsed ? 'blue.400' : 'gray.300'
+
+  // Status icon: online status takes priority, then parsed status
+  const getStatusIcon = () => {
+    if (service.hidden) return FiEyeOff
+    if (onlineStatus === true) return FiCheckCircle
+    if (onlineStatus === false) return FiXCircle
+    return service.is_parsed ? FiCheckCircle : FiDatabase
+  }
+
+  const getStatusColor = () => {
+    if (service.hidden) return 'gray.500'
+    if (onlineStatus === true) return 'green.500'
+    if (onlineStatus === false) return 'red.500'
+    return service.is_parsed ? 'blue.500' : 'gray.400'
+  }
+
+  const getStatusLabel = () => {
+    if (service.hidden) return 'Hidden (disabled)'
+    if (isCheckingOnline) return 'Checking...'
+    if (onlineStatus === true) return 'Online'
+    if (onlineStatus === false) return 'Offline'
+    return service.is_parsed ? 'Schema Parsed' : 'Not Parsed'
+  }
 
   return (
     <Box
@@ -132,36 +200,54 @@ function PGServiceCard({ service, onParse, isParsing }: PGServiceCardProps) {
       border="2px solid"
       borderColor={borderColor}
       p={4}
+      minH="220px"
       position="relative"
       transition="all 0.3s ease"
+      opacity={service.hidden ? 0.7 : 1}
       _hover={{
         transform: 'translateY(-2px)',
         boxShadow: 'lg',
       }}
     >
-      {/* Status indicator */}
-      <Box
+      {/* Status indicator and hide button */}
+      <HStack
         position="absolute"
         top={3}
         right={3}
+        spacing={2}
       >
-        <Tooltip label={service.is_parsed ? 'Schema Parsed' : 'Not Parsed'}>
+        <Tooltip label={service.hidden ? 'Show service' : 'Hide service'}>
+          <IconButton
+            aria-label={service.hidden ? 'Show' : 'Hide'}
+            icon={<Icon as={service.hidden ? FiEye : FiEyeOff} />}
+            size="xs"
+            variant="ghost"
+            colorScheme={service.hidden ? 'blue' : 'gray'}
+            onClick={() => onToggleHidden(!service.hidden)}
+            isLoading={isTogglingHidden}
+          />
+        </Tooltip>
+        <Tooltip label={getStatusLabel()}>
           <span>
-            <Icon
-              as={statusIcon}
-              color={statusColor}
-              boxSize={5}
-            />
+            {isCheckingOnline ? (
+              <Spinner size="sm" color="blue.500" />
+            ) : (
+              <Icon
+                as={getStatusIcon()}
+                color={getStatusColor()}
+                boxSize={5}
+              />
+            )}
           </span>
         </Tooltip>
-      </Box>
+      </HStack>
 
       {/* Service info */}
       <VStack align="start" spacing={3}>
         <HStack>
-          <Icon as={SiPostgresql} color="blue.600" boxSize={6} />
+          <Icon as={SiPostgresql} color={service.hidden ? 'gray.400' : 'blue.600'} boxSize={6} />
           <VStack align="start" spacing={0}>
-            <Text fontWeight="bold" fontSize="lg" noOfLines={1}>
+            <Text fontWeight="bold" fontSize="lg" noOfLines={1} color={service.hidden ? 'gray.500' : undefined}>
               {service.name}
             </Text>
             <Text fontSize="xs" color="gray.500" noOfLines={1}>
@@ -172,13 +258,18 @@ function PGServiceCard({ service, onParse, isParsing }: PGServiceCardProps) {
 
         {/* Database info */}
         {service.dbname && (
-          <Badge colorScheme="blue" fontSize="xs">
+          <Badge colorScheme={service.hidden ? 'gray' : 'blue'} fontSize="xs">
             Database: {service.dbname}
           </Badge>
         )}
 
         {/* Stats or action */}
-        {service.is_parsed ? (
+        {service.hidden ? (
+          <Alert status="info" variant="subtle" borderRadius="md" py={2}>
+            <AlertIcon boxSize={4} />
+            <Text fontSize="sm">This service is hidden</Text>
+          </Alert>
+        ) : service.is_parsed ? (
           <SimpleGrid columns={2} spacing={2} w="100%">
             <Stat size="sm">
               <StatLabel fontSize="xs" color="gray.500">
@@ -187,8 +278,8 @@ function PGServiceCard({ service, onParse, isParsing }: PGServiceCardProps) {
                   <Text>Status</Text>
                 </HStack>
               </StatLabel>
-              <StatNumber fontSize="md" color="blue.600">
-                Parsed
+              <StatNumber fontSize="md" color={onlineStatus === true ? 'green.600' : onlineStatus === false ? 'red.600' : 'blue.600'}>
+                {onlineStatus === true ? 'Online' : onlineStatus === false ? 'Offline' : 'Parsed'}
               </StatNumber>
             </Stat>
             <Stat size="sm">
@@ -250,6 +341,7 @@ function ServerCard({ server, isAlert = false }: ServerCardProps) {
       border="2px solid"
       borderColor={borderColor}
       p={4}
+      minH="220px"
       position="relative"
       transition="all 0.3s ease"
       _hover={{
@@ -374,6 +466,11 @@ export default function Dashboard() {
   const pingIntervalRef = useRef<number>(30)
   const queryClient = useQueryClient()
   const [parsingService, setParsingService] = useState<string | null>(null)
+  const [togglingHiddenService, setTogglingHiddenService] = useState<string | null>(null)
+
+  // Settings
+  const showHiddenPGServices = useUIStore((state) => state.settings.showHiddenPGServices)
+  const openDialog = useUIStore((state) => state.openDialog)
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['dashboard'],
@@ -388,6 +485,11 @@ export default function Dashboard() {
     staleTime: 30000,
   })
 
+  // Filter services based on settings
+  const filteredPGServices = pgServices?.filter(
+    (service) => showHiddenPGServices || !service.hidden
+  )
+
   // Handle parsing a PG service
   const handleParsePGService = async (serviceName: string) => {
     setParsingService(serviceName)
@@ -398,6 +500,21 @@ export default function Dashboard() {
       console.error('Failed to parse service:', err)
     } finally {
       setParsingService(null)
+    }
+  }
+
+  // Handle toggling hidden state for a PG service
+  const handleToggleHidden = async (serviceName: string, hidden: boolean) => {
+    setTogglingHiddenService(serviceName)
+    try {
+      await api.setPGServiceHidden(serviceName, hidden)
+      // Clear cached online status when hiding/showing
+      pgOnlineStatusMap.delete(serviceName)
+      queryClient.invalidateQueries({ queryKey: ['pgservices'] })
+    } catch (err) {
+      console.error('Failed to toggle hidden state:', err)
+    } finally {
+      setTogglingHiddenService(null)
     }
   }
 
@@ -440,7 +557,7 @@ export default function Dashboard() {
   }
 
   const hasGeoServers = data && data.servers.length > 0
-  const hasPGServices = pgServices && pgServices.length > 0
+  const hasPGServices = filteredPGServices && filteredPGServices.length > 0
 
   if (!hasGeoServers && !hasPGServices) {
     return (
@@ -499,7 +616,7 @@ export default function Dashboard() {
             {hasPGServices && (
               <HStack spacing={2}>
                 <Icon as={SiPostgresql} color="blue.600" />
-                <Text fontWeight="bold" color="blue.600">{pgServices?.length || 0}</Text>
+                <Text fontWeight="bold" color="blue.600">{filteredPGServices?.length || 0}</Text>
                 <Text color="gray.500">PG Services</Text>
               </HStack>
             )}
@@ -508,6 +625,15 @@ export default function Dashboard() {
               <Text color="gray.500">{data?.pingIntervalSecs || 60}s</Text>
             </HStack>
           </HStack>
+          <Tooltip label="Settings">
+            <IconButton
+              aria-label="Settings"
+              icon={<FiSettings />}
+              variant="ghost"
+              colorScheme="gray"
+              onClick={() => openDialog('settings')}
+            />
+          </Tooltip>
           <Tooltip label="Refresh status">
             <IconButton
               aria-label="Refresh"
@@ -527,7 +653,7 @@ export default function Dashboard() {
         overflowY="auto"
         p={6}
         justify="center"
-        align={(data?.servers.length || 0) + (pgServices?.length || 0) <= 3 ? 'center' : 'flex-start'}
+        align={(data?.servers.length || 0) + (filteredPGServices?.length || 0) <= 3 ? 'center' : 'flex-start'}
       >
         <VStack spacing={6} maxW="1400px" w="100%">
           {/* GeoServer section */}
@@ -578,16 +704,18 @@ export default function Dashboard() {
               <HStack spacing={2} mb={3} justify="center">
                 <Icon as={SiPostgresql} color="blue.600" />
                 <Text fontWeight="bold" color="gray.700">
-                  PostgreSQL Services ({pgServices?.length || 0})
+                  PostgreSQL Services ({filteredPGServices?.length || 0})
                 </Text>
               </HStack>
               <Flex wrap="wrap" gap={4} justify="center">
-                {pgServices?.map(service => (
+                {filteredPGServices?.map(service => (
                   <Box key={service.name} w={{ base: '100%', md: '340px' }}>
                     <PGServiceCard
                       service={service}
                       onParse={() => handleParsePGService(service.name)}
                       isParsing={parsingService === service.name}
+                      onToggleHidden={(hidden) => handleToggleHidden(service.name, hidden)}
+                      isTogglingHidden={togglingHiddenService === service.name}
                     />
                   </Box>
                 ))}

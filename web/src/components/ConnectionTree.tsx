@@ -41,6 +41,7 @@ import {
   FiCloud,
   FiTable,
   FiColumns,
+  FiCode,
 } from 'react-icons/fi'
 import { SiPostgresql } from 'react-icons/si'
 import { useConnectionStore } from '../stores/connectionStore'
@@ -279,6 +280,7 @@ function PostgreSQLRootNode() {
   const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
+  const showHiddenPGServices = useUIStore((state) => state.settings.showHiddenPGServices)
 
   // Fetch PostgreSQL services
   const { data: pgServices, isLoading } = useQuery({
@@ -286,6 +288,11 @@ function PostgreSQLRootNode() {
     queryFn: () => api.getPGServices(),
     staleTime: 30000,
   })
+
+  // Filter hidden services based on setting
+  const filteredPGServices = pgServices?.filter(
+    (service) => showHiddenPGServices || !service.hidden
+  )
 
   // Auto-expand PostgreSQL section on mount
   useEffect(() => {
@@ -316,18 +323,18 @@ function PostgreSQLRootNode() {
         isLoading={isLoading}
         onClick={handleClick}
         level={1}
-        count={pgServices?.length}
+        count={filteredPGServices?.length}
       />
       {isExpanded && (
         <Box pl={4}>
-          {!pgServices || pgServices.length === 0 ? (
+          {!filteredPGServices || filteredPGServices.length === 0 ? (
             <Box px={2} py={3}>
               <Text color="gray.500" fontSize="sm">
                 No PostgreSQL services. Click + to add one.
               </Text>
             </Box>
           ) : (
-            pgServices.map((svc) => (
+            filteredPGServices.map((svc) => (
               <PGServiceNode
                 key={svc.name}
                 service={svc}
@@ -413,6 +420,30 @@ function PGServiceNode({ service }: PGServiceNodeProps) {
     })
   }
 
+  const handleQuery = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    openDialog('query', {
+      mode: 'view',
+      data: { serviceName: service.name },
+    })
+  }
+
+  const handleDashboard = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    openDialog('pgdashboard', {
+      mode: 'view',
+      data: { serviceName: service.name },
+    })
+  }
+
+  const handleUpload = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    openDialog('pgupload', {
+      mode: 'create',
+      data: { serviceName: service.name },
+    })
+  }
+
   const subtitle = service.host ? `${service.host}:${service.port || '5432'}/${service.dbname || ''}` : ''
 
   return (
@@ -424,6 +455,9 @@ function PGServiceNode({ service }: PGServiceNodeProps) {
         isLoading={loadingSchemas}
         onClick={handleClick}
         onDelete={handleDelete}
+        onQuery={service.is_parsed ? handleQuery : undefined}
+        onPreview={handleDashboard}
+        onUpload={handleUpload}
         level={2}
         count={schemaData?.schemas?.length}
       />
@@ -474,6 +508,7 @@ function PGSchemaNode({ serviceName, schema }: PGSchemaNodeProps) {
   const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
+  const openDialog = useUIStore((state) => state.openDialog)
 
   const node: TreeNode = {
     id: nodeId,
@@ -490,6 +525,14 @@ function PGSchemaNode({ serviceName, schema }: PGSchemaNodeProps) {
     toggleNode(nodeId)
   }
 
+  const handleUpload = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    openDialog('pgupload', {
+      mode: 'create',
+      data: { serviceName, schemaName: schema.name },
+    })
+  }
+
   return (
     <Box>
       <TreeNodeRow
@@ -498,6 +541,7 @@ function PGSchemaNode({ serviceName, schema }: PGSchemaNodeProps) {
         isSelected={isSelected}
         isLoading={false}
         onClick={handleClick}
+        onUpload={handleUpload}
         level={3}
         count={schema.tables.length}
       />
@@ -523,21 +567,24 @@ interface PGTableNodeProps {
   schemaName: string
   table: {
     name: string
+    is_view?: boolean
     columns: { name: string; type: string; nullable: boolean }[]
   }
 }
 
 function PGTableNode({ serviceName, schemaName, table }: PGTableNodeProps) {
-  const nodeId = generateNodeId('pgtable', serviceName, schemaName, table.name)
+  const nodeType = table.is_view ? 'pgview' : 'pgtable'
+  const nodeId = generateNodeId(nodeType, serviceName, schemaName, table.name)
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
+  const openDialog = useUIStore((state) => state.openDialog)
 
   const node: TreeNode = {
     id: nodeId,
     name: table.name,
-    type: 'pgtable',
+    type: nodeType,
     serviceName,
     schemaName,
     tableName: table.name,
@@ -550,6 +597,32 @@ function PGTableNode({ serviceName, schemaName, table }: PGTableNodeProps) {
     toggleNode(nodeId)
   }
 
+  const handleShowData = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    openDialog('dataviewer', {
+      mode: 'view',
+      data: {
+        serviceName,
+        schemaName,
+        tableName: table.name,
+        isView: table.is_view,
+      },
+    })
+  }
+
+  const handleQuery = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    openDialog('query', {
+      mode: 'view',
+      data: {
+        serviceName,
+        schemaName,
+        tableName: table.name,
+        initialSQL: `SELECT * FROM "${schemaName}"."${table.name}" LIMIT 100`,
+      },
+    })
+  }
+
   return (
     <Box>
       <TreeNodeRow
@@ -560,6 +633,8 @@ function PGTableNode({ serviceName, schemaName, table }: PGTableNodeProps) {
         onClick={handleClick}
         level={4}
         count={table.columns.length}
+        onShowData={handleShowData}
+        onQuery={handleQuery}
       />
       {isExpanded && (
         <Box pl={4}>
@@ -1575,6 +1650,9 @@ interface TreeNodeRowProps {
   onPreview?: (e: React.MouseEvent) => void
   onTerria?: (e: React.MouseEvent) => void
   onOpenAdmin?: (e: React.MouseEvent) => void
+  onQuery?: (e: React.MouseEvent) => void
+  onShowData?: (e: React.MouseEvent) => void
+  onUpload?: (e: React.MouseEvent) => void
   onDownloadConfig?: (e: React.MouseEvent) => void
   onDownloadData?: (e: React.MouseEvent) => void
   downloadDataLabel?: string // "Shapefile" or "GeoTIFF"
@@ -1594,6 +1672,9 @@ function TreeNodeRow({
   onPreview,
   onTerria,
   onOpenAdmin,
+  onQuery,
+  onShowData,
+  onUpload,
   onDownloadConfig,
   onDownloadData,
   downloadDataLabel,
@@ -1742,6 +1823,45 @@ function TreeNodeRow({
               colorScheme="kartoza"
               onClick={onPreview}
               _hover={{ bg: 'kartoza.100' }}
+            />
+          </Tooltip>
+        )}
+        {onUpload && (
+          <Tooltip label="Import Data" fontSize="xs">
+            <IconButton
+              aria-label="Import Data"
+              icon={<FiUpload size={14} />}
+              size="xs"
+              variant="ghost"
+              colorScheme="green"
+              onClick={onUpload}
+              _hover={{ bg: 'green.50' }}
+            />
+          </Tooltip>
+        )}
+        {onShowData && (
+          <Tooltip label="View Data" fontSize="xs">
+            <IconButton
+              aria-label="View Data"
+              icon={<FiTable size={14} />}
+              size="xs"
+              variant="ghost"
+              colorScheme="blue"
+              onClick={onShowData}
+              _hover={{ bg: 'blue.50' }}
+            />
+          </Tooltip>
+        )}
+        {onQuery && (
+          <Tooltip label="Query" fontSize="xs">
+            <IconButton
+              aria-label="Query"
+              icon={<FiCode size={14} />}
+              size="xs"
+              variant="ghost"
+              colorScheme="purple"
+              onClick={onQuery}
+              _hover={{ bg: 'purple.50' }}
             />
           </Tooltip>
         )}

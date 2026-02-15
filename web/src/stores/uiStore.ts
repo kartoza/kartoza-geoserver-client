@@ -13,6 +13,11 @@ export type DialogType =
   | 'info'
   | 'sync'
   | 'globe3d'
+  | 'settings'
+  | 'query'
+  | 'dataviewer'
+  | 'pgdashboard'
+  | 'pgupload'
   | null
 
 export type DialogMode = 'create' | 'edit' | 'delete' | 'view'
@@ -38,6 +43,10 @@ interface PreviewState {
   nodeType?: string // 'layer' | 'layergroup'
 }
 
+interface Settings {
+  showHiddenPGServices: boolean
+}
+
 interface UIState {
   // Dialog state
   activeDialog: DialogType
@@ -58,6 +67,9 @@ interface UIState {
   // Sidebar state
   sidebarWidth: number
 
+  // Settings
+  settings: Settings
+
   // Actions
   openDialog: (type: DialogType, data?: DialogData) => void
   closeDialog: () => void
@@ -69,6 +81,29 @@ interface UIState {
   setLoading: (loading: boolean) => void
   setSidebarWidth: (width: number) => void
   clearMessages: () => void
+  setShowHiddenPGServices: (show: boolean) => void
+}
+
+// Load persisted settings from localStorage
+const loadSettings = (): Settings => {
+  try {
+    const stored = localStorage.getItem('cloudbench-settings')
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return { showHiddenPGServices: false }
+}
+
+// Save settings to localStorage
+const saveSettings = (settings: Settings) => {
+  try {
+    localStorage.setItem('cloudbench-settings', JSON.stringify(settings))
+  } catch {
+    // Ignore save errors
+  }
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -81,6 +116,7 @@ export const useUIStore = create<UIState>((set) => ({
   successMessage: null,
   isLoading: false,
   sidebarWidth: 420,
+  settings: loadSettings(),
 
   openDialog: (type, data) => {
     set({ activeDialog: type, dialogData: data ?? null })
@@ -142,5 +178,13 @@ export const useUIStore = create<UIState>((set) => ({
 
   clearMessages: () => {
     set({ errorMessage: null, successMessage: null })
+  },
+
+  setShowHiddenPGServices: (show) => {
+    set((state) => {
+      const newSettings = { ...state.settings, showHiddenPGServices: show }
+      saveSettings(newSettings)
+      return { settings: newSettings }
+    })
   },
 }))

@@ -453,5 +453,22 @@ func GetSupportedExtensions() map[string]string {
 func IsSupported(filename string) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
 	_, ok := GetSupportedExtensions()[ext]
+	if ok {
+		return true
+	}
+	// Also check raster formats
+	_, ok = GetRasterExtensions()[ext]
 	return ok
+}
+
+// GetAllSupportedExtensions returns all supported extensions (vector + raster)
+func GetAllSupportedExtensions() map[string]string {
+	result := make(map[string]string)
+	for k, v := range GetSupportedExtensions() {
+		result[k] = v
+	}
+	for k, v := range GetRasterExtensions() {
+		result[k] = v
+	}
+	return result
 }

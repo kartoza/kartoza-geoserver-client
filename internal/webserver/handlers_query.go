@@ -39,7 +39,7 @@ func (s *Server) handleQueryBuilder(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleQueryExecute handles /api/query/execute - execute a visual query
+// handleQueryExecute handles /api/query/execute - execute a visual query or raw SQL
 func (s *Server) handleQueryExecute(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -49,9 +49,11 @@ func (s *Server) handleQueryExecute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Definition  query.QueryDefinition `json:"definition"`
+		SQL         string                `json:"sql"`         // Raw SQL query (optional)
+		Definition  query.QueryDefinition `json:"definition"`  // Visual query definition (optional)
 		ServiceName string                `json:"service_name"`
 		MaxRows     int                   `json:"max_rows"`
+		Offset      int                   `json:"offset"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -64,20 +66,43 @@ func (s *Server) handleQueryExecute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build the SQL
-	qb := query.FromDefinition(req.Definition)
-	if req.MaxRows > 0 {
-		qb.Limit(req.MaxRows)
+	var sql string
+	var err error
+
+	// Use raw SQL if provided, otherwise build from definition
+	if strings.TrimSpace(req.SQL) != "" {
+		sql = strings.TrimSpace(req.SQL)
+	} else {
+		// Build the SQL from definition
+		qb := query.FromDefinition(req.Definition)
+		if req.MaxRows > 0 {
+			qb.Limit(req.MaxRows)
+		}
+		if req.Offset > 0 {
+			qb.Offset(req.Offset)
+		}
+		sql, _, err = qb.Build()
+		if err != nil {
+			s.jsonError(w, "Failed to build query: "+err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
-	sql, _, err := qb.Build()
-	if err != nil {
-		s.jsonError(w, "Failed to build query: "+err.Error(), http.StatusBadRequest)
+
+	// Validate SQL is not empty
+	if strings.TrimSpace(sql) == "" {
+		s.jsonError(w, "SQL query cannot be empty", http.StatusBadRequest)
 		return
+	}
+
+	// Default max rows
+	maxRows := req.MaxRows
+	if maxRows <= 0 {
+		maxRows = 100
 	}
 
 	// Execute using the LLM executor (safe, read-only)
 	executor := llm.NewQueryExecutor(
-		llm.WithMaxRows(req.MaxRows),
+		llm.WithMaxRows(maxRows),
 		llm.WithTimeout(30*time.Second),
 		llm.WithReadOnly(true),
 	)

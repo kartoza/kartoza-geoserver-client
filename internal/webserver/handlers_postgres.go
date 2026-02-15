@@ -17,6 +17,8 @@ type PGServiceResponse struct {
 	User     string `json:"user,omitempty"`
 	SSLMode  string `json:"sslmode,omitempty"`
 	IsParsed bool   `json:"is_parsed"`
+	Hidden   bool   `json:"hidden"`
+	Online   *bool  `json:"online,omitempty"` // nil = not checked, true/false = checked
 }
 
 // handleGetPGServices returns all PostgreSQL services from pg_service.conf
@@ -46,6 +48,7 @@ func (s *Server) handleGetPGServices(w http.ResponseWriter, r *http.Request) {
 			User:     svc.User,
 			SSLMode:  svc.SSLMode,
 			IsParsed: isParsed,
+			Hidden:   svc.Hidden,
 		})
 	}
 
@@ -148,6 +151,12 @@ func (s *Server) handlePGServiceByName(w http.ResponseWriter, r *http.Request) {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	case "hide":
+		if r.Method == http.MethodPost {
+			s.handleSetPGServiceHidden(w, r, name)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	case "schema":
 		if r.Method == http.MethodGet {
 			s.handleGetPGSchemaByName(w, r, name)
@@ -158,6 +167,13 @@ func (s *Server) handlePGServiceByName(w http.ResponseWriter, r *http.Request) {
 		// Returns schema info formatted for SQL autocompletion
 		if r.Method == http.MethodGet {
 			s.handleGetPGSchemasForCompletion(w, r, name)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	case "stats":
+		// Returns server statistics for the dashboard
+		if r.Method == http.MethodGet {
+			s.handleGetPGServiceStats(w, r, name)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -288,6 +304,7 @@ type ColumnInfoForCompletion struct {
 type TableInfoForCompletion struct {
 	Name    string                    `json:"name"`
 	Schema  string                    `json:"schema,omitempty"`
+	IsView  bool                      `json:"is_view"`
 	Columns []ColumnInfoForCompletion `json:"columns"`
 }
 
@@ -351,7 +368,7 @@ func (s *Server) handleGetPGSchemasForCompletion(w http.ResponseWriter, r *http.
 	// Get tables and columns for each schema
 	for i, schemaName := range schemaNames {
 		tableQuery := `
-			SELECT t.table_name, c.column_name, c.data_type, c.is_nullable
+			SELECT t.table_name, t.table_type, c.column_name, c.data_type, c.is_nullable
 			FROM information_schema.tables t
 			JOIN information_schema.columns c
 				ON t.table_schema = c.table_schema
@@ -368,8 +385,8 @@ func (s *Server) handleGetPGSchemasForCompletion(w http.ResponseWriter, r *http.
 
 		tableMap := make(map[string]*TableInfoForCompletion)
 		for rows.Next() {
-			var tableName, colName, dataType, isNullable string
-			if err := rows.Scan(&tableName, &colName, &dataType, &isNullable); err != nil {
+			var tableName, tableType, colName, dataType, isNullable string
+			if err := rows.Scan(&tableName, &tableType, &colName, &dataType, &isNullable); err != nil {
 				continue
 			}
 
@@ -377,6 +394,7 @@ func (s *Server) handleGetPGSchemasForCompletion(w http.ResponseWriter, r *http.
 				tableMap[tableName] = &TableInfoForCompletion{
 					Name:    tableName,
 					Schema:  schemaName,
+					IsView:  tableType == "VIEW",
 					Columns: []ColumnInfoForCompletion{},
 				}
 			}
@@ -389,10 +407,20 @@ func (s *Server) handleGetPGSchemasForCompletion(w http.ResponseWriter, r *http.
 		}
 		rows.Close()
 
-		// Convert map to slice
+		// Convert map to slice and sort alphabetically
+		tableSlice := make([]TableInfoForCompletion, 0, len(tableMap))
 		for _, table := range tableMap {
-			schemas[i].Tables = append(schemas[i].Tables, *table)
+			tableSlice = append(tableSlice, *table)
 		}
+		// Sort by name
+		for j := 0; j < len(tableSlice)-1; j++ {
+			for k := j + 1; k < len(tableSlice); k++ {
+				if tableSlice[j].Name > tableSlice[k].Name {
+					tableSlice[j], tableSlice[k] = tableSlice[k], tableSlice[j]
+				}
+			}
+		}
+		schemas[i].Tables = tableSlice
 	}
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -412,4 +440,51 @@ func (s *Server) handleDeletePGServiceByName(w http.ResponseWriter, r *http.Requ
 	s.config.Save()
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// PGServiceHideRequest represents a request to set hidden state
+type PGServiceHideRequest struct {
+	Hidden bool `json:"hidden"`
+}
+
+// handleSetPGServiceHidden sets the hidden state for a PostgreSQL service
+func (s *Server) handleSetPGServiceHidden(w http.ResponseWriter, r *http.Request, name string) {
+	var req PGServiceHideRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := postgres.SetServiceHidden(name, req.Hidden); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"hidden":  req.Hidden,
+	})
+}
+
+// handleGetPGServiceStats returns comprehensive statistics for a PostgreSQL service
+func (s *Server) handleGetPGServiceStats(w http.ResponseWriter, r *http.Request, name string) {
+	services, err := postgres.ParsePGServiceFile()
+	if err != nil {
+		http.Error(w, "Failed to parse pg_service.conf", http.StatusInternalServerError)
+		return
+	}
+
+	svc, err := postgres.GetServiceByName(services, name)
+	if err != nil {
+		http.Error(w, "Service not found", http.StatusNotFound)
+		return
+	}
+
+	stats, err := svc.GetServerStats()
+	if err != nil {
+		http.Error(w, "Failed to get server stats: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(stats)
 }

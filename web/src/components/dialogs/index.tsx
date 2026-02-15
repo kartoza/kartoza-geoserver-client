@@ -6,6 +6,11 @@ import LayerGroupDialog from './LayerGroupDialog'
 import CacheDialog from './CacheDialog'
 import LayerDialog from './LayerDialog'
 import StoreDialog from './StoreDialog'
+import AppSettingsDialog from './AppSettingsDialog'
+import QueryDialog from './QueryDialog'
+import DataViewerDialog from './DataViewerDialog'
+import PGServiceDashboardDialog from './PGServiceDashboardDialog'
+import PGUploadDialog from './PGUploadDialog'
 import { SettingsDialog } from './SettingsDialog'
 import { SyncDialog } from './SyncDialog'
 import { StyleDialog } from './StyleDialog'
@@ -25,8 +30,13 @@ export default function Dialogs() {
       <SyncDialog />
       <StyleDialog />
       <Globe3DDialog />
+      <AppSettingsDialog />
+      <QueryDialog />
+      <DataViewerDialog />
+      <PGServiceDashboardDialog />
+      <PGUploadDialog />
     </>
   )
 }
 
-export { SettingsDialog, SyncDialog, StyleDialog, Globe3DDialog }
+export { SettingsDialog, SyncDialog, StyleDialog, Globe3DDialog, QueryDialog }

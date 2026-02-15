@@ -330,12 +330,160 @@ func (s *Server) handleOgr2ogrStatus(w http.ResponseWriter, r *http.Request) {
 		version, _ = ogr2ogr.GetVersion()
 	}
 
+	rasterAvailable := ogr2ogr.CheckRaster2PgsqlAvailable()
+	rasterVersion := ""
+	if rasterAvailable {
+		rasterVersion, _ = ogr2ogr.GetRaster2PgsqlVersion()
+	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"available":           available,
-		"version":             version,
-		"supported_formats":   ogr2ogr.SupportedFormats(),
-		"supported_extensions": ogr2ogr.GetSupportedExtensions(),
+		"available":            available,
+		"version":              version,
+		"raster_available":     rasterAvailable,
+		"raster_version":       rasterVersion,
+		"supported_formats":    ogr2ogr.SupportedFormats(),
+		"supported_extensions": ogr2ogr.GetAllSupportedExtensions(),
+		"vector_extensions":    ogr2ogr.GetSupportedExtensions(),
+		"raster_extensions":    ogr2ogr.GetRasterExtensions(),
 	})
+}
+
+// RasterImportRequest represents a request to import raster data
+type RasterImportRequest struct {
+	SourceFile    string `json:"source_file"`
+	TargetService string `json:"target_service"`
+	TargetSchema  string `json:"target_schema"`
+	TableName     string `json:"table_name"`
+	SRID          int    `json:"srid"`
+	TileSize      string `json:"tile_size"`
+	Overwrite     bool   `json:"overwrite"`
+	Append        bool   `json:"append"`
+	CreateIndex   bool   `json:"create_index"`
+	OutOfDB       bool   `json:"out_of_db"`
+}
+
+// handlePGRasterImport handles POST /api/pg/import/raster - start a raster import job
+func (s *Server) handlePGRasterImport(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check if raster2pgsql is available
+	if !ogr2ogr.CheckRaster2PgsqlAvailable() {
+		http.Error(w, "raster2pgsql not found on system. Please install PostGIS.", http.StatusServiceUnavailable)
+		return
+	}
+
+	var req RasterImportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.SourceFile == "" {
+		http.Error(w, "source_file is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.TargetService == "" {
+		http.Error(w, "target_service is required", http.StatusBadRequest)
+		return
+	}
+
+	// Check if source file exists
+	if _, err := os.Stat(req.SourceFile); os.IsNotExist(err) {
+		http.Error(w, "Source file not found", http.StatusBadRequest)
+		return
+	}
+
+	// Create import job
+	importJobsMu.Lock()
+	jobCounter++
+	jobID := generateImportJobID()
+	job := &ImportJob{
+		ID:         jobID,
+		SourceFile: req.SourceFile,
+		Service:    req.TargetService,
+		Status:     "pending",
+		Progress:   0,
+		Message:    "Queued for raster import",
+		StartedAt:  time.Now(),
+	}
+	importJobs[jobID] = job
+	importJobsMu.Unlock()
+
+	// Start import in background
+	go s.runRasterImportJob(job, req)
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"job_id":  jobID,
+		"status":  "pending",
+		"message": "Raster import job created",
+	})
+}
+
+// runRasterImportJob executes the raster import job
+func (s *Server) runRasterImportJob(job *ImportJob, req RasterImportRequest) {
+	updateJob := func(status string, progress int, message string, err string) {
+		importJobsMu.Lock()
+		job.Status = status
+		job.Progress = progress
+		job.Message = message
+		job.Error = err
+		if status == "completed" || status == "failed" {
+			job.CompletedAt = time.Now()
+		}
+		importJobsMu.Unlock()
+	}
+
+	updateJob("running", 0, "Starting raster import...", "")
+
+	opts := ogr2ogr.RasterImportOptions{
+		SourceFile:    req.SourceFile,
+		TargetService: req.TargetService,
+		TargetSchema:  req.TargetSchema,
+		TableName:     req.TableName,
+		SRID:          req.SRID,
+		TileSize:      req.TileSize,
+		Overwrite:     req.Overwrite,
+		Append:        req.Append,
+		CreateIndex:   req.CreateIndex,
+		OutOfDB:       req.OutOfDB,
+	}
+
+	if opts.TargetSchema == "" {
+		opts.TargetSchema = "public"
+	}
+
+	// Progress callback
+	progress := func(pct int, msg string) {
+		updateJob("running", pct, msg, "")
+	}
+
+	ctx := context.Background()
+	result, err := ogr2ogr.ImportRaster(ctx, opts, progress)
+	if err != nil {
+		updateJob("failed", 0, "Raster import failed", err.Error())
+		return
+	}
+
+	if !result.Success {
+		errMsg := "Raster import failed"
+		if len(result.Errors) > 0 {
+			errMsg = strings.Join(result.Errors, "; ")
+		}
+		updateJob("failed", 0, errMsg, errMsg)
+		return
+	}
+
+	importJobsMu.Lock()
+	job.TargetTable = result.TableName
+	importJobsMu.Unlock()
+
+	updateJob("completed", 100, "Raster import completed: "+result.TableName, "")
 }
 
 // generateImportJobID generates a unique import job ID

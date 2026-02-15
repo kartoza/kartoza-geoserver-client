@@ -133,10 +133,11 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/pg/services", s.handlePGServices)
 	mux.HandleFunc("/api/pg/services/", s.handlePGServiceByName)
 
-	// API routes - Data Import (ogr2ogr)
+	// API routes - Data Import (ogr2ogr and raster2pgsql)
 	mux.HandleFunc("/api/pg/import", s.handlePGImport)
-	mux.HandleFunc("/api/pg/import/", s.handlePGImportStatus)
+	mux.HandleFunc("/api/pg/import/raster", s.handlePGRasterImport)
 	mux.HandleFunc("/api/pg/import/upload", s.handlePGImportUpload)
+	mux.HandleFunc("/api/pg/import/", s.handlePGImportStatus)
 	mux.HandleFunc("/api/pg/detect-layers", s.handlePGDetectLayers)
 	mux.HandleFunc("/api/pg/ogr2ogr/status", s.handleOgr2ogrStatus)
 

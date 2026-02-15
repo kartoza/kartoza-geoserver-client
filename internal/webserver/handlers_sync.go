@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/sync"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/sync"
 )
 
 // SyncConfigRequest represents a request to save/update a sync configuration

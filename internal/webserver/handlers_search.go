@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
 )
 
 // SearchResult represents a single search result

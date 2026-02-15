@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/api"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/api"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
 )
 
 // ResourceType represents the type of cached resource

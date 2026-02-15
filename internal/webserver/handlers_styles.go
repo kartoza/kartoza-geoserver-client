@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/api"
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/api"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
 )
 
 // StyleResponse represents a style in API responses

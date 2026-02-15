@@ -8,7 +8,12 @@
       "Bash(git add:*)",
       "Bash(npm install:*)",
       "Bash(go build:*)",
-      "WebFetch(domain:docs.qgis.org)"
+      "WebFetch(domain:docs.qgis.org)",
+      "WebSearch",
+      "WebFetch(domain:docs-v8.terria.io)",
+      "WebFetch(domain:github.com)",
+      "Bash(mkdir:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

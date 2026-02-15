@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
-	"github.com/kartoza/kartoza-geoserver-client/internal/tui/components"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/tui/components"
 )
 
 // Cache operation result message

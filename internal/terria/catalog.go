@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/api"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/api"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
 )
 
 // CatalogVersion is the TerriaJS catalog version

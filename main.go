@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kartoza/kartoza-geoserver-client/cmd"
+	"github.com/kartoza/kartoza-cloudbench/cmd"
 )
 
 var (

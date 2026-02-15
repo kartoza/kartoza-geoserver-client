@@ -11,13 +11,13 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kartoza/kartoza-geoserver-client/internal/api"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
-	"github.com/kartoza/kartoza-geoserver-client/internal/preview"
-	"github.com/kartoza/kartoza-geoserver-client/internal/tui/components"
-	"github.com/kartoza/kartoza-geoserver-client/internal/tui/screens"
-	"github.com/kartoza/kartoza-geoserver-client/internal/tui/styles"
+	"github.com/kartoza/kartoza-cloudbench/internal/api"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/preview"
+	"github.com/kartoza/kartoza-cloudbench/internal/tui/components"
+	"github.com/kartoza/kartoza-cloudbench/internal/tui/screens"
+	"github.com/kartoza/kartoza-cloudbench/internal/tui/styles"
 )
 
 // Screen represents the current screen

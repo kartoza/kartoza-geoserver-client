@@ -3,8 +3,8 @@ package api
 import (
 	"testing"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
 )
 
 func getTestClient() *Client {

@@ -11,9 +11,9 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kartoza/kartoza-geoserver-client/internal/api"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/tui/styles"
+	"github.com/kartoza/kartoza-cloudbench/internal/api"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/tui/styles"
 )
 
 const (

@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
 )
 
 // fixEmptyGeoServerResponse handles GeoServer's quirk of returning "" instead of {} or []

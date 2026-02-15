@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
-	"github.com/kartoza/kartoza-geoserver-client/internal/tui/components"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/tui/components"
 )
 
 // workspaceConfigLoadedMsg is sent when workspace config is loaded for editing

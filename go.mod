@@ -1,4 +1,4 @@
-module github.com/kartoza/kartoza-geoserver-client
+module github.com/kartoza/kartoza-cloudbench
 
 go 1.23
 

@@ -9,11 +9,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/harmonica"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kartoza/kartoza-geoserver-client/internal/api"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
-	"github.com/kartoza/kartoza-geoserver-client/internal/tui/icons"
-	"github.com/kartoza/kartoza-geoserver-client/internal/tui/styles"
+	"github.com/kartoza/kartoza-cloudbench/internal/api"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/tui/icons"
+	"github.com/kartoza/kartoza-cloudbench/internal/tui/styles"
 )
 
 // SearchResult represents a single search result

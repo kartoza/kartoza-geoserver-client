@@ -2,9 +2,9 @@ package tui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kartoza/kartoza-geoserver-client/internal/api"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/api"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/models"
 )
 
 // buildConnectionsTree builds the initial tree with all connections as root nodes

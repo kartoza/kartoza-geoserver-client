@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/webserver"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/webserver"
 )
 
 var (

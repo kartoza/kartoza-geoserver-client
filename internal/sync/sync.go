@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kartoza/kartoza-geoserver-client/internal/api"
-	"github.com/kartoza/kartoza-geoserver-client/internal/cache"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/api"
+	"github.com/kartoza/kartoza-cloudbench/internal/cache"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
 )
 
 // Task represents a running sync task

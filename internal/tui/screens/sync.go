@@ -9,9 +9,9 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
-	"github.com/kartoza/kartoza-geoserver-client/internal/sync"
-	"github.com/kartoza/kartoza-geoserver-client/internal/tui/styles"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/sync"
+	"github.com/kartoza/kartoza-cloudbench/internal/tui/styles"
 )
 
 // SyncKeyMap defines the key bindings for the sync screen

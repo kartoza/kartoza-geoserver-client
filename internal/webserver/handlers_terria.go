@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/terria"
+	"github.com/kartoza/kartoza-cloudbench/internal/terria"
 )
 
 // handleTerriaConnection exports an entire connection as Terria catalog

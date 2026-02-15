@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/api"
-	"github.com/kartoza/kartoza-geoserver-client/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/api"
+	"github.com/kartoza/kartoza-cloudbench/internal/config"
 )
 
 // ServerStatusResponse represents the status of a single server

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kartoza/kartoza-geoserver-client/internal/cache"
-	"github.com/kartoza/kartoza-geoserver-client/internal/sync"
+	"github.com/kartoza/kartoza-cloudbench/internal/cache"
+	"github.com/kartoza/kartoza-cloudbench/internal/sync"
 )
 
 // handleDownload handles resource download requests

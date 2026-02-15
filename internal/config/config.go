@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	configDir  = "kartoza-geoserver-client"
-	configFile = "config.json"
+	configDir    = "kartoza-cloudbench"
+	oldConfigDir = "kartoza-geoserver-client" // For migration
+	configFile   = "config.json"
 )
 
 // Connection represents a GeoServer connection configuration
@@ -127,6 +128,12 @@ func configPath() (string, error) {
 
 // Load loads the configuration from disk
 func Load() (*Config, error) {
+	// Try to migrate from old config location if new one doesn't exist
+	if err := migrateOldConfig(); err != nil {
+		// Log but don't fail - migration is best-effort
+		fmt.Fprintf(os.Stderr, "Config migration warning: %v\n", err)
+	}
+
 	path, err := configPath()
 	if err != nil {
 		return nil, err
@@ -146,6 +153,44 @@ func Load() (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// migrateOldConfig migrates config from old kartoza-geoserver-client directory
+func migrateOldConfig() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	oldPath := filepath.Join(homeDir, ".config", oldConfigDir, configFile)
+	newPath := filepath.Join(homeDir, ".config", configDir, configFile)
+
+	// Check if old config exists and new doesn't
+	if _, err := os.Stat(oldPath); os.IsNotExist(err) {
+		return nil // No old config to migrate
+	}
+	if _, err := os.Stat(newPath); err == nil {
+		return nil // New config already exists
+	}
+
+	// Create new config directory
+	newDir := filepath.Dir(newPath)
+	if err := os.MkdirAll(newDir, 0755); err != nil {
+		return fmt.Errorf("failed to create new config dir: %w", err)
+	}
+
+	// Copy old config to new location
+	data, err := os.ReadFile(oldPath)
+	if err != nil {
+		return fmt.Errorf("failed to read old config: %w", err)
+	}
+
+	if err := os.WriteFile(newPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write new config: %w", err)
+	}
+
+	fmt.Printf("Migrated config from %s to %s\n", oldPath, newPath)
+	return nil
 }
 
 // Save saves the configuration to disk

@@ -618,6 +618,7 @@ export default function Dashboard() {
         bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
         flexShrink={0}
+        borderTopRadius="lg"
       >
         <HStack spacing={3}>
           <Box bg="whiteAlpha.200" p={2} borderRadius="lg">
@@ -695,7 +696,7 @@ export default function Dashboard() {
             <Box w="100%">
               <HStack spacing={2} mb={4} justify="center">
                 <Box
-                  bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
+                  bg="#417d9b"
                   px={4}
                   py={2}
                   borderRadius="full"
@@ -747,7 +748,7 @@ export default function Dashboard() {
             <Box w="100%">
               <HStack spacing={2} mb={4} justify="center">
                 <Box
-                  bg="linear-gradient(90deg, #417d9b 0%, #336699 100%)"
+                  bg="#336699"
                   px={4}
                   py={2}
                   borderRadius="full"

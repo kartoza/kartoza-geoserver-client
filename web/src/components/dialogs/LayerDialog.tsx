@@ -285,7 +285,7 @@ export default function LayerDialog() {
       <ModalContent borderRadius="xl" overflow="hidden" maxH="85vh">
         {/* Gradient Header */}
         <Box
-          bg="linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 100%)"
+          bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
           px={6}
           py={4}
         >

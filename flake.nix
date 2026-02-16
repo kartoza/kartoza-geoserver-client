@@ -1,24 +1,29 @@
 {
-  description = "Kartoza GeoServer Client - Dual-panel TUI for managing GeoServer";
+  description = "Kartoza CloudBench - Unified management for GeoServer and PostgreSQL/PostGIS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
     let
       version = "0.2.0";
 
       # Overlay that can be imported by other flakes
       overlay = final: prev: {
         # Web frontend built with Nix
-        kartoza-geoserver-web-frontend = final.buildNpmPackage {
-          pname = "kartoza-geoserver-web-frontend";
+        kartoza-cloudbench-web-frontend = final.buildNpmPackage {
+          pname = "kartoza-cloudbench-web-frontend";
           inherit version;
           src = "${self}/web";
 
-          npmDepsHash = "sha256-amu8oLqpTjg0ViC218I6NWPaPWhUhKxCtfmm77JQ8m4=";
+          npmDepsHash = "sha256-0fvFrSNV1fkuEgXt7KDswkIh3hQHLH/M+aU4jZfgGrk=";
 
           buildPhase = ''
             npm run build
@@ -30,14 +35,14 @@
           '';
 
           meta = with final.lib; {
-            description = "Web frontend for Kartoza GeoServer Client";
+            description = "Web frontend for Kartoza CloudBench";
             license = licenses.mit;
           };
         };
 
         # TUI application
-        kartoza-geoserver-client = final.buildGoModule {
-          pname = "kartoza-geoserver-client";
+        kartoza-cloudbench = final.buildGoModule {
+          pname = "kartoza-cloudbench";
           inherit version;
           src = self;
 
@@ -45,6 +50,8 @@
 
           # Skip tests that require a running GeoServer
           doCheck = false;
+
+          nativeBuildInputs = [ final.makeWrapper ];
 
           ldflags = [
             "-s"
@@ -52,19 +59,30 @@
             "-X main.version=${version}"
           ];
 
+          # Wrap binary to include gdal and postgis in PATH
+          postInstall = ''
+            wrapProgram $out/bin/kartoza-cloudbench \
+              --prefix PATH : ${
+                final.lib.makeBinPath [
+                  final.gdal
+                  final.postgresqlPackages.postgis
+                ]
+              }
+          '';
+
           meta = with final.lib; {
-            description = "Dual-panel TUI for managing GeoServer instances";
-            homepage = "https://github.com/kartoza/kartoza-geoserver-client";
+            description = "Unified management TUI for GeoServer and PostgreSQL/PostGIS";
+            homepage = "https://github.com/kartoza/kartoza-cloudbench";
             license = licenses.mit;
             maintainers = [ ];
-            mainProgram = "kartoza-geoserver-client";
+            mainProgram = "kartoza-cloudbench";
             platforms = platforms.unix ++ platforms.windows;
           };
         };
 
         # Web server with embedded frontend
-        kartoza-geoserver-web = final.buildGoModule {
-          pname = "kartoza-geoserver-web";
+        kartoza-cloudbench-web = final.buildGoModule {
+          pname = "kartoza-cloudbench-web";
           inherit version;
           src = self;
 
@@ -73,10 +91,12 @@
           # Skip tests that require a running GeoServer
           doCheck = false;
 
+          nativeBuildInputs = [ final.makeWrapper ];
+
           # Copy the built frontend before Go build
           preBuild = ''
             mkdir -p internal/webserver/static
-            cp -r ${final.kartoza-geoserver-web-frontend}/* internal/webserver/static/ || true
+            cp -r ${final.kartoza-cloudbench-web-frontend}/* internal/webserver/static/ || true
           '';
 
           subPackages = [ "cmd/web" ];
@@ -87,12 +107,23 @@
             "-X main.version=${version}"
           ];
 
+          # Wrap binary to include gdal and postgis in PATH
+          postInstall = ''
+            wrapProgram $out/bin/web \
+              --prefix PATH : ${
+                final.lib.makeBinPath [
+                  final.gdal
+                  final.postgresqlPackages.postgis
+                ]
+              }
+          '';
+
           meta = with final.lib; {
-            description = "Web interface for Kartoza GeoServer Client";
-            homepage = "https://github.com/kartoza/kartoza-geoserver-client";
+            description = "Web interface for Kartoza CloudBench";
+            homepage = "https://github.com/kartoza/kartoza-cloudbench";
             license = licenses.mit;
             maintainers = [ ];
-            mainProgram = "kartoza-geoserver-web";
+            mainProgram = "web";
             platforms = platforms.unix ++ platforms.windows;
           };
         };
@@ -101,9 +132,11 @@
     {
       # Export overlay for use in other flakes
       overlays.default = overlay;
-      overlays.kartoza-geoserver-client = overlay;
+      overlays.kartoza-cloudbench = overlay;
 
-    } // flake-utils.lib.eachDefaultSystem (system:
+    }
+    // flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -111,13 +144,15 @@
         };
 
         # MkDocs with Material theme for documentation
-        mkdocsEnv = pkgs.python3.withPackages (ps: with ps; [
-          mkdocs
-          mkdocs-material
-          mkdocs-minify-plugin
-          pygments
-          pymdown-extensions
-        ]);
+        mkdocsEnv = pkgs.python3.withPackages (
+          ps: with ps; [
+            mkdocs
+            mkdocs-material
+            mkdocs-minify-plugin
+            pygments
+            pymdown-extensions
+          ]
+        );
 
         # Test GeoServer configuration
         geoserverContainer = "kartoza-geoserver-test";
@@ -128,10 +163,10 @@
       in
       {
         packages = {
-          default = pkgs.kartoza-geoserver-client;
-          kartoza-geoserver-client = pkgs.kartoza-geoserver-client;
-          kartoza-geoserver-web = pkgs.kartoza-geoserver-web;
-          kartoza-geoserver-web-frontend = pkgs.kartoza-geoserver-web-frontend;
+          default = pkgs.kartoza-cloudbench;
+          kartoza-cloudbench = pkgs.kartoza-cloudbench;
+          kartoza-cloudbench-web = pkgs.kartoza-cloudbench-web;
+          kartoza-cloudbench-web-frontend = pkgs.kartoza-cloudbench-web-frontend;
         };
 
         devShells.default = pkgs.mkShell {
@@ -167,8 +202,8 @@
             yq
 
             # GIS tools for data import
-            gdal                         # Provides ogr2ogr for vector data import
-            postgresqlPackages.postgis   # Provides raster2pgsql for raster data import
+            gdal # Provides ogr2ogr for vector data import
+            postgresqlPackages.postgis # Provides raster2pgsql for raster data import
 
             # Documentation
             mkdocsEnv
@@ -203,7 +238,7 @@
             # Helpful aliases
             alias gor='go run .'
             alias got='go test -v ./...'
-            alias gob='go build -o bin/kartoza-geoserver-client .'
+            alias gob='go build -o bin/kartoza-cloudbench .'
             alias gom='go mod tidy'
             alias gol='golangci-lint run'
 
@@ -283,7 +318,7 @@
 
             web-build() {
               echo "Building web frontend with Nix..."
-              nix build .#kartoza-geoserver-web-frontend -o result-frontend
+              nix build .#kartoza-cloudbench-web-frontend -o result-frontend
               echo "Copying to internal/webserver/static..."
               rm -rf internal/webserver/static/*
               cp -r result-frontend/* internal/webserver/static/
@@ -293,7 +328,7 @@
             export -f web-build
 
             echo ""
-            echo "🌍 Kartoza GeoServer Client Development Environment"
+            echo "🌍 Kartoza CloudBench Development Environment"
             echo ""
             echo "Available commands:"
             echo "  gor  - Run the application"
@@ -305,7 +340,7 @@
             echo "Web Interface:"
             echo "  web-dev    - Show dev server instructions"
             echo "  web-build  - Build frontend with Nix"
-            echo "  nix build .#kartoza-geoserver-web - Build complete web server"
+            echo "  nix build .#kartoza-cloudbench-web - Build complete web server"
             echo ""
             echo "Test GeoServer:"
             echo "  geoserver-start  - Start Kartoza GeoServer container"
@@ -324,22 +359,24 @@
         apps = {
           default = {
             type = "app";
-            program = "${self.packages.${system}.default}/bin/kartoza-geoserver-client";
+            program = "${self.packages.${system}.default}/bin/kartoza-cloudbench";
           };
 
           web = {
             type = "app";
-            program = "${self.packages.${system}.kartoza-geoserver-web}/bin/web";
+            program = "${self.packages.${system}.kartoza-cloudbench-web}/bin/web";
           };
 
           setup = {
             type = "app";
-            program = toString (pkgs.writeShellScript "setup" ''
-              echo "Initializing kartoza-geoserver-client..."
-              go mod download
-              go mod tidy
-              echo "Setup complete!"
-            '');
+            program = toString (
+              pkgs.writeShellScript "setup" ''
+                echo "Initializing Kartoza CloudBench..."
+                go mod download
+                go mod tidy
+                echo "Setup complete!"
+              ''
+            );
           };
         };
       }

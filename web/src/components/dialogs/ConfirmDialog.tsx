@@ -132,7 +132,7 @@ export default function ConfirmDialog() {
       <ModalContent borderRadius="xl" overflow="hidden">
         {/* Warning Header */}
         <Box
-          bg="linear-gradient(135deg, #E55B3C 0%, #F0B84D 100%)"
+          bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
           px={6}
           py={4}
         >

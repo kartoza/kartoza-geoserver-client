@@ -771,7 +771,7 @@ export function downloadSyncLogs(taskId: string): void {
 // ============================================================================
 
 export interface SearchResult {
-  type: 'workspace' | 'datastore' | 'coveragestore' | 'layer' | 'style' | 'layergroup'
+  type: 'workspace' | 'datastore' | 'coveragestore' | 'layer' | 'style' | 'layergroup' | 'pgservice' | 'pgschema' | 'pgtable' | 'pgview' | 'pgcolumn' | 'pgfunction'
   name: string
   workspace?: string
   storeName?: string
@@ -781,6 +781,11 @@ export interface SearchResult {
   tags: string[]
   description?: string
   icon: string
+  // PostgreSQL-specific fields
+  serviceName?: string
+  schemaName?: string
+  tableName?: string
+  dataType?: string
 }
 
 export interface SearchResponse {
@@ -1202,4 +1207,19 @@ export async function getTableData(
 ): Promise<ExecuteQueryResponse> {
   const sql = `SELECT * FROM "${schemaName}"."${tableName}" LIMIT ${limit} OFFSET ${offset}`
   return executeQuery(serviceName, sql, limit)
+}
+
+// ============================================================================
+// Documentation API
+// ============================================================================
+
+export interface DocumentationResponse {
+  content: string
+  title: string
+}
+
+// Get documentation content (SPECIFICATION.md)
+export async function getDocumentation(): Promise<DocumentationResponse> {
+  const response = await fetch(`${API_BASE}/docs`)
+  return handleResponse<DocumentationResponse>(response)
 }

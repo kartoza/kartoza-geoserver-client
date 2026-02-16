@@ -292,7 +292,7 @@ function DataStoresDashboard({
     <VStack spacing={6} align="stretch">
       {/* Dashboard Header */}
       <Card
-        bg="linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -302,8 +302,8 @@ function DataStoresDashboard({
                 <Icon as={FiDatabase} boxSize={8} />
               </Box>
               <VStack align="start" spacing={0}>
-                <Heading size="lg">Data Stores</Heading>
-                <Text opacity={0.9}>Workspace: {workspace}</Text>
+                <Heading size="lg" color="white">Data Stores</Heading>
+                <Text color="white" opacity={0.9}>Workspace: {workspace}</Text>
               </VStack>
             </HStack>
             <Spacer />
@@ -387,7 +387,7 @@ function CoverageStoresDashboard({
   return (
     <VStack spacing={6} align="stretch">
       <Card
-        bg="linear-gradient(135deg, #D4922A 0%, #E8A331 50%, #F0B84D 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -397,8 +397,8 @@ function CoverageStoresDashboard({
                 <Icon as={FiImage} boxSize={8} />
               </Box>
               <VStack align="start" spacing={0}>
-                <Heading size="lg">Coverage Stores</Heading>
-                <Text opacity={0.9}>Workspace: {workspace}</Text>
+                <Heading size="lg" color="white">Coverage Stores</Heading>
+                <Text color="white" opacity={0.9}>Workspace: {workspace}</Text>
               </VStack>
             </HStack>
             <Spacer />
@@ -480,7 +480,7 @@ function LayersDashboard({
   return (
     <VStack spacing={6} align="stretch">
       <Card
-        bg="linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -490,8 +490,8 @@ function LayersDashboard({
                 <Icon as={FiLayers} boxSize={8} />
               </Box>
               <VStack align="start" spacing={0}>
-                <Heading size="lg">Layers</Heading>
-                <Text opacity={0.9}>Workspace: {workspace}</Text>
+                <Heading size="lg" color="white">Layers</Heading>
+                <Text color="white" opacity={0.9}>Workspace: {workspace}</Text>
               </VStack>
             </HStack>
             <Spacer />
@@ -615,7 +615,7 @@ function StylesDashboard({
   return (
     <VStack spacing={6} align="stretch">
       <Card
-        bg="linear-gradient(135deg, #5BB5E8 0%, #3B9DD9 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -625,8 +625,8 @@ function StylesDashboard({
                 <Icon as={FiEdit3} boxSize={8} />
               </Box>
               <VStack align="start" spacing={0}>
-                <Heading size="lg">Styles</Heading>
-                <Text opacity={0.9}>Workspace: {workspace}</Text>
+                <Heading size="lg" color="white">Styles</Heading>
+                <Text color="white" opacity={0.9}>Workspace: {workspace}</Text>
               </VStack>
             </HStack>
             <Spacer />
@@ -724,7 +724,7 @@ function LayerGroupsDashboard({
   return (
     <VStack spacing={6} align="stretch">
       <Card
-        bg="linear-gradient(135deg, #1B6B9B 0%, #155a84 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -734,8 +734,8 @@ function LayerGroupsDashboard({
                 <Icon as={FiGrid} boxSize={8} />
               </Box>
               <VStack align="start" spacing={0}>
-                <Heading size="lg">Layer Groups</Heading>
-                <Text opacity={0.9}>Workspace: {workspace}</Text>
+                <Heading size="lg" color="white">Layer Groups</Heading>
+                <Text color="white" opacity={0.9}>Workspace: {workspace}</Text>
               </VStack>
             </HStack>
             <Spacer />
@@ -962,7 +962,7 @@ function ConnectionPanel({ connectionId }: { connectionId: string }) {
     <VStack spacing={6} align="stretch">
       {/* Connection Header */}
       <Card
-        bg="linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -972,8 +972,8 @@ function ConnectionPanel({ connectionId }: { connectionId: string }) {
                 <Icon as={FiServer} boxSize={8} />
               </Box>
               <VStack align="start" spacing={0}>
-                <Heading size="lg">{connection.name}</Heading>
-                <Text opacity={0.9}>{connection.url}</Text>
+                <Heading size="lg" color="white">{connection.name}</Heading>
+                <Text color="white" opacity={0.9}>{connection.url}</Text>
               </VStack>
             </HStack>
             <Spacer />
@@ -1099,7 +1099,7 @@ function WorkspacePanel({
     <VStack spacing={6} align="stretch">
       {/* Workspace Header */}
       <Card
-        bg="linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -1109,7 +1109,7 @@ function WorkspacePanel({
                 <Icon as={FiFolder} boxSize={8} />
               </Box>
               <VStack align="start" spacing={1}>
-                <Heading size="lg">{workspace}</Heading>
+                <Heading size="lg" color="white">{workspace}</Heading>
                 <HStack>
                   {config?.default && <Badge colorScheme="blue">Default</Badge>}
                   {config?.isolated && <Badge colorScheme="purple">Isolated</Badge>}
@@ -1276,10 +1276,7 @@ function StorePanel({
   return (
     <VStack spacing={6} align="stretch">
       <Card
-        bg={isDataStore
-          ? "linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 100%)"
-          : "linear-gradient(135deg, #D4922A 0%, #E8A331 100%)"
-        }
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -1289,7 +1286,7 @@ function StorePanel({
                 <Icon as={isDataStore ? FiDatabase : FiImage} boxSize={8} />
               </Box>
               <VStack align="start" spacing={1}>
-                <Heading size="lg">{storeName}</Heading>
+                <Heading size="lg" color="white">{storeName}</Heading>
                 <HStack>
                   <Badge colorScheme={isDataStore ? 'blue' : 'orange'}>
                     {isDataStore ? 'Data Store' : 'Coverage Store'}
@@ -1435,7 +1432,7 @@ function LayerPanel({
   return (
     <VStack spacing={6} align="stretch">
       <Card
-        bg="linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -1445,7 +1442,7 @@ function LayerPanel({
                 <Icon as={FiLayers} boxSize={8} />
               </Box>
               <VStack align="start" spacing={1}>
-                <Heading size="lg">{layerName}</Heading>
+                <Heading size="lg" color="white">{layerName}</Heading>
                 <HStack>
                   <Badge colorScheme="teal">Layer</Badge>
                   {layer?.enabled && <Badge colorScheme="green">Enabled</Badge>}
@@ -1650,7 +1647,7 @@ function LayerGroupPanel({
   return (
     <VStack spacing={6} align="stretch">
       <Card
-        bg="linear-gradient(135deg, #1B6B9B 0%, #155a84 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -1660,7 +1657,7 @@ function LayerGroupPanel({
                 <Icon as={FiGrid} boxSize={8} />
               </Box>
               <VStack align="start" spacing={1}>
-                <Heading size="lg">{groupName}</Heading>
+                <Heading size="lg" color="white">{groupName}</Heading>
                 <HStack>
                   <Badge colorScheme="purple">Layer Group</Badge>
                   {group?.mode && <Badge colorScheme="blue">{group.mode}</Badge>}
@@ -1833,7 +1830,7 @@ function StylePanel({
   return (
     <VStack spacing={6} align="stretch">
       <Card
-        bg="linear-gradient(135deg, #3d9970 0%, #2d7a5a 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -1843,7 +1840,7 @@ function StylePanel({
                 <Icon as={FiEdit3} boxSize={8} />
               </Box>
               <VStack align="start" spacing={1}>
-                <Heading size="lg">{styleName}</Heading>
+                <Heading size="lg" color="white">{styleName}</Heading>
                 <HStack>
                   <Badge colorScheme="pink">Style</Badge>
                   {styleContent?.format && (
@@ -2212,7 +2209,7 @@ function PGServicePanel({ serviceName }: { serviceName: string }) {
     <VStack spacing={6} align="stretch">
       {/* Header Card */}
       <Card
-        bg="linear-gradient(135deg, #336791 0%, #1a4e6d 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -2223,7 +2220,7 @@ function PGServicePanel({ serviceName }: { serviceName: string }) {
               </Box>
               <VStack align="start" spacing={1}>
                 <HStack spacing={3}>
-                  <Heading size="lg">{serviceName}</Heading>
+                  <Heading size="lg" color="white">{serviceName}</Heading>
                   <Badge
                     colorScheme="green"
                     variant="solid"
@@ -2564,7 +2561,7 @@ function PGSchemaPanel({ serviceName, schemaName }: { serviceName: string; schem
     <VStack spacing={6} align="stretch">
       {/* Header Card */}
       <Card
-        bg="linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)"
+        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>
@@ -2575,7 +2572,7 @@ function PGSchemaPanel({ serviceName, schemaName }: { serviceName: string; schem
               </Box>
               <VStack align="start" spacing={1}>
                 <HStack spacing={3}>
-                  <Heading size="lg">{schemaName}</Heading>
+                  <Heading size="lg" color="white">{schemaName}</Heading>
                 </HStack>
                 <HStack spacing={3} opacity={0.9}>
                   <Text fontSize="sm">{stats.database_name}</Text>
@@ -3148,7 +3145,7 @@ function PGTablePanel({ serviceName, schemaName, tableName, isView = false }: PG
     <VStack spacing={4} align="stretch" h="100%">
       {/* Header Card */}
       <Card
-        bg={isView ? 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)' : 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)'}
+        bg={isView ? 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)' : 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)'}
         color="white"
       >
         <CardBody py={6} px={6}>

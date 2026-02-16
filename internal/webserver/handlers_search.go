@@ -1,16 +1,18 @@
 package webserver
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strings"
 
 	"github.com/kartoza/kartoza-cloudbench/internal/models"
+	"github.com/kartoza/kartoza-cloudbench/internal/postgres"
 )
 
 // SearchResult represents a single search result
 type SearchResult struct {
-	Type         string   `json:"type"`         // workspace, datastore, coveragestore, layer, style, layergroup
+	Type         string   `json:"type"`         // workspace, datastore, coveragestore, layer, style, layergroup, pgservice, pgschema, pgtable, pgview, pgcolumn, pgfunction
 	Name         string   `json:"name"`
 	Workspace    string   `json:"workspace,omitempty"`
 	StoreName    string   `json:"storeName,omitempty"`
@@ -20,6 +22,11 @@ type SearchResult struct {
 	Tags         []string `json:"tags"`         // Additional tags/badges
 	Description  string   `json:"description,omitempty"`
 	Icon         string   `json:"icon"`         // Nerd font icon codepoint
+	// PostgreSQL-specific fields
+	ServiceName string `json:"serviceName,omitempty"` // PostgreSQL service name
+	SchemaName  string `json:"schemaName,omitempty"`  // PostgreSQL schema name
+	TableName   string `json:"tableName,omitempty"`   // PostgreSQL table/view name
+	DataType    string `json:"dataType,omitempty"`    // Column data type or function return type
 }
 
 // SearchResponse represents the search API response
@@ -224,6 +231,12 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Search PostgreSQL services
+	if postgres.PGServiceFileExists() {
+		pgResults := s.searchPostgreSQLEntities(query)
+		results = append(results, pgResults...)
+	}
+
 	// Limit results
 	maxResults := 50
 	if len(results) > maxResults {
@@ -270,4 +283,248 @@ func (s *Server) handleSearchSuggestions(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"suggestions": suggestions,
 	})
+}
+
+// searchPostgreSQLEntities searches across all PostgreSQL services for entities matching the query
+func (s *Server) searchPostgreSQLEntities(query string) []SearchResult {
+	var results []SearchResult
+
+	services, err := postgres.ParsePGServiceFile()
+	if err != nil {
+		return results
+	}
+
+	for _, svc := range services {
+		// Skip hidden services
+		if svc.Hidden {
+			continue
+		}
+
+		// Search service name
+		if matchesQuery(svc.Name, query) {
+			results = append(results, SearchResult{
+				Type:        "pgservice",
+				Name:        svc.Name,
+				ServerName:  svc.Name,
+				ServiceName: svc.Name,
+				Tags:        []string{"PostgreSQL", "Service"},
+				Icon:        "\ue76e", // postgresql icon
+				Description: svc.DBName,
+			})
+		}
+
+		// Connect to the database to search entities
+		db, err := svc.Connect()
+		if err != nil {
+			continue
+		}
+
+		// Search schemas, tables, views, columns, and functions
+		results = append(results, s.searchPGSchemas(db, svc.Name, query)...)
+		results = append(results, s.searchPGTables(db, svc.Name, query)...)
+		results = append(results, s.searchPGViews(db, svc.Name, query)...)
+		results = append(results, s.searchPGColumns(db, svc.Name, query)...)
+		results = append(results, s.searchPGFunctions(db, svc.Name, query)...)
+
+		db.Close()
+	}
+
+	return results
+}
+
+// searchPGSchemas searches for PostgreSQL schemas matching the query
+func (s *Server) searchPGSchemas(db *sql.DB, serviceName, query string) []SearchResult {
+	var results []SearchResult
+
+	rows, err := db.Query(`
+		SELECT schema_name
+		FROM information_schema.schemata
+		WHERE schema_name NOT LIKE 'pg_%'
+		  AND schema_name != 'information_schema'
+		  AND LOWER(schema_name) LIKE '%' || $1 || '%'
+		ORDER BY schema_name
+		LIMIT 20
+	`, query)
+	if err != nil {
+		return results
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var schemaName string
+		if err := rows.Scan(&schemaName); err != nil {
+			continue
+		}
+		results = append(results, SearchResult{
+			Type:        "pgschema",
+			Name:        schemaName,
+			ServerName:  serviceName,
+			ServiceName: serviceName,
+			SchemaName:  schemaName,
+			Tags:        []string{"PostgreSQL", "Schema"},
+			Icon:        "\uf07b", // folder icon
+		})
+	}
+
+	return results
+}
+
+// searchPGTables searches for PostgreSQL tables matching the query
+func (s *Server) searchPGTables(db *sql.DB, serviceName, query string) []SearchResult {
+	var results []SearchResult
+
+	rows, err := db.Query(`
+		SELECT table_schema, table_name
+		FROM information_schema.tables
+		WHERE table_type = 'BASE TABLE'
+		  AND table_schema NOT LIKE 'pg_%'
+		  AND table_schema != 'information_schema'
+		  AND LOWER(table_name) LIKE '%' || $1 || '%'
+		ORDER BY table_schema, table_name
+		LIMIT 30
+	`, query)
+	if err != nil {
+		return results
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var schemaName, tableName string
+		if err := rows.Scan(&schemaName, &tableName); err != nil {
+			continue
+		}
+		results = append(results, SearchResult{
+			Type:        "pgtable",
+			Name:        tableName,
+			ServerName:  serviceName,
+			ServiceName: serviceName,
+			SchemaName:  schemaName,
+			Tags:        []string{"PostgreSQL", "Table", schemaName},
+			Icon:        "\uf0ce", // table icon
+			Description: schemaName + "." + tableName,
+		})
+	}
+
+	return results
+}
+
+// searchPGViews searches for PostgreSQL views matching the query
+func (s *Server) searchPGViews(db *sql.DB, serviceName, query string) []SearchResult {
+	var results []SearchResult
+
+	rows, err := db.Query(`
+		SELECT table_schema, table_name
+		FROM information_schema.tables
+		WHERE table_type = 'VIEW'
+		  AND table_schema NOT LIKE 'pg_%'
+		  AND table_schema != 'information_schema'
+		  AND LOWER(table_name) LIKE '%' || $1 || '%'
+		ORDER BY table_schema, table_name
+		LIMIT 20
+	`, query)
+	if err != nil {
+		return results
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var schemaName, viewName string
+		if err := rows.Scan(&schemaName, &viewName); err != nil {
+			continue
+		}
+		results = append(results, SearchResult{
+			Type:        "pgview",
+			Name:        viewName,
+			ServerName:  serviceName,
+			ServiceName: serviceName,
+			SchemaName:  schemaName,
+			Tags:        []string{"PostgreSQL", "View", schemaName},
+			Icon:        "\uf06e", // eye icon
+			Description: schemaName + "." + viewName,
+		})
+	}
+
+	return results
+}
+
+// searchPGColumns searches for PostgreSQL columns matching the query
+func (s *Server) searchPGColumns(db *sql.DB, serviceName, query string) []SearchResult {
+	var results []SearchResult
+
+	rows, err := db.Query(`
+		SELECT table_schema, table_name, column_name, data_type
+		FROM information_schema.columns
+		WHERE table_schema NOT LIKE 'pg_%'
+		  AND table_schema != 'information_schema'
+		  AND LOWER(column_name) LIKE '%' || $1 || '%'
+		ORDER BY table_schema, table_name, ordinal_position
+		LIMIT 30
+	`, query)
+	if err != nil {
+		return results
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var schemaName, tableName, columnName, dataType string
+		if err := rows.Scan(&schemaName, &tableName, &columnName, &dataType); err != nil {
+			continue
+		}
+		results = append(results, SearchResult{
+			Type:        "pgcolumn",
+			Name:        columnName,
+			ServerName:  serviceName,
+			ServiceName: serviceName,
+			SchemaName:  schemaName,
+			TableName:   tableName,
+			DataType:    dataType,
+			Tags:        []string{"PostgreSQL", "Column", dataType},
+			Icon:        "\uf0db", // columns icon
+			Description: schemaName + "." + tableName + "." + columnName,
+		})
+	}
+
+	return results
+}
+
+// searchPGFunctions searches for PostgreSQL functions matching the query
+func (s *Server) searchPGFunctions(db *sql.DB, serviceName, query string) []SearchResult {
+	var results []SearchResult
+
+	rows, err := db.Query(`
+		SELECT n.nspname AS schema_name,
+		       p.proname AS function_name,
+		       pg_catalog.pg_get_function_result(p.oid) AS return_type
+		FROM pg_catalog.pg_proc p
+		LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+		WHERE n.nspname NOT LIKE 'pg_%'
+		  AND n.nspname != 'information_schema'
+		  AND LOWER(p.proname) LIKE '%' || $1 || '%'
+		ORDER BY n.nspname, p.proname
+		LIMIT 20
+	`, query)
+	if err != nil {
+		return results
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var schemaName, funcName, returnType string
+		if err := rows.Scan(&schemaName, &funcName, &returnType); err != nil {
+			continue
+		}
+		results = append(results, SearchResult{
+			Type:        "pgfunction",
+			Name:        funcName,
+			ServerName:  serviceName,
+			ServiceName: serviceName,
+			SchemaName:  schemaName,
+			DataType:    returnType,
+			Tags:        []string{"PostgreSQL", "Function"},
+			Icon:        "\uf121", // code icon
+			Description: schemaName + "." + funcName + "()",
+		})
+	}
+
+	return results
 }

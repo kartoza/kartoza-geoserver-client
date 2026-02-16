@@ -21,7 +21,8 @@ import {
   Flex,
   Badge,
 } from '@chakra-ui/react'
-import { FiSearch, FiX, FiFolder, FiDatabase, FiImage, FiLayers, FiEdit3, FiBook } from 'react-icons/fi'
+import { FiSearch, FiX, FiFolder, FiDatabase, FiImage, FiLayers, FiEdit3, FiBook, FiEye, FiColumns, FiCode, FiTable } from 'react-icons/fi'
+import { SiPostgresql } from 'react-icons/si'
 import { useQuery } from '@tanstack/react-query'
 import * as api from '../api/client'
 import { useTreeStore } from '../stores/treeStore'
@@ -40,6 +41,13 @@ const typeIcons: Record<string, React.ElementType> = {
   layer: FiLayers,
   style: FiEdit3,
   layergroup: FiBook,
+  // PostgreSQL types
+  pgservice: SiPostgresql,
+  pgschema: FiFolder,
+  pgtable: FiTable,
+  pgview: FiEye,
+  pgcolumn: FiColumns,
+  pgfunction: FiCode,
 }
 
 const typeColors: Record<string, string> = {
@@ -49,6 +57,13 @@ const typeColors: Record<string, string> = {
   layer: 'teal',
   style: 'purple',
   layergroup: 'cyan',
+  // PostgreSQL types
+  pgservice: 'blue',
+  pgschema: 'cyan',
+  pgtable: 'green',
+  pgview: 'purple',
+  pgcolumn: 'gray',
+  pgfunction: 'orange',
 }
 
 export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {
@@ -110,36 +125,86 @@ export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {
   }, [selectedIndex, results.length])
 
   const handleSelect = useCallback((result: api.SearchResult) => {
-    // Expand parent nodes to show the selected item
-    // Expand connection node
-    expandNode(`connection:${result.connectionId}`)
+    // Check if this is a PostgreSQL result
+    const isPGResult = ['pgservice', 'pgschema', 'pgtable', 'pgview', 'pgcolumn', 'pgfunction'].includes(result.type)
 
-    // Expand workspace if applicable
-    if (result.workspace) {
-      expandNode(`workspace:${result.connectionId}:${result.workspace}`)
+    if (isPGResult) {
+      // Expand PostgreSQL root node
+      expandNode('postgresql-root')
 
-      // Expand the appropriate category folder
-      if (result.type === 'layer') {
-        expandNode(`layers:${result.connectionId}:${result.workspace}`)
-      } else if (result.type === 'style') {
-        expandNode(`styles:${result.connectionId}:${result.workspace}`)
-      } else if (result.type === 'datastore') {
-        expandNode(`datastores:${result.connectionId}:${result.workspace}`)
-      } else if (result.type === 'coveragestore') {
-        expandNode(`coveragestores:${result.connectionId}:${result.workspace}`)
-      } else if (result.type === 'layergroup') {
-        expandNode(`layergroups:${result.connectionId}:${result.workspace}`)
+      // Expand service node if we have a service name
+      if (result.serviceName) {
+        expandNode(`pgservice:${result.serviceName}`)
+
+        // Expand schema node if we have a schema name
+        if (result.schemaName) {
+          expandNode(`pgschema:${result.serviceName}:${result.schemaName}`)
+
+          // Expand table node for column results
+          if (result.type === 'pgcolumn' && result.tableName) {
+            expandNode(`pgtable:${result.serviceName}:${result.schemaName}:${result.tableName}`)
+          }
+        }
       }
-    }
 
-    // Navigate to the selected item in the tree
-    selectNode({
-      id: `${result.type}:${result.connectionId}:${result.workspace || ''}:${result.name}`,
-      name: result.name,
-      type: result.type as NodeType,
-      connectionId: result.connectionId,
-      workspace: result.workspace,
-    })
+      // Build the correct node ID based on type
+      let nodeId: string
+      if (result.type === 'pgservice') {
+        nodeId = `pgservice:${result.serviceName}`
+      } else if (result.type === 'pgschema') {
+        nodeId = `pgschema:${result.serviceName}:${result.schemaName}`
+      } else if (result.type === 'pgtable' || result.type === 'pgview') {
+        nodeId = `${result.type}:${result.serviceName}:${result.schemaName}:${result.name}`
+      } else if (result.type === 'pgcolumn') {
+        nodeId = `pgcolumn:${result.serviceName}:${result.schemaName}:${result.tableName}:${result.name}`
+      } else if (result.type === 'pgfunction') {
+        nodeId = `pgfunction:${result.serviceName}:${result.schemaName}:${result.name}`
+      } else {
+        nodeId = `${result.type}:${result.serviceName}:${result.name}`
+      }
+
+      // Navigate to the selected item in the tree
+      selectNode({
+        id: nodeId,
+        name: result.name,
+        type: result.type as NodeType,
+        serviceName: result.serviceName,
+        schemaName: result.schemaName,
+        // For tables/views, the tableName is the result name itself
+        tableName: (result.type === 'pgtable' || result.type === 'pgview') ? result.name : result.tableName,
+      })
+    } else {
+      // GeoServer result handling
+      // Expand connection node
+      expandNode(`connection:${result.connectionId}`)
+
+      // Expand workspace if applicable
+      if (result.workspace) {
+        expandNode(`workspace:${result.connectionId}:${result.workspace}`)
+
+        // Expand the appropriate category folder
+        if (result.type === 'layer') {
+          expandNode(`layers:${result.connectionId}:${result.workspace}`)
+        } else if (result.type === 'style') {
+          expandNode(`styles:${result.connectionId}:${result.workspace}`)
+        } else if (result.type === 'datastore') {
+          expandNode(`datastores:${result.connectionId}:${result.workspace}`)
+        } else if (result.type === 'coveragestore') {
+          expandNode(`coveragestores:${result.connectionId}:${result.workspace}`)
+        } else if (result.type === 'layergroup') {
+          expandNode(`layergroups:${result.connectionId}:${result.workspace}`)
+        }
+      }
+
+      // Navigate to the selected item in the tree
+      selectNode({
+        id: `${result.type}:${result.connectionId}:${result.workspace || ''}:${result.name}`,
+        name: result.name,
+        type: result.type as NodeType,
+        connectionId: result.connectionId,
+        workspace: result.workspace,
+      })
+    }
 
     if (onSelect) {
       onSelect(result)
@@ -273,7 +338,7 @@ export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {
                 <VStack spacing={3}>
                   <Icon as={FiSearch} boxSize={8} color={mutedColor} />
                   <Text color={mutedColor}>
-                    Search across all your GeoServer resources
+                    Search across GeoServer and PostgreSQL resources
                   </Text>
                   <HStack spacing={1} fontSize="sm" color={mutedColor}>
                     <Text>Press</Text>

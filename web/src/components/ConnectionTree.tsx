@@ -168,6 +168,7 @@ function CloudBenchRootNode({ connections }: { connections: { id: string; name: 
   const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
+  const instanceName = useUIStore((state) => state.settings.instanceName)
 
   // Auto-expand root on mount
   useEffect(() => {
@@ -178,7 +179,7 @@ function CloudBenchRootNode({ connections }: { connections: { id: string; name: 
 
   const node: TreeNode = {
     id: nodeId,
-    name: 'Kartoza CloudBench',
+    name: instanceName,
     type: 'cloudbench',
   }
 

@@ -6,16 +6,36 @@ This document provides a detailed specification of all features, behaviors, and 
 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
-3. [User Interface](#user-interface)
-4. [Connection Management](#connection-management)
-5. [File Browser](#file-browser)
-6. [Unified Resource Tree](#unified-resource-tree)
-7. [CRUD Operations](#crud-operations)
-8. [File Upload](#file-upload)
-9. [Layer Preview](#layer-preview)
-10. [Keyboard Shortcuts](#keyboard-shortcuts)
-11. [Configuration](#configuration)
-12. [API Integration](#api-integration)
+3. [Branding Guidelines](#branding-guidelines)
+4. [User Interface](#user-interface)
+5. [Connection Management](#connection-management)
+6. [File Browser](#file-browser)
+7. [Unified Resource Tree](#unified-resource-tree)
+8. [CRUD Operations](#crud-operations)
+9. [File Upload](#file-upload)
+10. [Layer Preview](#layer-preview)
+11. [Universal Search](#universal-search)
+12. [Keyboard Shortcuts](#keyboard-shortcuts)
+13. [Configuration](#configuration)
+14. [API Integration](#api-integration)
+15. [PostgreSQL Integration](#postgresql-integration)
+16. [Data Import (ogr2ogr)](#data-import-ogr2ogr)
+17. [PostgreSQL to GeoServer Bridge](#postgresql-to-geoserver-bridge)
+18. [AI Query Engine](#ai-query-engine)
+19. [Visual Query Designer](#visual-query-designer)
+20. [SQL View Layers](#sql-view-layers)
+21. [SQL Editor](#sql-editor)
+22. [UI Animation System](#ui-animation-system)
+23. [GeoWebCache (Tile Caching)](#geowebcache-tile-caching)
+24. [Server Synchronization](#server-synchronization)
+25. [Layer Metadata Management](#layer-metadata-management)
+26. [Layer Groups](#layer-groups)
+27. [Dashboard & Monitoring](#dashboard--monitoring)
+28. [Raster Data Import](#raster-data-import)
+29. [PostgreSQL Table Data Viewer](#postgresql-table-data-viewer)
+30. [Terria Integration](#terria-integration)
+31. [Future Enhancements](#future-enhancements)
+32. [Version History](#version-history)
 
 ---
 
@@ -33,10 +53,16 @@ Kartoza CloudBench is a unified platform for GeoServer and PostgreSQL management
 - Navigate GeoServer hierarchy (workspaces, stores, layers, styles)
 - Upload files to GeoServer with progress tracking and verification
 - Create, edit, and delete GeoServer resources
-- Preview layers in a browser-based map viewer
-- **PostgreSQL Integration** (Planned): Manage PostgreSQL services via pg_service.conf
-- **AI Query Engine** (Planned): Natural language to SQL query generation
+- Preview layers in browser-based 2D map viewer and 3D globe
+- Manage GeoWebCache tile seeding and truncation
+- Synchronize configurations between GeoServer instances
+- **PostgreSQL Integration**: Manage PostgreSQL services via pg_service.conf
+- **Data Import**: Import vector and raster data to PostgreSQL via ogr2ogr/raster2pgsql
+- **PostgreSQL to GeoServer Bridge**: Create PostGIS stores from PostgreSQL services
+- **AI Query Engine**: Natural language to SQL query generation using local LLM
 - **Visual Query Designer**: Metabase-style visual query builder
+- **SQL View Layers**: Publish SQL queries as GeoServer WMS/WFS layers
+- **Table Data Viewer**: Browse PostgreSQL table data with infinite scroll
 
 ---
 
@@ -46,9 +72,14 @@ Kartoza CloudBench is a unified platform for GeoServer and PostgreSQL management
 
 - **Language**: Go 1.23+
 - **TUI Framework**: Bubble Tea (Elm-style architecture)
-- **Styling**: Lip Gloss
-- **Animations**: Harmonica (spring physics)
-- **Map Preview**: MapLibre GL JS with OpenLayers fallback
+- **TUI Styling**: Lip Gloss
+- **TUI Animations**: Harmonica (spring physics)
+- **Web UI Framework**: React with TypeScript
+- **Web UI Components**: Chakra UI
+- **Web UI Animations**: Framer Motion (spring physics)
+- **Map Viewer**: MapLibre GL JS
+- **3D Globe Viewer**: Cesium.js
+- **SQL Editor**: CodeMirror 6
 
 ### Package Structure
 
@@ -56,35 +87,46 @@ Kartoza CloudBench is a unified platform for GeoServer and PostgreSQL management
 internal/
 ├── api/           # GeoServer REST API client
 ├── config/        # Configuration management
+├── gwc/           # GeoWebCache integration
+├── integration/   # Cross-system operations
+│   ├── bridge.go         # PostgreSQL → GeoServer bridge
+│   └── sqlview.go        # SQL View layer publishing
+├── llm/           # LLM integration
+│   ├── engine.go         # Query generation
+│   ├── executor.go       # Safe query execution
+│   ├── ollama.go         # Ollama client
+│   └── types.go          # Data types
 ├── models/        # Data models (TreeNode, LocalFile, etc.)
+├── ogr2ogr/       # Data import via ogr2ogr/raster2pgsql
+├── postgres/      # PostgreSQL integration
+│   ├── service.go        # pg_service.conf parsing
+│   ├── client.go         # Database operations
+│   └── schema.go         # Schema harvesting
 ├── preview/       # Browser-based layer preview server
-├── postgres/      # PostgreSQL integration (Phase 2)
-│   ├── service.go     # pg_service.conf parsing
-│   ├── client.go      # Database operations
-│   └── schema.go      # Schema harvesting
-├── llm/           # LLM integration (Phase 5)
-│   ├── engine.go      # Query generation
-│   ├── embedded.go    # llama.cpp wrapper
-│   └── ollama.go      # Ollama client
-├── nn/            # Neural network (Phase 5)
-│   ├── model.go       # Seq2Seq model
-│   ├── trainer.go     # Training logic
-│   └── tokenizer.go   # SQL tokenizer
-├── ogr2ogr/       # Data import (Phase 3)
-│   └── import.go      # ogr2ogr wrapper
-├── integration/   # Cross-system operations (Phase 4, 7)
-│   ├── postgis_store.go    # PG → GeoServer stores
-│   └── sql_view_layer.go   # Query → SQL View layers
+├── query/         # Visual query builder
+├── storage/       # File storage management
+├── sync/          # Server synchronization
+├── terria/        # Terria catalog export
 ├── tui/           # Terminal UI components
-│   ├── app.go          # Main application state and Update loop
-│   ├── app_tree.go     # Tree building and navigation
-│   ├── app_upload.go   # File upload and verification
-│   ├── app_crud.go     # CRUD operations
-│   ├── components/     # Reusable UI components
-│   ├── screens/        # Full-screen views (connections)
-│   └── styles/         # Style definitions
-├── webserver/     # HTTP handlers for Web UI
-└── verify/        # Upload verification (WFS-based)
+│   ├── app.go            # Main application state
+│   ├── components/       # Reusable UI components
+│   ├── screens/          # Full-screen views
+│   └── styles/           # Style definitions
+├── verify/        # Upload verification (WFS-based)
+└── webserver/     # HTTP handlers (60+ endpoints)
+    ├── handlers_*.go     # API handlers by domain
+    └── static/           # Built React frontend
+
+web/
+├── src/
+│   ├── api/              # TypeScript API client
+│   ├── components/       # React components
+│   │   ├── dialogs/      # Modal dialogs
+│   │   └── *.tsx         # Main components
+│   ├── stores/           # Zustand state management
+│   ├── types/            # TypeScript definitions
+│   └── utils/            # Animation utilities
+└── package.json          # npm dependencies
 ```
 
 ### Application State
@@ -95,6 +137,103 @@ The application maintains:
 - `treeView`: GeoServer resource tree component
 - `fileBrowser`: Local file browser component
 - `focusLeft`: Boolean indicating which panel has focus
+
+---
+
+## Branding Guidelines
+
+The application follows Kartoza's official brand guidelines to maintain visual consistency with the Kartoza brand identity.
+
+### Application Name
+
+- **Full Name**: Kartoza Cloudbench
+- **Display**: "Kartoza Cloudbench" in the header with Kartoza logo
+- **Page Title**: "Kartoza Cloudbench" in browser tab
+
+### Primary Brand Colors
+
+| Color Name | Hex Code | RGB | Usage |
+|------------|----------|-----|-------|
+| Kartoza Blue | `#417d9b` | rgb(65, 125, 155) | Primary brand color, header background, buttons, links |
+| Kartoza Gold | `#dea037` | rgb(222, 160, 55) | Accent color, highlights, call-to-action buttons |
+| Kartoza Gray | `#8b8d8a` | rgb(139, 141, 138) | Secondary elements, muted text, borders |
+
+### Color Palette Variations
+
+Each primary color has a full shade range (50-900) for consistent UI design:
+
+**Blue Scale (kartoza):**
+- `kartoza.50`: `#e8f2f6` - Lightest, for backgrounds
+- `kartoza.100`: `#c5dfe8`
+- `kartoza.200`: `#9ecbd9`
+- `kartoza.300`: `#6eb2c7`
+- `kartoza.400`: `#4f9bb3`
+- `kartoza.500`: `#417d9b` - Primary brand blue
+- `kartoza.600`: `#386d87`
+- `kartoza.700`: `#2d5a70`
+- `kartoza.800`: `#234859`
+- `kartoza.900`: `#193642` - Darkest
+
+**Gold Scale (accent):**
+- `accent.50`: `#fdf6e8` - Lightest
+- `accent.100`: `#fae9c5`
+- `accent.200`: `#f5d89e`
+- `accent.300`: `#efc777`
+- `accent.400`: `#e9b650`
+- `accent.500`: `#dea037` - Primary brand gold
+- `accent.600`: `#c78d2f`
+- `accent.700`: `#a67525`
+- `accent.800`: `#865d1c`
+- `accent.900`: `#664612` - Darkest
+
+**Gray Scale:**
+- `gray.50`: `#f5f5f5` - Page backgrounds
+- `gray.100`: `#e8e9e8` - Alternate backgrounds
+- `gray.200`: `#d4d5d4`
+- `gray.300`: `#b8b9b8`
+- `gray.400`: `#9fa09f`
+- `gray.500`: `#8b8d8a` - Primary brand gray
+- `gray.600`: `#737573`
+- `gray.700`: `#5c5e5c`
+- `gray.800`: `#454745`
+- `gray.900`: `#2e302e` - Dark text
+
+### Logo Usage
+
+- **Logo Files**: Located in project root
+  - `KartozaLogoHorizontalCMYK.svg` - Horizontal layout
+  - `KartozaLogoVerticalCMYK.svg` - Vertical layout
+- **Web Assets**: Copy to `web/public/kartoza-logo.svg`
+- **Header Display**: White filter applied on dark background (`filter: brightness(0) invert(1)`)
+- **Minimum Size**: 32px height in header
+
+### Link to kartoza.com
+
+- The Kartoza logo in the header is clickable and links to https://kartoza.com
+- Opens in a new tab (`target="_blank"`)
+
+### UI Component Styling
+
+**Buttons:**
+- Primary buttons use `kartoza.500` with `kartoza.600` hover
+- Accent buttons use `accent.500` with `accent.600` hover
+- Subtle shadow effects using brand blue rgba values
+
+**Cards and Containers:**
+- Border radius: 12px standard, 8px for small elements
+- Shadow: `0 4px 16px rgba(65, 125, 155, 0.10)` using brand blue
+- Hover shadow: `0 8px 28px rgba(65, 125, 155, 0.16)`
+
+**Header:**
+- Background: `kartoza.700` (dark blue)
+- Text: White
+- Contains logo, application name, search bar, and action buttons
+
+### Typography
+
+- **Font Family**: Roboto, -apple-system, BlinkMacSystemFont, sans-serif
+- **Headings**: Font weight 600
+- **Body Text**: Font weight 400
 
 ---
 
@@ -1431,6 +1570,331 @@ import { modalContent, springs } from '../utils/animations';
 
 ---
 
+## GeoWebCache (Tile Caching)
+
+The application provides comprehensive management of GeoWebCache (GWC), GeoServer's built-in tile caching system.
+
+### Features
+
+- **Layer Cache Management**: View and manage cached layers
+- **Seeding Operations**: Pre-generate tiles for faster map viewing
+- **Truncation**: Delete cached tiles to force regeneration
+- **Disk Quota Management**: Configure storage limits
+- **Grid Set Configuration**: Manage tile grid schemes (TMS)
+- **Real-time Progress**: Monitor seeding operations in real-time
+
+### Seeding Operations
+
+| Operation | Description |
+|-----------|-------------|
+| Seed | Pre-generate tiles for a layer within specified bounds |
+| Reseed | Regenerate existing tiles (updates outdated caches) |
+| Truncate | Delete all cached tiles for a layer |
+
+### Seed Configuration
+
+| Parameter | Description |
+|-----------|-------------|
+| Zoom Start | Starting zoom level for tile generation |
+| Zoom Stop | Ending zoom level for tile generation |
+| Grid Set | Tile grid scheme (e.g., EPSG:4326, EPSG:900913) |
+| Bounds | Optional bounding box to limit seeding area |
+| Thread Count | Number of parallel seeding threads |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/gwc/layers/{connId}` | GET | List all cached layers |
+| `/api/gwc/layers/{connId}/{layer}` | GET | Get layer cache info |
+| `/api/gwc/seed/{connId}/{layer}` | POST | Start seeding operation |
+| `/api/gwc/seed/{connId}/{layer}` | GET | Get seed operation status |
+| `/api/gwc/seed/{connId}/{layer}` | DELETE | Stop seeding operation |
+| `/api/gwc/seed/{connId}` | DELETE | Stop all seeding operations |
+| `/api/gwc/truncate/{connId}/{layer}` | POST | Truncate layer cache |
+| `/api/gwc/gridsets/{connId}` | GET | List grid sets |
+| `/api/gwc/gridsets/{connId}/{gridset}` | GET | Get grid set details |
+| `/api/gwc/diskquota/{connId}` | GET | Get disk quota settings |
+| `/api/gwc/diskquota/{connId}` | PUT | Update disk quota settings |
+
+### Web UI (CacheDialog)
+
+The Cache Dialog provides:
+- Visual progress bars for seeding operations
+- Zoom level range slider
+- Grid set dropdown selection
+- Bounding box input (optional)
+- Real-time status updates
+- Stop individual or all operations
+
+---
+
+## Server Synchronization
+
+The application supports synchronizing GeoServer configurations between multiple servers, enabling easy migration and replication of resources.
+
+### Features
+
+- **Multi-destination Sync**: Sync from one source to multiple destinations
+- **Selective Resource Sync**: Choose which resources to sync (workspaces, stores, layers, styles, groups)
+- **Additive Mode**: Only adds/updates resources, never deletes (non-destructive)
+- **Named Configurations**: Save sync setups for repeated use
+- **Real-time Progress**: Per-destination progress tracking
+- **Visual Feedback**: Animated UI with pulsing icons and flowing arrows
+
+### Sync Configuration
+
+| Field | Description |
+|-------|-------------|
+| Name | Configuration name for reuse |
+| Source | Source GeoServer connection |
+| Destinations | One or more target GeoServer connections |
+| Resources | Workspaces, data stores, coverage stores, layers, styles, layer groups |
+
+### Sync Behavior
+
+- Creates missing workspaces on destination
+- Creates missing stores with connection parameters
+- Publishes missing layers
+- Copies styles (SLD content)
+- Recreates layer groups
+- Skips resources that already exist (by name)
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/sync/configs` | GET | List saved sync configurations |
+| `/api/sync/configs` | POST | Create new sync configuration |
+| `/api/sync/configs/{id}` | GET | Get specific configuration |
+| `/api/sync/configs/{id}` | PUT | Update configuration |
+| `/api/sync/configs/{id}` | DELETE | Delete configuration |
+| `/api/sync/start` | POST | Start sync operation |
+| `/api/sync/status` | GET | Get overall sync status |
+| `/api/sync/status/{syncId}` | GET | Get specific sync status |
+| `/api/sync/stop` | POST | Stop all sync operations |
+| `/api/sync/stop/{syncId}` | DELETE | Stop specific sync operation |
+
+### Web UI (SyncDialog)
+
+The Sync Dialog provides:
+- Drag-drop interface for selecting source/destinations
+- Resource type checkboxes
+- Per-destination progress bars
+- Activity log with timestamps
+- Stop controls for individual or all syncs
+- Animated visual feedback
+
+---
+
+## Layer Metadata Management
+
+The application provides comprehensive layer metadata editing capabilities for GeoServer layers.
+
+### Editable Metadata Fields
+
+| Category | Fields |
+|----------|--------|
+| Basic Info | Title, Abstract, Keywords |
+| Attribution | Attribution text, Logo URL, Attribution Title |
+| Coordinate Systems | Native SRS, Declared SRS |
+| Bounding Boxes | Lat/Lon bounds, Native bounds |
+| Service Config | Service enable/disable toggles |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/layermetadata/{connId}/{workspace}/{layer}` | GET | Get comprehensive metadata |
+| `/api/layermetadata/{connId}/{workspace}/{layer}` | PUT | Update metadata |
+| `/api/layers/{connId}/{workspace}/{layer}/feature-count` | GET | Get feature count (vector) |
+
+### Web UI
+
+The Layer Metadata panel displays:
+- Full layer information in organized sections
+- Inline editing for supported fields
+- Service endpoint URLs (WMS, WFS, WCS)
+- Bounding box visualization
+- Feature count for vector layers
+
+---
+
+## Layer Groups
+
+The application supports creating and managing GeoServer layer groups, which bundle multiple layers for combined rendering.
+
+### Features
+
+- **Group Creation**: Create new layer groups from existing layers
+- **Layer Ordering**: Control draw order of member layers
+- **Style Assignment**: Assign styles to each member layer
+- **Nested Groups**: Support for layer groups containing other groups
+
+### Group Configuration
+
+| Field | Description |
+|-------|-------------|
+| Name | Unique identifier for the group |
+| Title | Human-readable display name |
+| Abstract | Description of the group |
+| Mode | SINGLE, OPAQUE_CONTAINER, NAMED, CONTAINER, EO |
+| Bounds | Combined bounds of all member layers |
+| Layers | Ordered list of member layers with styles |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/layergroups/{connId}/{workspace}` | GET | List layer groups |
+| `/api/layergroups/{connId}/{workspace}` | POST | Create layer group |
+| `/api/layergroups/{connId}/{workspace}/{group}` | GET | Get group details |
+| `/api/layergroups/{connId}/{workspace}/{group}` | PUT | Update layer group |
+| `/api/layergroups/{connId}/{workspace}/{group}` | DELETE | Delete layer group |
+
+### Web UI (LayerGroupDialog)
+
+The Layer Group Dialog provides:
+- Layer selection from workspace
+- Drag-drop reordering
+- Style assignment per layer
+- Preview of combined rendering
+
+---
+
+## Dashboard & Monitoring
+
+The application provides a dashboard view for monitoring all connected servers and their resources.
+
+### Features
+
+- **Multi-server Overview**: Summary of all GeoServer connections
+- **Resource Counts**: Workspaces, layers, styles, stores per server
+- **Connection Status**: Online/offline indicators with response times
+- **Quick Actions**: Context-aware action buttons
+- **PostgreSQL Services**: Service status and statistics
+
+### Dashboard Metrics
+
+| Metric | Description |
+|--------|-------------|
+| Server Version | GeoServer version information |
+| Workspace Count | Number of workspaces |
+| Layer Count | Total published layers |
+| Style Count | Total styles defined |
+| Store Count | Data stores + coverage stores |
+| GWC Disk Usage | Cached tile storage size |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/dashboard` | GET | Multi-server dashboard data |
+| `/api/dashboard/server` | GET | Single server status |
+| `/api/server/{connId}/info` | GET | Detailed server information |
+| `/api/connections/{id}/info` | GET | Connection-specific info |
+
+### Web UI
+
+The Dashboard component displays:
+- Server cards with status indicators
+- Animated connection state
+- Quick navigation to resources
+- PostgreSQL service cards
+- Upload buttons (context-aware based on selection)
+
+---
+
+## Raster Data Import
+
+The application supports importing raster data into PostgreSQL using PostGIS raster support via raster2pgsql.
+
+### Supported Formats
+
+| Extension | Format |
+|-----------|--------|
+| `.tif`, `.tiff` | GeoTIFF |
+| `.gpkg` | GeoPackage (raster tiles) |
+| `.png`, `.jpg` | World-file georeferenced images |
+
+### Import Options
+
+| Option | Description |
+|--------|-------------|
+| Target Schema | PostgreSQL schema to import into |
+| Table Name | Name for the raster table |
+| SRID | Spatial Reference ID for the raster |
+| Tile Size | Tile dimensions (e.g., 256x256) |
+| Overwrite | Replace existing table if exists |
+| Overview Levels | Generate pyramid levels for performance |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/pg/import/raster` | POST | Start raster import |
+| `/api/pg/import/upload` | POST | Upload file for import |
+| `/api/pg/import/{jobId}` | GET | Get import job status |
+
+### Web UI (PGUploadDialog)
+
+The PostgreSQL Upload Dialog supports:
+- File type auto-detection (vector vs raster)
+- Layer selection for multi-layer files
+- Custom table naming
+- Progress tracking
+- Post-import layer detection
+
+---
+
+## PostgreSQL Table Data Viewer
+
+The application provides an interactive data viewer for browsing PostgreSQL table contents with infinite scroll.
+
+### Features
+
+- **Infinite Scroll**: Load data progressively as you scroll
+- **Column Headers**: Display column names with type information
+- **Null Handling**: Display `-` for NULL values
+- **Row Numbering**: Show row index for reference
+- **CSV Export**: Export visible data to CSV file
+- **Refresh**: Reload data from database
+- **SQL Query**: Open Query Designer for the table
+
+### Display Options
+
+- Automatic column width adjustment
+- Truncation of long values with ellipsis
+- JSON/JSONB pretty formatting
+- Geometry column handling (shows WKT summary)
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/query/execute` | POST | Execute query with pagination |
+
+The data viewer uses the query execute endpoint with:
+```json
+{
+  "sql": "SELECT * FROM \"schema\".\"table\"",
+  "service_name": "pg_service",
+  "max_rows": 100,
+  "offset": 0
+}
+```
+
+### Web UI (PGTablePanel)
+
+The PostgreSQL Table Panel displays:
+- Header card with table name and row count
+- Sticky column headers during scroll
+- Infinite scroll loading indicator
+- Export CSV and SQL Query buttons
+- Full-height table filling available space
+
+---
+
 ## Terria Integration
 
 The application integrates with TerriaJS, a powerful open-source framework for web-based 2D/3D geospatial visualization. This enables viewing GeoServer data in a 3D globe interface.
@@ -1500,13 +1964,16 @@ https://map.terria.io/#http://localhost:8080/api/terria/init/CONNECTION_ID.json
 7. **Offline Mode**: Cached tree browsing when disconnected
 8. **Raster Verification**: WCS-based verification for coverage uploads
 9. ~~**Terria Integration**: 3D globe viewer support~~ (Implemented in v0.7.0)
-10. **Embedded TerriaMap**: Self-hosted Terria viewer (setup script available)
+10. ~~**Embedded TerriaMap**: Self-hosted Terria viewer~~ (Implemented - built-in Cesium viewer)
 11. ~~**PostgreSQL Integration**: pg_service.conf support~~ (Implemented in v0.8.0)
 12. ~~**Data Import**: ogr2ogr-based import~~ (Implemented in v0.8.0)
 13. ~~**PG to GeoServer Bridge**: PostGIS store creation~~ (Implemented in v0.8.0)
 14. ~~**AI Query Engine**: Natural language to SQL~~ (Implemented in v0.8.0)
 15. ~~**Visual Query Designer**: Metabase-style query builder~~ (Implemented in v0.9.0)
 16. ~~**SQL View Layers**: Publish queries as GeoServer layers~~ (Implemented in v0.9.0)
+17. ~~**GeoWebCache Management**: Tile seeding and truncation~~ (Implemented in v0.13.0)
+18. ~~**Server Synchronization**: Multi-server sync~~ (Implemented in v0.13.0)
+19. ~~**Raster Import**: PostGIS raster support via raster2pgsql~~ (Implemented in v0.13.0)
 
 ### Known Limitations
 
@@ -1514,7 +1981,7 @@ https://map.terria.io/#http://localhost:8080/api/terria/init/CONNECTION_ID.json
 2. Large file uploads may timeout (30-second default)
 3. No support for cascading WMS stores (read-only)
 4. Password stored in plaintext in config file
-5. Terria integration requires external viewer (NationalMap) unless TerriaMapStatic is installed
+5. AI Query requires local Ollama server running
 
 ---
 
@@ -1533,7 +2000,9 @@ https://map.terria.io/#http://localhost:8080/api/terria/init/CONNECTION_ID.json
 | 0.9.0 | 2025 | Visual Query Designer with SQL generation, PostGIS support, query saving |
 | 0.10.0 | 2025 | SQL View Layers: publish queries as GeoServer WMS/WFS layers |
 | 0.11.0 | 2025 | SQL Editor with syntax highlighting and schema-aware autocompletion |
-| 0.12.0 | 2025 | Physics-based UI animations with spring motion, micro-interactions, and delightful transitions |
+| 0.12.0 | 2025 | Physics-based UI animations with spring motion, micro-interactions |
+| 0.13.0 | 2025 | GeoWebCache management, server synchronization, layer groups, dashboard |
+| 0.14.0 | 2025 | PostgreSQL raster import, table data viewer with infinite scroll, embedded 3D viewer |
 
 ---
 

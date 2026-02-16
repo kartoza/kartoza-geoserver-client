@@ -1,58 +1,59 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react'
 
-// Kartoza brand colors - matching the Hugo website CSS variables
+// Kartoza brand colors - official brand palette
+// Primary colors: #417d9b (blue), #dea037 (gold), #8b8d8a (gray)
 const colors = {
-  // Primary blues
+  // Primary blue - Kartoza brand blue #417d9b
   kartoza: {
-    50: '#e6f3fa',
-    100: '#b3daf0',
-    200: '#80c1e6',
-    300: '#5BB5E8', // primary-light
-    400: '#4da8de',
-    500: '#3B9DD9', // primary - main blue
-    600: '#2d8ac6',
-    700: '#1B6B9B', // primary-dark
-    800: '#155a84',
-    900: '#0f4a6d',
+    50: '#e8f2f6',
+    100: '#c5dfe8',
+    200: '#9ecbd9',
+    300: '#6eb2c7',
+    400: '#4f9bb3',
+    500: '#417d9b', // Primary brand blue
+    600: '#386d87',
+    700: '#2d5a70',
+    800: '#234859',
+    900: '#193642',
   },
-  // Orange/gold accent
+  // Gold/orange accent - Kartoza brand gold #dea037
   accent: {
-    50: '#fef5e7',
-    100: '#fce5c3',
-    200: '#f9d59f',
-    300: '#F0B84D', // accent-light
-    400: '#E8A331', // accent - main orange
-    500: '#D4922A', // accent-dark
-    600: '#c08526',
-    700: '#a67121',
-    800: '#8c5d1c',
-    900: '#724917',
+    50: '#fdf6e8',
+    100: '#fae9c5',
+    200: '#f5d89e',
+    300: '#efc777',
+    400: '#e9b650',
+    500: '#dea037', // Primary brand gold
+    600: '#c78d2f',
+    700: '#a67525',
+    800: '#865d1c',
+    900: '#664612',
   },
-  // Grays matching Kartoza design
+  // Grays - Kartoza brand gray #8b8d8a
   gray: {
-    50: '#f7f9fb', // light-bg
-    100: '#e8ecf0', // light-bg-alt
-    200: '#d4dbe2',
-    300: '#C8C8C8',
-    400: '#9E9E9E',
-    500: '#6B7B8D',
-    600: '#4D6370', // text-muted
-    700: '#3d4f5f',
-    800: '#2a3a4a',
-    900: '#1a2a3a', // text-dark
+    50: '#f5f5f5', // light-bg
+    100: '#e8e9e8', // light-bg-alt
+    200: '#d4d5d4',
+    300: '#b8b9b8',
+    400: '#9fa09f',
+    500: '#8b8d8a', // Primary brand gray
+    600: '#737573',
+    700: '#5c5e5c',
+    800: '#454745',
+    900: '#2e302e', // text-dark
   },
 }
 
-// Kartoza shadows matching homepage.css
+// Kartoza shadows using brand blue #417d9b (65, 125, 155)
 const shadows = {
-  sm: '0 2px 8px rgba(27, 107, 155, 0.08)',
-  md: '0 4px 16px rgba(27, 107, 155, 0.12)',
-  lg: '0 8px 32px rgba(27, 107, 155, 0.16)',
-  xl: '0 16px 48px rgba(27, 107, 155, 0.20)',
-  kartoza: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
-  kartozaHover: '0 8px 28px rgba(27, 107, 155, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
-  accent: '0 4px 20px rgba(232, 163, 49, 0.4)',
-  accentHover: '0 6px 28px rgba(232, 163, 49, 0.5)',
+  sm: '0 2px 8px rgba(65, 125, 155, 0.08)',
+  md: '0 4px 16px rgba(65, 125, 155, 0.12)',
+  lg: '0 8px 32px rgba(65, 125, 155, 0.16)',
+  xl: '0 16px 48px rgba(65, 125, 155, 0.20)',
+  kartoza: '0 4px 16px rgba(65, 125, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+  kartozaHover: '0 8px 28px rgba(65, 125, 155, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
+  accent: '0 4px 20px rgba(222, 160, 55, 0.4)', // Brand gold #dea037
+  accentHover: '0 6px 28px rgba(222, 160, 55, 0.5)',
 }
 
 // Border radii matching Kartoza design
@@ -83,16 +84,16 @@ const theme = extendTheme({
         bg: 'gray.50',
         color: 'gray.900',
       },
-      // Custom CSS for Kartoza styling
+      // Custom CSS for Kartoza styling using brand colors
       '.kartoza-gradient': {
-        background: 'linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 50%, #5BB5E8 100%)',
+        background: 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)',
       },
       '.kartoza-card': {
         borderRadius: '12px',
-        boxShadow: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+        boxShadow: '0 4px 16px rgba(65, 125, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
         transition: 'box-shadow 0.3s ease, transform 0.3s ease',
         _hover: {
-          boxShadow: '0 8px 28px rgba(27, 107, 155, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 8px 28px rgba(65, 125, 155, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
           transform: 'translateY(-3px)',
         },
       },
@@ -112,10 +113,10 @@ const theme = extendTheme({
         solid: {
           bg: 'kartoza.500',
           color: 'white',
-          boxShadow: '0 2px 8px rgba(27, 107, 155, 0.12)',
+          boxShadow: '0 2px 8px rgba(65, 125, 155, 0.12)',
           _hover: {
             bg: 'kartoza.600',
-            boxShadow: '0 4px 14px rgba(27, 107, 155, 0.20)',
+            boxShadow: '0 4px 14px rgba(65, 125, 155, 0.20)',
             transform: 'translateY(-1px)',
           },
         },
@@ -135,12 +136,12 @@ const theme = extendTheme({
           },
         },
         accent: {
-          bg: 'accent.400',
+          bg: 'accent.500',
           color: 'white',
-          boxShadow: '0 4px 20px rgba(232, 163, 49, 0.4)',
+          boxShadow: '0 4px 20px rgba(222, 160, 55, 0.4)',
           _hover: {
-            bg: 'accent.500',
-            boxShadow: '0 6px 28px rgba(232, 163, 49, 0.5)',
+            bg: 'accent.600',
+            boxShadow: '0 6px 28px rgba(222, 160, 55, 0.5)',
             transform: 'translateY(-2px)',
           },
         },
@@ -194,11 +195,11 @@ const theme = extendTheme({
       baseStyle: {
         container: {
           borderRadius: '12px',
-          boxShadow: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+          boxShadow: '0 4px 16px rgba(65, 125, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
           transition: 'box-shadow 0.3s ease, transform 0.3s ease',
           overflow: 'hidden',
           _hover: {
-            boxShadow: '0 8px 28px rgba(27, 107, 155, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
+            boxShadow: '0 8px 28px rgba(65, 125, 155, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
           },
         },
       },
@@ -228,7 +229,7 @@ const theme = extendTheme({
       baseStyle: {
         dialog: {
           borderRadius: '12px',
-          boxShadow: '0 16px 48px rgba(27, 107, 155, 0.20)',
+          boxShadow: '0 16px 48px rgba(65, 125, 155, 0.20)',
         },
         header: {
           borderBottom: '1px solid',

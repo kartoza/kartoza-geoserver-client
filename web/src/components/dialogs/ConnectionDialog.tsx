@@ -267,8 +267,8 @@ export default function ConnectionDialog() {
 
   const getHeaderGradient = () => {
     return connectionType === 'geoserver'
-      ? 'linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 100%)'
-      : 'linear-gradient(135deg, #336791 0%, #5B93C5 100%)'
+      ? 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)'
+      : 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)'
   }
 
   const getHeaderIcon = () => {

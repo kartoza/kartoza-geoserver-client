@@ -45,6 +45,7 @@ interface PreviewState {
 
 interface Settings {
   showHiddenPGServices: boolean
+  instanceName: string
 }
 
 interface UIState {
@@ -82,6 +83,7 @@ interface UIState {
   setSidebarWidth: (width: number) => void
   clearMessages: () => void
   setShowHiddenPGServices: (show: boolean) => void
+  setInstanceName: (name: string) => void
 }
 
 // Load persisted settings from localStorage
@@ -94,7 +96,7 @@ const loadSettings = (): Settings => {
   } catch {
     // Ignore parse errors
   }
-  return { showHiddenPGServices: false }
+  return { showHiddenPGServices: false, instanceName: 'My Cloudbench' }
 }
 
 // Save settings to localStorage
@@ -183,6 +185,14 @@ export const useUIStore = create<UIState>((set) => ({
   setShowHiddenPGServices: (show) => {
     set((state) => {
       const newSettings = { ...state.settings, showHiddenPGServices: show }
+      saveSettings(newSettings)
+      return { settings: newSettings }
+    })
+  },
+
+  setInstanceName: (name) => {
+    set((state) => {
+      const newSettings = { ...state.settings, instanceName: name }
       saveSettings(newSettings)
       return { settings: newSettings }
     })

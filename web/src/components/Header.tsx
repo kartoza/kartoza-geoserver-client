@@ -15,6 +15,8 @@ import {
   Input,
   Kbd,
   HStack,
+  Link,
+  Image,
 } from '@chakra-ui/react'
 import { FiPlus, FiSettings, FiUpload, FiRefreshCw, FiHelpCircle, FiRefreshCcw, FiSearch } from 'react-icons/fi'
 import { useUIStore } from '../stores/uiStore'
@@ -23,10 +25,11 @@ import { useTreeStore } from '../stores/treeStore'
 
 interface HeaderProps {
   onSearchClick?: () => void
+  onHelpClick?: () => void
 }
 
-export default function Header({ onSearchClick }: HeaderProps) {
-  const bgColor = useColorModeValue('kartoza.700', 'gray.800')
+export default function Header({ onSearchClick, onHelpClick }: HeaderProps) {
+  const bgColor = useColorModeValue('gray.700', 'gray.800')
   const openDialog = useUIStore((state) => state.openDialog)
   const fetchConnections = useConnectionStore((state) => state.fetchConnections)
   const selectedNode = useTreeStore((state) => state.selectedNode)
@@ -78,8 +81,23 @@ export default function Header({ onSearchClick }: HeaderProps) {
   return (
     <Box bg={bgColor} px={4} py={2}>
       <Flex align="center">
+        <Link
+          href="https://kartoza.com"
+          isExternal
+          display="flex"
+          alignItems="center"
+          _hover={{ opacity: 0.9 }}
+        >
+          <Image
+            src="/kartoza-logo.svg"
+            alt="Kartoza"
+            h="32px"
+            mr={3}
+            filter="brightness(0) invert(1)"
+          />
+        </Link>
         <Heading size="md" color="white" fontWeight="bold">
-          Kartoza GeoServer Client
+          Cloudbench
         </Heading>
 
         {/* Search Bar */}
@@ -180,7 +198,6 @@ export default function Header({ onSearchClick }: HeaderProps) {
               >
                 Sync Server(s)
               </MenuItem>
-              <MenuItem icon={<FiHelpCircle />}>Help</MenuItem>
               <MenuItem
                 icon={<FiPlus />}
                 onClick={() => openDialog('workspace', { mode: 'create' })}
@@ -201,6 +218,16 @@ export default function Header({ onSearchClick }: HeaderProps) {
               </MenuItem>
             </MenuList>
           </Menu>
+          <Tooltip label="Help (?)" placement="bottom">
+            <IconButton
+              aria-label="Help"
+              icon={<FiHelpCircle />}
+              variant="ghost"
+              color="white"
+              _hover={{ bg: 'kartoza.600' }}
+              onClick={onHelpClick}
+            />
+          </Tooltip>
         </Flex>
       </Flex>
     </Box>

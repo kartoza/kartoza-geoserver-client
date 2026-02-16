@@ -34,7 +34,7 @@ export default function AppSettingsDialog() {
       <ModalContent borderRadius="xl" overflow="hidden">
         {/* Header */}
         <Box
-          bg="linear-gradient(135deg, #4A5568 0%, #2D3748 100%)"
+          bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
           px={6}
           py={4}
         >

@@ -129,6 +129,9 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/search", s.handleSearch)
 	mux.HandleFunc("/api/search/suggestions", s.handleSearchSuggestions)
 
+	// API routes - Documentation
+	mux.HandleFunc("/api/docs", s.handleDocumentation)
+
 	// API routes - PostgreSQL Services
 	mux.HandleFunc("/api/pg/services", s.handlePGServices)
 	mux.HandleFunc("/api/pg/services/", s.handlePGServiceByName)

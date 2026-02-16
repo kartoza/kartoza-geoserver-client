@@ -348,7 +348,7 @@ export default function UploadDialog() {
       <ModalContent borderRadius="xl" overflow="hidden" maxH="85vh">
         {/* Gradient Header */}
         <Box
-          bg="linear-gradient(135deg, #3B9DD9 0%, #5BB5E8 100%)"
+          bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
           px={6}
           py={4}
         >

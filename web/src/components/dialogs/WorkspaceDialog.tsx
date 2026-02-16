@@ -138,7 +138,7 @@ export default function WorkspaceDialog() {
       <ModalContent borderRadius="xl" overflow="hidden">
         {/* Gradient Header */}
         <Box
-          bg="linear-gradient(135deg, #E8A331 0%, #F0B84D 100%)"
+          bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
           px={6}
           py={4}
         >

@@ -1,0 +1,5 @@
+export { default as DataStoresDashboard } from './DataStoresDashboard'
+export { default as CoverageStoresDashboard } from './CoverageStoresDashboard'
+export { default as LayersDashboard } from './LayersDashboard'
+export { default as StylesDashboard } from './StylesDashboard'
+export { default as LayerGroupsDashboard } from './LayerGroupsDashboard'

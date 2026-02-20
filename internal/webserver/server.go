@@ -58,6 +58,7 @@ func (s *Server) Start(addr string) error {
 func (s *Server) setupRoutes(mux *http.ServeMux) {
 	// API routes - connections
 	mux.HandleFunc("/api/connections", s.handleConnections)
+	mux.HandleFunc("/api/connections/test", s.handleTestConnectionDirect) // Test without saving
 	mux.HandleFunc("/api/connections/", s.handleConnectionByID)
 
 	// API routes - workspaces (pattern: /api/connections/{connId}/workspaces)

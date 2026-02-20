@@ -778,7 +778,7 @@ export function SyncDialog() {
       <ModalOverlay backdropFilter="blur(4px)" />
       <ModalContent maxH="90vh">
         <ModalHeader
-          bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
+          bg="linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)"
           color="white"
           borderTopRadius="md"
         >

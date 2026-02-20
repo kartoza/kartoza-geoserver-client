@@ -142,7 +142,7 @@ The application maintains:
 
 ## Branding Guidelines
 
-The application follows Kartoza's official brand guidelines to maintain visual consistency with the Kartoza brand identity.
+The application follows Kartoza's official brand guidelines to maintain visual consistency with the Kartoza Hugo website (kartoza-website). The visual style uses organic rounded corners, multi-layered shadows, and smooth transitions.
 
 ### Application Name
 
@@ -150,53 +150,57 @@ The application follows Kartoza's official brand guidelines to maintain visual c
 - **Display**: "Kartoza Cloudbench" in the header with Kartoza logo
 - **Page Title**: "Kartoza Cloudbench" in browser tab
 
-### Primary Brand Colors
+### Primary Brand Colors (Matching Hugo Website)
 
 | Color Name | Hex Code | RGB | Usage |
 |------------|----------|-----|-------|
-| Kartoza Blue | `#417d9b` | rgb(65, 125, 155) | Primary brand color, header background, buttons, links |
-| Kartoza Gold | `#dea037` | rgb(222, 160, 55) | Accent color, highlights, call-to-action buttons |
-| Kartoza Gray | `#8b8d8a` | rgb(139, 141, 138) | Secondary elements, muted text, borders |
+| Primary Dark | `#1B6B9B` | rgb(27, 107, 155) | Dark accents, hover states |
+| Primary | `#3B9DD9` | rgb(59, 157, 217) | Primary brand color, buttons, links |
+| Primary Light | `#5BB5E8` | rgb(91, 181, 232) | Light accents, backgrounds |
+| Accent Gold | `#E8A331` | rgb(232, 163, 49) | Accent color, highlights, call-to-action buttons |
+| Accent Dark | `#D4922A` | rgb(212, 146, 42) | Darker accent for hover states |
+| Text Primary | `#1a2a3a` | rgb(26, 42, 58) | Main text color (dark navy) |
+| Text Secondary | `#4D6370` | rgb(77, 99, 112) | Secondary/muted text |
 
 ### Color Palette Variations
 
 Each primary color has a full shade range (50-900) for consistent UI design:
 
 **Blue Scale (kartoza):**
-- `kartoza.50`: `#e8f2f6` - Lightest, for backgrounds
-- `kartoza.100`: `#c5dfe8`
-- `kartoza.200`: `#9ecbd9`
-- `kartoza.300`: `#6eb2c7`
-- `kartoza.400`: `#4f9bb3`
-- `kartoza.500`: `#417d9b` - Primary brand blue
-- `kartoza.600`: `#386d87`
-- `kartoza.700`: `#2d5a70`
-- `kartoza.800`: `#234859`
-- `kartoza.900`: `#193642` - Darkest
+- `kartoza.50`: `#e6f3f8` - Lightest, for backgrounds
+- `kartoza.100`: `#c2e1ed`
+- `kartoza.200`: `#9acee2`
+- `kartoza.300`: `#5BB5E8` - Primary Light
+- `kartoza.400`: `#4ba9dc`
+- `kartoza.500`: `#3B9DD9` - Primary (medium teal blue)
+- `kartoza.600`: `#2f8ac4`
+- `kartoza.700`: `#1B6B9B` - Primary Dark
+- `kartoza.800`: `#155681`
+- `kartoza.900`: `#0f4166` - Darkest
 
 **Gold Scale (accent):**
-- `accent.50`: `#fdf6e8` - Lightest
-- `accent.100`: `#fae9c5`
-- `accent.200`: `#f5d89e`
-- `accent.300`: `#efc777`
-- `accent.400`: `#e9b650`
-- `accent.500`: `#dea037` - Primary brand gold
-- `accent.600`: `#c78d2f`
-- `accent.700`: `#a67525`
-- `accent.800`: `#865d1c`
+- `accent.50`: `#fef8eb` - Lightest
+- `accent.100`: `#fcecc8`
+- `accent.200`: `#f9dda2`
+- `accent.300`: `#F0B84D` - Accent Light
+- `accent.400`: `#E8A331` - Primary brand gold
+- `accent.500`: `#E8A331` - Primary brand gold
+- `accent.600`: `#D4922A` - Accent Dark
+- `accent.700`: `#b87d23`
+- `accent.800`: `#96651c`
 - `accent.900`: `#664612` - Darkest
 
 **Gray Scale:**
-- `gray.50`: `#f5f5f5` - Page backgrounds
-- `gray.100`: `#e8e9e8` - Alternate backgrounds
-- `gray.200`: `#d4d5d4`
-- `gray.300`: `#b8b9b8`
-- `gray.400`: `#9fa09f`
-- `gray.500`: `#8b8d8a` - Primary brand gray
-- `gray.600`: `#737573`
-- `gray.700`: `#5c5e5c`
-- `gray.800`: `#454745`
-- `gray.900`: `#2e302e` - Dark text
+- `gray.50`: `#f7f9fb` - Light Background 1
+- `gray.100`: `#e8ecf0` - Light Background 2
+- `gray.200`: `#d4dce4`
+- `gray.300`: `#b0bcc8`
+- `gray.400`: `#8a9aaa`
+- `gray.500`: `#9E9E9E` - Grey
+- `gray.600`: `#4D6370` - Text Secondary
+- `gray.700`: `#3d4f5f` - Grey Dark
+- `gray.800`: `#2a3a4a`
+- `gray.900`: `#1a2a3a` - Text Primary (Dark Navy)
 
 ### Logo Usage
 
@@ -204,7 +208,7 @@ Each primary color has a full shade range (50-900) for consistent UI design:
   - `KartozaLogoHorizontalCMYK.svg` - Horizontal layout
   - `KartozaLogoVerticalCMYK.svg` - Vertical layout
 - **Web Assets**: Copy to `web/public/kartoza-logo.svg`
-- **Header Display**: White filter applied on dark background (`filter: brightness(0) invert(1)`)
+- **Header Display**: White filter applied on gradient background (`filter: brightness(0) invert(1)`)
 - **Minimum Size**: 32px height in header
 
 ### Link to kartoza.com
@@ -215,25 +219,42 @@ Each primary color has a full shade range (50-900) for consistent UI design:
 ### UI Component Styling
 
 **Buttons:**
-- Primary buttons use `kartoza.500` with `kartoza.600` hover
-- Accent buttons use `accent.500` with `accent.600` hover
-- Subtle shadow effects using brand blue rgba values
+- Primary buttons use `kartoza.500` with `kartoza.700` hover
+- Accent buttons use `accent.400` with `accent.600` hover
+- Multi-layered shadow effects using brand blue rgba(27, 107, 155, ...)
+- Border radius: 10px
+- Subtle translateY(-1px) lift on hover
 
 **Cards and Containers:**
-- Border radius: 12px standard, 8px for small elements
-- Shadow: `0 4px 16px rgba(65, 125, 155, 0.10)` using brand blue
-- Hover shadow: `0 8px 28px rgba(65, 125, 155, 0.16)`
+- Border radius: 12px standard, 8px for small elements, 16px for large sections
+- Shadow: `0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)`
+- Hover shadow: `0 8px 28px rgba(27, 107, 155, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08)`
+- Hover transform: translateY(-3px)
 
 **Header:**
-- Background: `kartoza.700` (dark blue)
+- Background: Gradient `linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 50%, #5BB5E8 100%)`
+- Shadow: `0 2px 12px rgba(27, 107, 155, 0.08)`
 - Text: White
+- Button hover: `whiteAlpha.200`
 - Contains logo, application name, search bar, and action buttons
+
+**Gradients:**
+- Hero/Header: `linear-gradient(135deg, #1B6B9B 0%, #3B9DD9 50%, #5BB5E8 100%)`
+- Horizontal: `linear-gradient(90deg, #3B9DD9 0%, #1B6B9B 100%)`
+- Accent Background: `linear-gradient(135deg, rgba(232, 163, 49, 0.15) 0%, rgba(212, 146, 42, 0.1) 100%)`
 
 ### Typography
 
 - **Font Family**: Roboto, -apple-system, BlinkMacSystemFont, sans-serif
-- **Headings**: Font weight 600
+- **Headings**: Font weight 600, color kartoza.700 for brand variants
 - **Body Text**: Font weight 400
+- **Accent Text**: color accent.400, font weight 600
+
+### Animation & Transitions
+
+- **Standard transition**: `all 0.25s ease`
+- **Card/Shadow transition**: `box-shadow 0.3s ease, transform 0.3s ease`
+- **Hover lift**: `translateY(-1px)` for buttons, `translateY(-3px)` for cards
 
 ---
 

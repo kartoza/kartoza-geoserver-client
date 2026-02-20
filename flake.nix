@@ -160,6 +160,13 @@
         geoserverUser = "admin";
         geoserverPass = "geoserver";
 
+        # Test PostGIS configuration
+        postgisContainer = "kartoza-postgis-test";
+        postgisPort = "5433";
+        postgisUser = "docker";
+        postgisPass = "docker";
+        postgisDb = "gis";
+
       in
       {
         packages = {
@@ -235,6 +242,13 @@
             export GEOSERVER_PASS="${geoserverPass}"
             export GEOSERVER_URL="http://localhost:${geoserverPort}/geoserver"
 
+            # Test PostGIS configuration
+            export POSTGIS_CONTAINER="${postgisContainer}"
+            export POSTGIS_PORT="${postgisPort}"
+            export POSTGIS_USER="${postgisUser}"
+            export POSTGIS_PASS="${postgisPass}"
+            export POSTGIS_DB="${postgisDb}"
+
             # Helpful aliases
             alias gor='go run .'
             alias got='go test -v ./...'
@@ -308,6 +322,115 @@
             }
             export -f geoserver-creds
 
+            # PostGIS test environment commands
+            postgis-start() {
+              echo "Starting test PostGIS on port ${postgisPort}..."
+              docker run -d \
+                --name ${postgisContainer} \
+                -p ${postgisPort}:5432 \
+                -e POSTGRES_USER=${postgisUser} \
+                -e POSTGRES_PASS=${postgisPass} \
+                -e POSTGRES_DBNAME=${postgisDb} \
+                -e ALLOW_IP_RANGE=0.0.0.0/0 \
+                -v kartoza-postgis-data:/var/lib/postgresql \
+                kartoza/postgis:16-3.4
+              echo ""
+              echo "PostGIS starting at: localhost:${postgisPort}"
+              echo "Database: ${postgisDb}"
+              echo "Credentials: ${postgisUser} / ${postgisPass}"
+              echo ""
+              echo "Wait ~10 seconds for PostgreSQL to fully start."
+              echo "Check status with: postgis-status"
+              echo ""
+              echo "Connection string:"
+              echo "  postgresql://${postgisUser}:${postgisPass}@localhost:${postgisPort}/${postgisDb}"
+              echo ""
+              echo "pg_service.conf entry:"
+              echo "  [cloudbench_test]"
+              echo "  host=localhost"
+              echo "  port=${postgisPort}"
+              echo "  dbname=${postgisDb}"
+              echo "  user=${postgisUser}"
+              echo "  password=${postgisPass}"
+            }
+            export -f postgis-start
+
+            postgis-stop() {
+              echo "Stopping test PostGIS..."
+              docker stop ${postgisContainer} 2>/dev/null || true
+              docker rm ${postgisContainer} 2>/dev/null || true
+              echo "PostGIS stopped."
+              echo "Note: Data volume 'kartoza-postgis-data' preserved. Use 'postgis-clean' to remove it."
+            }
+            export -f postgis-stop
+
+            postgis-clean() {
+              echo "Removing PostGIS data volume..."
+              docker volume rm kartoza-postgis-data 2>/dev/null || true
+              echo "Data volume removed."
+            }
+            export -f postgis-clean
+
+            postgis-status() {
+              if docker ps --format '{{.Names}}' | grep -q "^${postgisContainer}$"; then
+                echo "PostGIS is running"
+                echo ""
+                echo "Host:     localhost"
+                echo "Port:     ${postgisPort}"
+                echo "Database: ${postgisDb}"
+                echo "User:     ${postgisUser}"
+                echo "Password: ${postgisPass}"
+                echo ""
+                # Check if PostgreSQL is ready using psql test via TCP
+                if docker exec -e PGPASSWORD=${postgisPass} ${postgisContainer} psql -h localhost -U ${postgisUser} -d ${postgisDb} -c "SELECT 1;" >/dev/null 2>&1; then
+                  echo "Status: READY"
+                  # Show PostGIS version
+                  echo ""
+                  docker exec -e PGPASSWORD=${postgisPass} ${postgisContainer} psql -h localhost -U ${postgisUser} -d ${postgisDb} -c "SELECT PostGIS_Version();" 2>/dev/null
+                else
+                  echo "Status: STARTING (wait a moment...)"
+                fi
+              else
+                echo "PostGIS is not running"
+                echo "Start with: postgis-start"
+              fi
+            }
+            export -f postgis-status
+
+            postgis-logs() {
+              docker logs -f ${postgisContainer}
+            }
+            export -f postgis-logs
+
+            postgis-creds() {
+              echo "Host:     localhost"
+              echo "Port:     $POSTGIS_PORT"
+              echo "Database: $POSTGIS_DB"
+              echo "User:     $POSTGIS_USER"
+              echo "Password: $POSTGIS_PASS"
+              echo ""
+              echo "Connection string:"
+              echo "  postgresql://$POSTGIS_USER:$POSTGIS_PASS@localhost:$POSTGIS_PORT/$POSTGIS_DB"
+            }
+            export -f postgis-creds
+
+            postgis-psql() {
+              docker exec -e PGPASSWORD=${postgisPass} -it ${postgisContainer} psql -h localhost -U ${postgisUser} -d ${postgisDb}
+            }
+            export -f postgis-psql
+
+            postgis-service() {
+              echo "Add this to ~/.pg_service.conf:"
+              echo ""
+              echo "[cloudbench_test]"
+              echo "host=localhost"
+              echo "port=${postgisPort}"
+              echo "dbname=${postgisDb}"
+              echo "user=${postgisUser}"
+              echo "password=${postgisPass}"
+            }
+            export -f postgis-service
+
             # Web development commands
             web-dev() {
               echo "Starting web development servers..."
@@ -348,6 +471,16 @@
             echo "  geoserver-status - Check status and show credentials"
             echo "  geoserver-logs   - Follow container logs"
             echo "  geoserver-creds  - Show connection credentials"
+            echo ""
+            echo "Test PostGIS:"
+            echo "  postgis-start    - Start Kartoza PostGIS container"
+            echo "  postgis-stop     - Stop and remove container (keeps data)"
+            echo "  postgis-clean    - Remove data volume"
+            echo "  postgis-status   - Check status and show credentials"
+            echo "  postgis-logs     - Follow container logs"
+            echo "  postgis-creds    - Show connection credentials"
+            echo "  postgis-psql     - Open psql shell"
+            echo "  postgis-service  - Show pg_service.conf entry"
             echo ""
             echo "Documentation:"
             echo "  docs       - Serve docs locally (http://localhost:8000)"

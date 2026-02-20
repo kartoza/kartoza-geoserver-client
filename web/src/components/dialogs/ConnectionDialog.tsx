@@ -28,7 +28,7 @@ import {
 import { FiEye, FiEyeOff, FiServer, FiCheck, FiDatabase } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import { useConnectionStore } from '../../stores/connectionStore'
-import { createPGService, testPGService, type PGServiceCreate } from '../../api/client'
+import { createPGService, testPGService, testConnectionDirect, type PGServiceCreate } from '../../api/client'
 import { springs } from '../../utils/animations'
 
 type ConnectionType = 'geoserver' | 'postgresql'
@@ -129,7 +129,7 @@ export default function ConnectionDialog() {
 
     try {
       if (connectionType === 'geoserver') {
-        if (!connectionId && !url) {
+        if (!url) {
           toast({
             title: 'URL required',
             description: 'Please enter a GeoServer URL first',
@@ -140,16 +140,18 @@ export default function ConnectionDialog() {
           return
         }
 
-        if (!connectionId) {
-          // Create temp connection
-          const tempConn = await addConnection({ name: name || 'Test', url, username, password })
-          const result = await testConnection(tempConn.id)
-          if (!result.success) {
-            await useConnectionStore.getState().removeConnection(tempConn.id)
-          }
+        if (connectionId) {
+          // Existing connection - test using the saved connection
+          const result = await testConnection(connectionId)
           setTestResult(result)
         } else {
-          const result = await testConnection(connectionId)
+          // New connection - test directly without saving
+          const result = await testConnectionDirect({
+            name: name || 'Test',
+            url,
+            username,
+            password,
+          })
           setTestResult(result)
         }
       } else {
@@ -267,8 +269,8 @@ export default function ConnectionDialog() {
 
   const getHeaderGradient = () => {
     return connectionType === 'geoserver'
-      ? 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)'
-      : 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)'
+      ? 'linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)'
+      : 'linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)'
   }
 
   const getHeaderIcon = () => {

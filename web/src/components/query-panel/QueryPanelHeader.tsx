@@ -24,7 +24,7 @@ export const QueryPanelHeader: React.FC<QueryPanelHeaderProps> = ({
 }) => {
   return (
     <Flex
-      bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
+      bg="linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)"
       px={6}
       py={4}
       align="center"

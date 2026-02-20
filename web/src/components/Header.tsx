@@ -9,7 +9,6 @@ import {
   MenuList,
   Spacer,
   Tooltip,
-  useColorModeValue,
   InputGroup,
   InputLeftElement,
   Input,
@@ -17,8 +16,9 @@ import {
   HStack,
   Link,
   Image,
+  Text,
 } from '@chakra-ui/react'
-import { FiPlus, FiSettings, FiUpload, FiRefreshCw, FiHelpCircle, FiRefreshCcw, FiSearch } from 'react-icons/fi'
+import { FiPlus, FiSettings, FiRefreshCw, FiHelpCircle, FiRefreshCcw, FiSearch, FiChevronDown } from 'react-icons/fi'
 import { useUIStore } from '../stores/uiStore'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useTreeStore } from '../stores/treeStore'
@@ -29,7 +29,6 @@ interface HeaderProps {
 }
 
 export default function Header({ onSearchClick, onHelpClick }: HeaderProps) {
-  const bgColor = useColorModeValue('gray.700', 'gray.800')
   const openDialog = useUIStore((state) => state.openDialog)
   const fetchConnections = useConnectionStore((state) => state.fetchConnections)
   const selectedNode = useTreeStore((state) => state.selectedNode)
@@ -78,158 +77,227 @@ export default function Header({ onSearchClick, onHelpClick }: HeaderProps) {
     useUIStore.getState().setStatus('Refreshing...')
   }
 
+  // Navigation items matching Kartoza website style
+  const navItemStyle = {
+    color: 'gray.700',
+    fontWeight: '500',
+    fontSize: 'sm',
+    px: 3,
+    py: 2,
+    borderRadius: 'md',
+    _hover: {
+      color: 'kartoza.500',
+      bg: 'gray.50',
+    },
+    transition: 'all 0.2s ease',
+  }
+
   return (
-    <Box bg={bgColor} px={4} py={2}>
-      <Flex align="center">
-        <Link
-          href="https://kartoza.com"
-          isExternal
-          display="flex"
-          alignItems="center"
-          _hover={{ opacity: 0.9 }}
-        >
-          <Image
-            src="/kartoza-logo.svg"
-            alt="Kartoza"
-            h="32px"
-            mr={3}
-            filter="brightness(0) invert(1)"
-          />
-        </Link>
-        <Heading size="md" color="white" fontWeight="bold">
-          Cloudbench
-        </Heading>
-
-        {/* Search Bar */}
-        <Box
-          mx={8}
-          flex="1"
-          maxW="400px"
-          onClick={onSearchClick}
-          cursor="pointer"
-        >
-          <InputGroup size="sm">
-            <InputLeftElement pointerEvents="none">
-              <FiSearch color="gray.400" />
-            </InputLeftElement>
-            <Input
-              placeholder="Search..."
-              bg="whiteAlpha.100"
-              border="1px solid"
-              borderColor="whiteAlpha.200"
-              color="white"
-              _placeholder={{ color: 'whiteAlpha.500' }}
-              _hover={{ borderColor: 'whiteAlpha.400', bg: 'whiteAlpha.200' }}
-              borderRadius="md"
-              readOnly
-              cursor="pointer"
-            />
-            <HStack
-              position="absolute"
-              right={2}
-              top="50%"
-              transform="translateY(-50%)"
-              spacing={1}
-            >
-              <Kbd size="xs" bg="whiteAlpha.200" color="whiteAlpha.700" borderColor="whiteAlpha.300">
-                ⌘
-              </Kbd>
-              <Kbd size="xs" bg="whiteAlpha.200" color="whiteAlpha.700" borderColor="whiteAlpha.300">
-                K
-              </Kbd>
-            </HStack>
-          </InputGroup>
-        </Box>
-
-        <Spacer />
-        <Flex gap={2}>
-          <Tooltip label="Add Connection" placement="bottom">
-            <IconButton
-              aria-label="Add connection"
-              icon={<FiPlus />}
-              variant="ghost"
-              color="white"
-              _hover={{ bg: 'kartoza.600' }}
-              onClick={handleNewConnection}
-            />
-          </Tooltip>
-          <Tooltip
-            label={
-              selectedNode?.type === 'postgresql' || selectedNode?.type === 'pgservice' ||
-              selectedNode?.type === 'pgschema' || selectedNode?.type === 'pgtable' ||
-              selectedNode?.type === 'pgview' || selectedNode?.type === 'pgcolumn'
-                ? 'Upload to PostgreSQL'
-                : 'Upload to GeoServer'
-            }
-            placement="bottom"
+    <Box>
+      {/* Main Navigation - White background like Kartoza website */}
+      <Box
+        bg="white"
+        px={6}
+        py={3}
+        borderBottom="1px solid"
+        borderBottomColor="gray.100"
+        boxShadow="0 2px 4px rgba(0, 0, 0, 0.04)"
+      >
+        <Flex align="center" maxW="1400px" mx="auto">
+          {/* Logo */}
+          <Link
+            href="https://kartoza.com"
+            isExternal
+            display="flex"
+            alignItems="center"
+            _hover={{ opacity: 0.9 }}
+            mr={8}
           >
-            <IconButton
-              aria-label="Upload files"
-              icon={<FiUpload />}
-              variant="ghost"
-              color="white"
-              _hover={{ bg: 'kartoza.600' }}
+            <Image
+              src="/kartoza-logo.svg"
+              alt="Kartoza"
+              h="36px"
+            />
+          </Link>
+
+          {/* App Name */}
+          <Heading
+            size="md"
+            color="gray.800"
+            fontWeight="600"
+            mr={8}
+          >
+            Cloudbench
+          </Heading>
+
+          {/* Navigation Menu Items */}
+          <HStack spacing={1} display={{ base: 'none', md: 'flex' }}>
+            <Menu>
+              <MenuButton
+                as={Box}
+                cursor="pointer"
+                {...navItemStyle}
+                display="flex"
+                alignItems="center"
+              >
+                <HStack spacing={1}>
+                  <Text>Connections</Text>
+                  <FiChevronDown size={14} />
+                </HStack>
+              </MenuButton>
+              <MenuList>
+                <MenuItem
+                  icon={<FiPlus />}
+                  onClick={handleNewConnection}
+                >
+                  Add Connection
+                </MenuItem>
+                <MenuItem
+                  icon={<FiRefreshCcw />}
+                  onClick={() => openDialog('sync', { mode: 'create' })}
+                >
+                  Sync Server(s)
+                </MenuItem>
+              </MenuList>
+            </Menu>
+
+            <Menu>
+              <MenuButton
+                as={Box}
+                cursor="pointer"
+                {...navItemStyle}
+                display="flex"
+                alignItems="center"
+              >
+                <HStack spacing={1}>
+                  <Text>Create</Text>
+                  <FiChevronDown size={14} />
+                </HStack>
+              </MenuButton>
+              <MenuList>
+                <MenuItem
+                  icon={<FiPlus />}
+                  onClick={() => openDialog('workspace', { mode: 'create' })}
+                >
+                  New Workspace
+                </MenuItem>
+                <MenuItem
+                  icon={<FiPlus />}
+                  onClick={() => openDialog('datastore', { mode: 'create' })}
+                >
+                  New Data Store
+                </MenuItem>
+                <MenuItem
+                  icon={<FiPlus />}
+                  onClick={() => openDialog('coveragestore', { mode: 'create' })}
+                >
+                  New Coverage Store
+                </MenuItem>
+              </MenuList>
+            </Menu>
+
+            <Box
+              as="button"
+              {...navItemStyle}
               onClick={handleUpload}
-            />
-          </Tooltip>
-          <Tooltip label="Refresh" placement="bottom">
-            <IconButton
-              aria-label="Refresh"
-              icon={<FiRefreshCw />}
-              variant="ghost"
-              color="white"
-              _hover={{ bg: 'kartoza.600' }}
-              onClick={handleRefresh}
-            />
-          </Tooltip>
-          <Menu>
-            <MenuButton
-              as={IconButton}
-              aria-label="Settings"
-              icon={<FiSettings />}
-              variant="ghost"
-              color="white"
-              _hover={{ bg: 'kartoza.600' }}
-            />
-            <MenuList>
-              <MenuItem
-                icon={<FiRefreshCcw />}
-                onClick={() => openDialog('sync', { mode: 'create' })}
+            >
+              Upload
+            </Box>
+          </HStack>
+
+          <Spacer />
+
+          {/* Search Bar */}
+          <Box
+            mx={4}
+            w="280px"
+            onClick={onSearchClick}
+            cursor="pointer"
+          >
+            <InputGroup size="sm">
+              <InputLeftElement pointerEvents="none">
+                <FiSearch color="#9E9E9E" />
+              </InputLeftElement>
+              <Input
+                placeholder="Search..."
+                bg="gray.50"
+                border="1px solid"
+                borderColor="gray.200"
+                color="gray.700"
+                _placeholder={{ color: 'gray.400' }}
+                _hover={{ borderColor: 'gray.300', bg: 'gray.100' }}
+                _focus={{ borderColor: 'kartoza.500', bg: 'white' }}
+                borderRadius="full"
+                readOnly
+                cursor="pointer"
+              />
+              <HStack
+                position="absolute"
+                right={3}
+                top="50%"
+                transform="translateY(-50%)"
+                spacing={1}
               >
-                Sync Server(s)
-              </MenuItem>
-              <MenuItem
-                icon={<FiPlus />}
-                onClick={() => openDialog('workspace', { mode: 'create' })}
-              >
-                New Workspace
-              </MenuItem>
-              <MenuItem
-                icon={<FiPlus />}
-                onClick={() => openDialog('datastore', { mode: 'create' })}
-              >
-                New Data Store
-              </MenuItem>
-              <MenuItem
-                icon={<FiPlus />}
-                onClick={() => openDialog('coveragestore', { mode: 'create' })}
-              >
-                New Coverage Store
-              </MenuItem>
-            </MenuList>
-          </Menu>
-          <Tooltip label="Help (?)" placement="bottom">
-            <IconButton
-              aria-label="Help"
-              icon={<FiHelpCircle />}
-              variant="ghost"
-              color="white"
-              _hover={{ bg: 'kartoza.600' }}
-              onClick={onHelpClick}
-            />
-          </Tooltip>
+                <Kbd size="xs" bg="gray.100" color="gray.500" borderColor="gray.200" fontSize="10px">
+                  ⌘K
+                </Kbd>
+              </HStack>
+            </InputGroup>
+          </Box>
+
+          {/* Action Icons */}
+          <HStack spacing={1}>
+            <Tooltip label="Refresh" placement="bottom">
+              <IconButton
+                aria-label="Refresh"
+                icon={<FiRefreshCw size={18} />}
+                variant="ghost"
+                color="gray.600"
+                _hover={{ bg: 'gray.100', color: 'kartoza.500' }}
+                onClick={handleRefresh}
+                size="sm"
+              />
+            </Tooltip>
+            <Tooltip label="Settings" placement="bottom">
+              <IconButton
+                aria-label="Settings"
+                icon={<FiSettings size={18} />}
+                variant="ghost"
+                color="gray.600"
+                _hover={{ bg: 'gray.100', color: 'kartoza.500' }}
+                size="sm"
+              />
+            </Tooltip>
+            <Tooltip label="Help (?)" placement="bottom">
+              <IconButton
+                aria-label="Help"
+                icon={<FiHelpCircle size={18} />}
+                variant="ghost"
+                color="gray.600"
+                _hover={{ bg: 'gray.100', color: 'kartoza.500' }}
+                onClick={onHelpClick}
+                size="sm"
+              />
+            </Tooltip>
+          </HStack>
         </Flex>
-      </Flex>
+      </Box>
+
+      {/* News Ticker Bar - Teal colored like Kartoza website */}
+      <Box
+        bg="kartoza.700"
+        py={2}
+        px={6}
+      >
+        <Text
+          color="white"
+          fontSize="sm"
+          textAlign="center"
+          fontWeight="400"
+        >
+          Kartoza Cloudbench — Manage your GeoServer and PostgreSQL instances
+        </Text>
+      </Box>
     </Box>
   )
 }

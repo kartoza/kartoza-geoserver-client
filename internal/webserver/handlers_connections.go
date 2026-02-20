@@ -49,6 +49,48 @@ func (s *Server) handleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleTestConnectionDirect handles POST /api/connections/test - tests credentials without saving
+func (s *Server) handleTestConnectionDirect(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		s.handleCORS(w)
+		return
+	}
+	if r.Method != http.MethodPost {
+		s.jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req ConnectionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.jsonError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.URL == "" {
+		s.jsonError(w, "URL is required", http.StatusBadRequest)
+		return
+	}
+
+	// Create a temporary client to test the connection without saving
+	tempClient := api.NewClientDirect(req.URL, req.Username, req.Password)
+
+	err := tempClient.TestConnection()
+	if err != nil {
+		s.jsonResponse(w, TestConnectionResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	info, _ := tempClient.GetServerInfo()
+	s.jsonResponse(w, TestConnectionResponse{
+		Success: true,
+		Message: "Connection successful",
+		Info:    info,
+	})
+}
+
 // handleConnectionByID handles requests to /api/connections/{id}
 func (s *Server) handleConnectionByID(w http.ResponseWriter, r *http.Request) {
 	// Extract connection ID from path

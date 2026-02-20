@@ -151,7 +151,7 @@ export default function PGServicePanel({ serviceName }: PGServicePanelProps) {
     <VStack spacing={6} align="stretch">
       {/* Header Card */}
       <Card
-        bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
+        bg="linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)"
         color="white"
       >
         <CardBody py={8} px={6}>

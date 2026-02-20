@@ -82,7 +82,7 @@ export function HelpPanel({ isOpen, onClose }: HelpPanelProps) {
             <DrawerHeader
               borderBottomWidth="1px"
               borderColor={borderColor}
-              bg="linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
+              bg="linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)"
               color="white"
             >
               <HStack spacing={3}>

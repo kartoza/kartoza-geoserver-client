@@ -13,12 +13,12 @@ build: build-tui build-web
 # Build the TUI binary
 build-tui:
 	@echo "Building TUI..."
-	go build $(LDFLAGS) -o bin/kartoza-geoserver-client .
+	go build $(LDFLAGS) -o bin/kartoza-cloudbench-client .
 
 # Build the Web binary (includes building frontend first)
 build-web: build-web-frontend
 	@echo "Building Web server..."
-	go build $(LDFLAGS) -o bin/kartoza-geoserver-web ./cmd/web
+	go build $(LDFLAGS) -o bin/kartoza-cloudbench ./cmd/web
 
 # Build the React frontend
 build-web-frontend:
@@ -47,11 +47,11 @@ dev-tui:
 
 # Run the web server
 run-web: build-web
-	./bin/kartoza-geoserver-web
+	./bin/kartoza-cloudbench
 
 # Run the TUI
 run-tui: build-tui
-	./bin/kartoza-geoserver-client
+	./bin/kartoza-cloudbench-client
 
 # Install binaries to GOPATH/bin
 install: build

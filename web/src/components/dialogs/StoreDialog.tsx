@@ -62,8 +62,8 @@ export default function StoreDialog() {
         {/* Gradient Header */}
         <Box
           bg={isDataStore
-            ? "linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
-            : "linear-gradient(90deg, #dea037 0%, #417d9b 100%)"
+            ? "linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)"
+            : "linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)"
           }
           px={6}
           py={4}

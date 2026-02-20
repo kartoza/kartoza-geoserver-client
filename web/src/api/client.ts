@@ -91,6 +91,16 @@ export async function testConnection(id: string): Promise<TestConnectionResult> 
   return handleResponse<TestConnectionResult>(response)
 }
 
+// Test connection credentials without saving
+export async function testConnectionDirect(conn: ConnectionCreate): Promise<TestConnectionResult> {
+  const response = await fetch(`${API_BASE}/connections/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<TestConnectionResult>(response)
+}
+
 export async function getServerInfo(id: string): Promise<ServerInfo> {
   const response = await fetch(`${API_BASE}/connections/${id}/info`)
   return handleResponse<ServerInfo>(response)

@@ -68,7 +68,7 @@ export function Globe3DDialog() {
   }, [isOpen])
 
   // Theme colors
-  const headerBg = 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)'
+  const headerBg = 'linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)'
   const panelBg = useColorModeValue('white', 'gray.800')
   const layerPanelBg = useColorModeValue('gray.50', 'gray.700')
   const borderColor = useColorModeValue('gray.200', 'gray.600')

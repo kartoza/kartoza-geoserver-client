@@ -1,67 +1,69 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react'
 
-// Kartoza brand colors - official brand palette
-// Primary colors: #417d9b (blue), #dea037 (gold), #8b8d8a (gray)
+// Kartoza brand colors - matching kartoza.com website
+// Deep navy/teal gradient background with gold accents
 const colors = {
-  // Primary blue - Kartoza brand blue #417d9b
+  // Primary blue/teal - Kartoza brand (matching website hero)
   kartoza: {
-    50: '#e8f2f6',
-    100: '#c5dfe8',
-    200: '#9ecbd9',
-    300: '#6eb2c7',
-    400: '#4f9bb3',
-    500: '#417d9b', // Primary brand blue
-    600: '#386d87',
-    700: '#2d5a70',
-    800: '#234859',
-    900: '#193642',
+    50: '#e8f4f8',   // lightest
+    100: '#c5e3ed',
+    200: '#9fd0e0',
+    300: '#6bb8cf',  // lighter teal
+    400: '#4a9cb8',  // medium teal
+    500: '#2d7d9b',  // Primary teal
+    600: '#1f6a8a',  // darker teal (news ticker)
+    700: '#175a77',  // dark teal
+    800: '#0f4a64',  // very dark teal
+    900: '#0a3a50',  // darkest (hero background base)
   },
-  // Gold/orange accent - Kartoza brand gold #dea037
+  // Gold/orange accent - Kartoza brand gold (CTA buttons)
   accent: {
-    50: '#fdf6e8',
-    100: '#fae9c5',
-    200: '#f5d89e',
-    300: '#efc777',
-    400: '#e9b650',
-    500: '#dea037', // Primary brand gold
-    600: '#c78d2f',
-    700: '#a67525',
-    800: '#865d1c',
-    900: '#664612',
+    50: '#fef8eb',
+    100: '#fcecc8',
+    200: '#f9dda2',
+    300: '#f5c97a',
+    400: '#E8A331',  // Primary brand gold (CTA buttons)
+    500: '#d99429',  // slightly darker
+    600: '#c28424',  // hover state
+    700: '#a6701f',
+    800: '#8a5c1a',
+    900: '#6e4915',
   },
-  // Grays - Kartoza brand gray #8b8d8a
+  // Grays
   gray: {
-    50: '#f5f5f5', // light-bg
-    100: '#e8e9e8', // light-bg-alt
-    200: '#d4d5d4',
-    300: '#b8b9b8',
-    400: '#9fa09f',
-    500: '#8b8d8a', // Primary brand gray
-    600: '#737573',
-    700: '#5c5e5c',
-    800: '#454745',
-    900: '#2e302e', // text-dark
+    50: '#f8f9fa',   // Light backgrounds
+    100: '#f1f3f5',  // Alternate backgrounds
+    200: '#e9ecef',
+    300: '#dee2e6',
+    400: '#ced4da',
+    500: '#adb5bd',
+    600: '#6c757d',  // Secondary text
+    700: '#495057',  // Dark text
+    800: '#343a40',
+    900: '#212529',  // Primary text
   },
 }
 
-// Kartoza shadows using brand blue #417d9b (65, 125, 155)
+// Kartoza shadows using brand blue #1B6B9B (27, 107, 155) - matching Hugo website
 const shadows = {
-  sm: '0 2px 8px rgba(65, 125, 155, 0.08)',
-  md: '0 4px 16px rgba(65, 125, 155, 0.12)',
-  lg: '0 8px 32px rgba(65, 125, 155, 0.16)',
-  xl: '0 16px 48px rgba(65, 125, 155, 0.20)',
-  kartoza: '0 4px 16px rgba(65, 125, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
-  kartozaHover: '0 8px 28px rgba(65, 125, 155, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
-  accent: '0 4px 20px rgba(222, 160, 55, 0.4)', // Brand gold #dea037
-  accentHover: '0 6px 28px rgba(222, 160, 55, 0.5)',
+  sm: '0 2px 8px rgba(27, 107, 155, 0.08)',
+  md: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+  lg: '0 8px 28px rgba(27, 107, 155, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08)',
+  xl: '0 16px 48px rgba(27, 107, 155, 0.20)',
+  kartoza: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+  kartozaHover: '0 8px 28px rgba(27, 107, 155, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08)',
+  navbar: '0 2px 12px rgba(27, 107, 155, 0.08)',
+  accent: '0 4px 20px rgba(232, 163, 49, 0.4)', // Brand gold #E8A331
+  accentHover: '0 6px 28px rgba(232, 163, 49, 0.5)',
 }
 
-// Border radii matching Kartoza design
+// Border radii matching Hugo website (organic rounded design)
 const radii = {
-  sm: '8px',
-  md: '12px',
-  lg: '20px',
-  xl: '32px',
+  sm: '8px',   // Small UI elements
+  md: '12px',  // Default - buttons, cards, notifications
+  lg: '16px',  // Larger cards, sections
+  xl: '20px',  // Hero sections, decorative elements
+  '2xl': '32px',
 }
 
 const config: ThemeConfig = {
@@ -84,18 +86,33 @@ const theme = extendTheme({
         bg: 'gray.50',
         color: 'gray.900',
       },
-      // Custom CSS for Kartoza styling using brand colors
+      // Custom CSS for Kartoza styling - matching kartoza.com website
       '.kartoza-gradient': {
-        background: 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)',
+        background: 'linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)',
+      },
+      '.kartoza-gradient-dark': {
+        background: 'linear-gradient(135deg, #0a3a50 0%, #0f4a64 100%)',
+      },
+      '.kartoza-gradient-horizontal': {
+        background: 'linear-gradient(90deg, #0a3a50 0%, #2d7d9b 100%)',
+      },
+      '.kartoza-gradient-accent': {
+        background: 'linear-gradient(135deg, rgba(232, 163, 49, 0.15) 0%, rgba(212, 146, 42, 0.1) 100%)',
       },
       '.kartoza-card': {
         borderRadius: '12px',
-        boxShadow: '0 4px 16px rgba(65, 125, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+        boxShadow: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
         transition: 'box-shadow 0.3s ease, transform 0.3s ease',
         _hover: {
-          boxShadow: '0 8px 28px rgba(65, 125, 155, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 8px 28px rgba(27, 107, 155, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08)',
           transform: 'translateY(-3px)',
         },
+      },
+      '.kartoza-text-gradient': {
+        background: 'linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
       },
     },
   },
@@ -113,10 +130,10 @@ const theme = extendTheme({
         solid: {
           bg: 'kartoza.500',
           color: 'white',
-          boxShadow: '0 2px 8px rgba(65, 125, 155, 0.12)',
+          boxShadow: '0 2px 8px rgba(27, 107, 155, 0.12)',
           _hover: {
-            bg: 'kartoza.600',
-            boxShadow: '0 4px 14px rgba(65, 125, 155, 0.20)',
+            bg: 'kartoza.700',
+            boxShadow: '0 4px 14px rgba(27, 107, 155, 0.20)',
             transform: 'translateY(-1px)',
           },
         },
@@ -136,21 +153,50 @@ const theme = extendTheme({
           },
         },
         accent: {
-          bg: 'accent.500',
+          bg: 'accent.400',
           color: 'white',
-          boxShadow: '0 4px 20px rgba(222, 160, 55, 0.4)',
+          boxShadow: '0 4px 20px rgba(232, 163, 49, 0.4)',
           _hover: {
             bg: 'accent.600',
-            boxShadow: '0 6px 28px rgba(222, 160, 55, 0.5)',
+            boxShadow: '0 6px 28px rgba(232, 163, 49, 0.5)',
             transform: 'translateY(-2px)',
           },
         },
         'accent-outline': {
           borderColor: 'accent.400',
           borderWidth: '2px',
-          color: 'accent.400',
+          color: 'accent.500',
           _hover: {
             bg: 'accent.50',
+          },
+        },
+        // Hero button styles matching Hugo website
+        heroPrimary: {
+          bg: 'accent.400',
+          color: 'white',
+          boxShadow: '0 4px 20px rgba(232, 163, 49, 0.4)',
+          px: 10,
+          py: 6,
+          fontSize: 'md',
+          fontWeight: '600',
+          _hover: {
+            bg: 'accent.600',
+            boxShadow: '0 6px 28px rgba(232, 163, 49, 0.5)',
+            transform: 'translateY(-2px)',
+          },
+        },
+        heroSecondary: {
+          bg: 'transparent',
+          color: 'white',
+          borderWidth: '2px',
+          borderColor: 'white',
+          px: 10,
+          py: 6,
+          fontSize: 'md',
+          fontWeight: '600',
+          _hover: {
+            bg: 'whiteAlpha.200',
+            transform: 'translateY(-1px)',
           },
         },
       },
@@ -173,7 +219,7 @@ const theme = extendTheme({
         color: 'kartoza.500',
         _hover: {
           textDecoration: 'underline',
-          color: 'kartoza.600',
+          color: 'kartoza.700',
         },
       },
     },
@@ -188,6 +234,12 @@ const theme = extendTheme({
         },
         accent: {
           color: 'accent.400',
+          fontWeight: '600',
+        },
+        hero: {
+          color: 'white',
+          fontWeight: '700',
+          textShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
         },
       },
     },
@@ -195,12 +247,15 @@ const theme = extendTheme({
       baseStyle: {
         container: {
           borderRadius: '12px',
-          boxShadow: '0 4px 16px rgba(65, 125, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+          boxShadow: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
           transition: 'box-shadow 0.3s ease, transform 0.3s ease',
           overflow: 'hidden',
           _hover: {
-            boxShadow: '0 8px 28px rgba(65, 125, 155, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)',
+            boxShadow: '0 8px 28px rgba(27, 107, 155, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08)',
           },
+        },
+        header: {
+          color: 'kartoza.700',
         },
       },
       variants: {
@@ -229,11 +284,12 @@ const theme = extendTheme({
       baseStyle: {
         dialog: {
           borderRadius: '12px',
-          boxShadow: '0 16px 48px rgba(65, 125, 155, 0.20)',
+          boxShadow: '0 16px 48px rgba(27, 107, 155, 0.20)',
         },
         header: {
           borderBottom: '1px solid',
           borderBottomColor: 'gray.100',
+          color: 'kartoza.700',
         },
         footer: {
           borderTop: '1px solid',
@@ -294,6 +350,10 @@ const theme = extendTheme({
           bg: 'accent.400',
           color: 'white',
         },
+        accentSubtle: {
+          bg: 'accent.50',
+          color: 'accent.700',
+        },
       },
     },
     Stat: {
@@ -318,6 +378,46 @@ const theme = extendTheme({
     Divider: {
       baseStyle: {
         borderColor: 'gray.200',
+      },
+    },
+    Menu: {
+      baseStyle: {
+        list: {
+          borderRadius: '12px',
+          boxShadow: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+          border: 'none',
+        },
+        item: {
+          _hover: {
+            bg: 'kartoza.50',
+          },
+          _focus: {
+            bg: 'kartoza.50',
+          },
+        },
+      },
+    },
+    Tooltip: {
+      baseStyle: {
+        borderRadius: '8px',
+        bg: 'gray.900',
+        color: 'white',
+        px: 3,
+        py: 2,
+      },
+    },
+    Alert: {
+      variants: {
+        subtle: {
+          container: {
+            borderRadius: '12px',
+          },
+        },
+        solid: {
+          container: {
+            borderRadius: '12px',
+          },
+        },
       },
     },
   },

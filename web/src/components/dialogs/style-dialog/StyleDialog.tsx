@@ -125,7 +125,7 @@ export function StyleDialog() {
   const [gammaValue, setGammaValue] = useState(1.0)
 
   const bgColor = useColorModeValue('gray.50', 'gray.900')
-  const headerBg = useColorModeValue('linear-gradient(90deg, #dea037 0%, #417d9b 100%)', 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)')
+  const headerBg = useColorModeValue('linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)', 'linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)')
 
   // Fetch style content when editing
   const { data: styleData, isLoading } = useQuery({

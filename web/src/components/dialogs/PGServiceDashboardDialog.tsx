@@ -320,7 +320,7 @@ export default function PGServiceDashboardDialog() {
   const [error, setError] = useState<string | null>(null)
 
   // Colors
-  const headerBg = useColorModeValue('linear-gradient(90deg, #dea037 0%, #417d9b 100%)', 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)')
+  const headerBg = useColorModeValue('linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)', 'linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)')
   const bodyBg = useColorModeValue('gray.50', 'gray.900')
 
   useEffect(() => {

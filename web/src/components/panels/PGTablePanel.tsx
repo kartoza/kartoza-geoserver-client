@@ -254,7 +254,7 @@ export default function PGTablePanel({ serviceName, schemaName, tableName, isVie
     <VStack spacing={4} align="stretch" h="100%">
       {/* Header Card */}
       <Card
-        bg={isView ? 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)' : 'linear-gradient(90deg, #dea037 0%, #417d9b 100%)'}
+        bg={isView ? 'linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)' : 'linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)'}
         color="white"
       >
         <CardBody py={6} px={6}>

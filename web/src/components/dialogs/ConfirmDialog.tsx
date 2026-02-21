@@ -69,6 +69,15 @@ export default function ConfirmDialog() {
           status: 'success',
           duration: 2000,
         })
+      } else if (data?.qgisProjectId) {
+        // Delete QGIS project
+        await api.deleteQGISProject(data.qgisProjectId as string)
+        queryClient.invalidateQueries({ queryKey: ['qgisprojects'] })
+        toast({
+          title: 'QGIS project removed',
+          status: 'success',
+          duration: 2000,
+        })
       } else if (data?.connectionId && !data?.workspace) {
         // Delete connection
         await removeConnection(data.connectionId as string)

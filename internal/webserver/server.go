@@ -13,6 +13,7 @@ import (
 	"github.com/kartoza/kartoza-cloudbench/internal/api"
 	"github.com/kartoza/kartoza-cloudbench/internal/cloudnative"
 	"github.com/kartoza/kartoza-cloudbench/internal/config"
+	"github.com/kartoza/kartoza-cloudbench/internal/geonode"
 	"github.com/kartoza/kartoza-cloudbench/internal/preview"
 	"github.com/kartoza/kartoza-cloudbench/internal/s3client"
 )
@@ -22,23 +23,26 @@ var staticFiles embed.FS
 
 // Server represents the web server
 type Server struct {
-	config        *config.Config
-	clients       map[string]*api.Client       // GeoServer Connection ID -> Client
-	s3Clients     map[string]*s3client.Client  // S3 Connection ID -> Client
-	clientsMu     sync.RWMutex
-	s3ClientsMu   sync.RWMutex
-	previewServer *preview.Server
-	conversionMgr *cloudnative.Manager
-	addr          string
+	config           *config.Config
+	clients          map[string]*api.Client        // GeoServer Connection ID -> Client
+	s3Clients        map[string]*s3client.Client   // S3 Connection ID -> Client
+	geonodeClients   map[string]*geonode.Client    // GeoNode Connection ID -> Client
+	clientsMu        sync.RWMutex
+	s3ClientsMu      sync.RWMutex
+	geonodeClientsMu sync.RWMutex
+	previewServer    *preview.Server
+	conversionMgr    *cloudnative.Manager
+	addr             string
 }
 
 // New creates a new web server
 func New(cfg *config.Config) *Server {
 	s := &Server{
-		config:        cfg,
-		clients:       make(map[string]*api.Client),
-		s3Clients:     make(map[string]*s3client.Client),
-		conversionMgr: cloudnative.NewManager(),
+		config:         cfg,
+		clients:        make(map[string]*api.Client),
+		s3Clients:      make(map[string]*s3client.Client),
+		geonodeClients: make(map[string]*geonode.Client),
+		conversionMgr:  cloudnative.NewManager(),
 	}
 
 	// Initialize clients for existing GeoServer connections
@@ -54,6 +58,12 @@ func New(cfg *config.Config) *Server {
 		}
 	}
 
+	// Initialize clients for existing GeoNode connections
+	for _, conn := range cfg.GeoNodeConnections {
+		client := geonode.NewClient(&conn)
+		s.geonodeClients[conn.ID] = client
+	}
+
 	return s
 }
 
@@ -64,8 +74,23 @@ func (s *Server) Start(addr string) error {
 	mux := http.NewServeMux()
 	s.setupRoutes(mux)
 
+	// Wrap with CORS isolation headers middleware for SharedArrayBuffer support (qgis-js)
+	handler := corsIsolationMiddleware(mux)
+
 	log.Printf("Starting web server on %s", addr)
-	return http.ListenAndServe(addr, mux)
+	return http.ListenAndServe(addr, handler)
+}
+
+// corsIsolationMiddleware adds COOP and COEP headers required for SharedArrayBuffer
+// This is needed for qgis-js WebAssembly which uses threading
+func corsIsolationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Cross-Origin-Opener-Policy: same-origin is required for SharedArrayBuffer
+		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
+		// Cross-Origin-Embedder-Policy: require-corp is required for SharedArrayBuffer
+		w.Header().Set("Cross-Origin-Embedder-Policy", "require-corp")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // setupRoutes sets up all HTTP routes
@@ -179,6 +204,15 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	// API routes - Visual Query Designer
 	mux.HandleFunc("/api/query/", s.handleQuery)
 
+	// API routes - QGIS Projects
+	mux.HandleFunc("/api/qgis/projects", s.handleQGISProjects)
+	mux.HandleFunc("/api/qgis/projects/", s.handleQGISProjectByID)
+
+	// API routes - GeoNode
+	mux.HandleFunc("/api/geonode/connections", s.handleGeoNodeConnections)
+	mux.HandleFunc("/api/geonode/connections/test", s.handleGeoNodeTestConnection)
+	mux.HandleFunc("/api/geonode/connections/", s.handleGeoNodeConnectionByID)
+
 	// API routes - SQL View Layers (publish queries as GeoServer layers)
 	mux.HandleFunc("/api/sqlview/", s.handleSQLView)
 	mux.HandleFunc("/api/sqlview", s.handleSQLView)
@@ -258,6 +292,8 @@ func (s *Server) serveStatic(w http.ResponseWriter, r *http.Request) {
 		contentType = "image/ktx2"
 	case strings.HasSuffix(path, ".wasm"):
 		contentType = "application/wasm"
+	case strings.HasSuffix(path, ".data"):
+		contentType = "application/octet-stream"
 	}
 
 	w.Header().Set("Content-Type", contentType)

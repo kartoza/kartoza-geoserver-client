@@ -822,8 +822,8 @@ func (s *Server) handleS3Presign(w http.ResponseWriter, r *http.Request, client 
 
 // S3PreviewMetadata represents metadata for S3 layer preview
 type S3PreviewMetadata struct {
-	Format      string      `json:"format"`      // "cog", "copc", "geoparquet", "geojson", "geotiff"
-	PreviewType string      `json:"previewType"` // "raster", "pointcloud", "vector"
+	Format      string      `json:"format"`      // "cog", "copc", "geoparquet", "geojson", "geotiff", "qgisproject"
+	PreviewType string      `json:"previewType"` // "raster", "pointcloud", "vector", "qgisproject"
 	Bounds      *S3Bounds   `json:"bounds,omitempty"`
 	CRS         string      `json:"crs,omitempty"`
 	Size        int64       `json:"size"`
@@ -906,6 +906,8 @@ func (s *Server) handleS3Preview(w http.ResponseWriter, r *http.Request) {
 			format = "geopackage"
 		case ".las", ".laz":
 			format = "pointcloud"
+		case ".qgs", ".qgz":
+			format = "qgisproject"
 		default:
 			format = "unknown"
 		}
@@ -920,6 +922,8 @@ func (s *Server) handleS3Preview(w http.ResponseWriter, r *http.Request) {
 		previewType = "pointcloud"
 	case "geoparquet", "geojson", "geopackage":
 		previewType = "vector"
+	case "qgisproject":
+		previewType = "qgisproject"
 	}
 
 	metadata := S3PreviewMetadata{

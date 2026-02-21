@@ -21,8 +21,9 @@ import {
   Flex,
   Badge,
 } from '@chakra-ui/react'
-import { FiSearch, FiX, FiFolder, FiDatabase, FiImage, FiLayers, FiEdit3, FiBook, FiEye, FiColumns, FiCode, FiTable } from 'react-icons/fi'
+import { FiSearch, FiX, FiFolder, FiDatabase, FiImage, FiLayers, FiEdit3, FiBook, FiEye, FiColumns, FiCode, FiTable, FiCloud, FiHardDrive, FiFile, FiMap } from 'react-icons/fi'
 import { SiPostgresql } from 'react-icons/si'
+import { TbWorld } from 'react-icons/tb'
 import { useQuery } from '@tanstack/react-query'
 import * as api from '../api/client'
 import { useTreeStore } from '../stores/treeStore'
@@ -48,6 +49,17 @@ const typeIcons: Record<string, React.ElementType> = {
   pgview: FiEye,
   pgcolumn: FiColumns,
   pgfunction: FiCode,
+  // S3 types
+  s3connection: FiCloud,
+  s3bucket: FiHardDrive,
+  s3object: FiFile,
+  // QGIS types
+  qgisproject: FiMap,
+  // GeoNode types
+  geonodeconnection: TbWorld,
+  geonodedataset: FiLayers,
+  geonodemap: FiMap,
+  geonodedocument: FiFile,
 }
 
 const typeColors: Record<string, string> = {
@@ -64,6 +76,17 @@ const typeColors: Record<string, string> = {
   pgview: 'purple',
   pgcolumn: 'gray',
   pgfunction: 'orange',
+  // S3 types
+  s3connection: 'orange',
+  s3bucket: 'yellow',
+  s3object: 'gray',
+  // QGIS types
+  qgisproject: 'green',
+  // GeoNode types
+  geonodeconnection: 'teal',
+  geonodedataset: 'teal',
+  geonodemap: 'teal',
+  geonodedocument: 'teal',
 }
 
 export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {
@@ -127,6 +150,12 @@ export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {
   const handleSelect = useCallback((result: api.SearchResult) => {
     // Check if this is a PostgreSQL result
     const isPGResult = ['pgservice', 'pgschema', 'pgtable', 'pgview', 'pgcolumn', 'pgfunction'].includes(result.type)
+    // Check if this is an S3 result
+    const isS3Result = ['s3connection', 's3bucket', 's3object'].includes(result.type)
+    // Check if this is a QGIS result
+    const isQGISResult = ['qgisproject'].includes(result.type)
+    // Check if this is a GeoNode result
+    const isGeoNodeResult = ['geonodeconnection', 'geonodedataset', 'geonodemap', 'geonodedocument', 'geonodegeostory', 'geonodedashboard'].includes(result.type)
 
     if (isPGResult) {
       // Expand PostgreSQL root node
@@ -172,6 +201,83 @@ export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {
         schemaName: result.schemaName,
         // For tables/views, the tableName is the result name itself
         tableName: (result.type === 'pgtable' || result.type === 'pgview') ? result.name : result.tableName,
+      })
+    } else if (isS3Result) {
+      // S3 result handling
+      expandNode('s3storage-root')
+
+      if (result.s3ConnectionId) {
+        expandNode(`s3conn-${result.s3ConnectionId}`)
+
+        if (result.s3Bucket) {
+          expandNode(`s3bucket-${result.s3ConnectionId}-${result.s3Bucket}`)
+        }
+      }
+
+      // Navigate to the selected item
+      let nodeId: string
+      if (result.type === 's3connection') {
+        nodeId = `s3conn-${result.s3ConnectionId}`
+      } else if (result.type === 's3bucket') {
+        nodeId = `s3bucket-${result.s3ConnectionId}-${result.s3Bucket}`
+      } else {
+        nodeId = `s3object-${result.s3ConnectionId}-${result.s3Bucket}-${result.s3Key}`
+      }
+
+      selectNode({
+        id: nodeId,
+        name: result.name,
+        type: result.type as NodeType,
+        s3ConnectionId: result.s3ConnectionId,
+        s3Bucket: result.s3Bucket,
+        s3Key: result.s3Key,
+      })
+    } else if (isQGISResult) {
+      // QGIS result handling
+      expandNode('qgis-projects-root')
+
+      selectNode({
+        id: `qgis-project-${result.qgisProjectId}`,
+        name: result.name,
+        type: 'qgisproject' as NodeType,
+        qgisProjectId: result.qgisProjectId,
+        qgisProjectPath: result.qgisProjectPath,
+      })
+    } else if (isGeoNodeResult) {
+      // GeoNode result handling
+      expandNode('geonode-root')
+
+      if (result.geonodeConnectionId) {
+        expandNode(`geonodeconn-${result.geonodeConnectionId}`)
+
+        // Expand the appropriate category
+        if (result.type === 'geonodedataset') {
+          expandNode(`geonode-datasets-${result.geonodeConnectionId}`)
+        } else if (result.type === 'geonodemap') {
+          expandNode(`geonode-maps-${result.geonodeConnectionId}`)
+        } else if (result.type === 'geonodedocument') {
+          expandNode(`geonode-documents-${result.geonodeConnectionId}`)
+        }
+      }
+
+      // Navigate to the selected item
+      let nodeId: string
+      if (result.type === 'geonodeconnection') {
+        nodeId = `geonodeconn-${result.geonodeConnectionId}`
+      } else {
+        // For individual resources, use the category-resource-pk format
+        const category = result.type.replace('geonode', '') + 's' // e.g., 'datasets', 'maps'
+        nodeId = `geonode-${category}-resource-${result.geonodeResourcePk}`
+      }
+
+      selectNode({
+        id: nodeId,
+        name: result.name,
+        type: result.type as NodeType,
+        geonodeConnectionId: result.geonodeConnectionId,
+        geonodeResourcePk: result.geonodeResourcePk,
+        geonodeAlternate: result.geonodeAlternate,
+        geonodeUrl: result.geonodeUrl,
       })
     } else {
       // GeoServer result handling
@@ -256,7 +362,7 @@ export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {
               </InputLeftElement>
               <Input
                 ref={inputRef}
-                placeholder="Search workspaces, layers, styles..."
+                placeholder="Search layers, datasets, S3, QGIS, GeoNode..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -338,7 +444,7 @@ export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {
                 <VStack spacing={3}>
                   <Icon as={FiSearch} boxSize={8} color={mutedColor} />
                   <Text color={mutedColor}>
-                    Search across GeoServer and PostgreSQL resources
+                    Search across GeoServer, PostgreSQL, S3, QGIS, and GeoNode resources
                   </Text>
                   <HStack spacing={1} fontSize="sm" color={mutedColor}>
                     <Text>Press</Text>

@@ -94,6 +94,27 @@ type S3Connection struct {
 	IsActive  bool   `json:"is_active"`
 }
 
+// QGISProject represents a QGIS project file tracked by the application
+type QGISProject struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Path         string `json:"path"`                    // Full path to .qgs or .qgz file
+	Title        string `json:"title,omitempty"`         // Project title from metadata
+	LastModified string `json:"lastModified"`
+	Size         int64  `json:"size"`
+}
+
+// GeoNodeConnection represents a GeoNode instance connection configuration
+type GeoNodeConnection struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	URL      string `json:"url"`       // Base URL e.g., "https://geonode.example.com"
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	Token    string `json:"token,omitempty"`    // API token (alternative to username/password)
+	IsActive bool   `json:"is_active"`
+}
+
 // SavedQuery represents a saved visual query definition
 type SavedQuery struct {
 	Name        string      `json:"name"`
@@ -113,7 +134,9 @@ type Config struct {
 	PingIntervalSecs int                 `json:"ping_interval_secs,omitempty"` // Dashboard refresh interval, default 60
 	PGServiceStates  []PGServiceState    `json:"pg_services,omitempty"`        // PostgreSQL service states
 	SavedQueries     []SavedQuery        `json:"saved_queries,omitempty"`      // Visual query definitions
-	S3Connections    []S3Connection      `json:"s3_connections,omitempty"`     // S3-compatible storage connections
+	S3Connections      []S3Connection      `json:"s3_connections,omitempty"`      // S3-compatible storage connections
+	QGISProjects       []QGISProject       `json:"qgis_projects,omitempty"`       // QGIS project files
+	GeoNodeConnections []GeoNodeConnection `json:"geonode_connections,omitempty"` // GeoNode instance connections
 }
 
 // GetPingInterval returns the ping interval in seconds, with a default of 60
@@ -429,6 +452,26 @@ func (c *Config) DeleteQuery(serviceName, queryName string) {
 	}
 }
 
+// QGISProjectsDir returns the directory for storing uploaded QGIS projects
+// This is stored in XDG_DATA_HOME/kartoza-cloudbench/qgis-projects/
+func QGISProjectsDir() (string, error) {
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to get home directory: %w", err)
+		}
+		dataHome = filepath.Join(home, ".local", "share")
+	}
+
+	dir := filepath.Join(dataHome, configDir, "qgis-projects")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create QGIS projects directory: %w", err)
+	}
+
+	return dir, nil
+}
+
 // GetS3Connection returns an S3 connection by ID
 func (c *Config) GetS3Connection(id string) *S3Connection {
 	for i := range c.S3Connections {
@@ -460,6 +503,42 @@ func (c *Config) RemoveS3Connection(id string) {
 	for i, conn := range c.S3Connections {
 		if conn.ID == id {
 			c.S3Connections = append(c.S3Connections[:i], c.S3Connections[i+1:]...)
+			return
+		}
+	}
+}
+
+// GetGeoNodeConnection returns a GeoNode connection by ID
+func (c *Config) GetGeoNodeConnection(id string) *GeoNodeConnection {
+	for i := range c.GeoNodeConnections {
+		if c.GeoNodeConnections[i].ID == id {
+			return &c.GeoNodeConnections[i]
+		}
+	}
+	return nil
+}
+
+// AddGeoNodeConnection adds a new GeoNode connection
+func (c *Config) AddGeoNodeConnection(conn GeoNodeConnection) {
+	c.GeoNodeConnections = append(c.GeoNodeConnections, conn)
+}
+
+// UpdateGeoNodeConnection updates an existing GeoNode connection
+func (c *Config) UpdateGeoNodeConnection(conn GeoNodeConnection) bool {
+	for i := range c.GeoNodeConnections {
+		if c.GeoNodeConnections[i].ID == conn.ID {
+			c.GeoNodeConnections[i] = conn
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveGeoNodeConnection removes a GeoNode connection by ID
+func (c *Config) RemoveGeoNodeConnection(id string) {
+	for i, conn := range c.GeoNodeConnections {
+		if conn.ID == id {
+			c.GeoNodeConnections = append(c.GeoNodeConnections[:i], c.GeoNodeConnections[i+1:]...)
 			return
 		}
 	}

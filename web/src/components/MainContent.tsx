@@ -6,6 +6,8 @@ import * as api from '../api/client'
 import MapPreview from './MapPreview'
 import Globe3DPreview from './Globe3DPreview'
 import S3LayerPreview from './S3LayerPreview'
+import QGISMapPreview from './QGISMapPreview'
+import GeoNodeMapPreview from './GeoNodeMapPreview'
 import Dashboard from './Dashboard'
 import {
   ConnectionPanel,
@@ -19,6 +21,7 @@ import {
   PGTablePanel,
   S3ConnectionPanel,
   S3StoragePanel,
+  GeoNodeResourcePanel,
 } from './panels'
 import {
   DataStoresDashboard,
@@ -32,9 +35,13 @@ export default function MainContent() {
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const activePreview = useUIStore((state) => state.activePreview)
   const activeS3Preview = useUIStore((state) => state.activeS3Preview)
+  const activeQGISPreview = useUIStore((state) => state.activeQGISPreview)
+  const activeGeoNodePreview = useUIStore((state) => state.activeGeoNodePreview)
   const previewMode = useUIStore((state) => state.previewMode)
   const setPreview = useUIStore((state) => state.setPreview)
   const setS3Preview = useUIStore((state) => state.setS3Preview)
+  const setQGISPreview = useUIStore((state) => state.setQGISPreview)
+  const setGeoNodePreview = useUIStore((state) => state.setGeoNodePreview)
   const prevSelectedNodeRef = useRef(selectedNode)
 
   // Auto-update preview when selection changes to a previewable entity
@@ -87,6 +94,37 @@ export default function MainContent() {
 
     startAutoPreview()
   }, [selectedNode, activePreview, setPreview])
+
+  // Show QGIS preview if active
+  if (activeQGISPreview) {
+    return (
+      <Box flex="1" display="flex" flexDirection="column" minH="0">
+        <QGISMapPreview
+          key={`qgis-${activeQGISPreview.projectId}`}
+          projectId={activeQGISPreview.projectId}
+          projectName={activeQGISPreview.projectName}
+          onClose={() => setQGISPreview(null)}
+        />
+      </Box>
+    )
+  }
+
+  // Show GeoNode preview if active
+  // Key only uses connectionId so the map persists when switching layers
+  if (activeGeoNodePreview) {
+    return (
+      <Box flex="1" display="flex" flexDirection="column" minH="0">
+        <GeoNodeMapPreview
+          key={`geonode-${activeGeoNodePreview.connectionId}`}
+          geonodeUrl={activeGeoNodePreview.geonodeUrl}
+          layerName={activeGeoNodePreview.layerName}
+          title={activeGeoNodePreview.title}
+          connectionId={activeGeoNodePreview.connectionId}
+          onClose={() => setGeoNodePreview(null)}
+        />
+      </Box>
+    )
+  }
 
   // Show S3 preview if active
   if (activeS3Preview) {
@@ -244,6 +282,12 @@ export default function MainContent() {
       )
     case 's3storage':
       return <S3StoragePanel />
+    case 'geonodedataset':
+    case 'geonodemap':
+    case 'geonodedocument':
+    case 'geonodegeostory':
+    case 'geonodedashboard':
+      return <GeoNodeResourcePanel node={selectedNode} />
     default:
       return <Dashboard />
   }

@@ -246,6 +246,8 @@ export type NodeType =
   | 'geoserver'      // "GeoServer" container
   | 'postgresql'     // "PostgreSQL" container
   | 's3storage'      // "S3 Storage" container
+  | 'qgisprojects'   // "QGIS Projects" container
+  | 'geonode'        // "GeoNode" container
   | 'connection'     // GeoServer connection
   | 'pgservice'      // pg_service.conf entry
   | 'pgschema'       // PostgreSQL schema
@@ -256,6 +258,18 @@ export type NodeType =
   | 's3bucket'       // S3 bucket
   | 's3folder'       // Virtual folder (prefix) in S3
   | 's3object'       // S3 object (file)
+  | 'qgisproject'    // QGIS project file (.qgs, .qgz)
+  | 'geonodeconnection'   // GeoNode connection
+  | 'geonodedatasets'     // GeoNode datasets container
+  | 'geonodemaps'         // GeoNode maps container
+  | 'geonodedocuments'    // GeoNode documents container
+  | 'geonodegeostories'   // GeoNode geostories container
+  | 'geonodedashboards'   // GeoNode dashboards container
+  | 'geonodedataset'      // Single GeoNode dataset
+  | 'geonodemap'          // Single GeoNode map
+  | 'geonodedocument'     // Single GeoNode document
+  | 'geonodegeostory'     // Single GeoNode geostory
+  | 'geonodedashboard'    // Single GeoNode dashboard
   | 'workspace'
   | 'datastores'
   | 'coveragestores'
@@ -295,6 +309,18 @@ export interface TreeNode {
   s3Size?: number
   s3ContentType?: string
   s3IsFolder?: boolean
+  // QGIS-specific fields
+  qgisProjectId?: string
+  qgisProjectPath?: string
+  // GeoNode-specific fields
+  geonodeConnectionId?: string
+  geonodeResourcePk?: number
+  geonodeResourceUuid?: string
+  geonodeResourceType?: string
+  geonodeThumbnailUrl?: string
+  geonodeDetailUrl?: string
+  geonodeAlternate?: string // For datasets: workspace:layer_name format
+  geonodeUrl?: string // Base URL of the GeoNode instance
 }
 
 // GeoWebCache (GWC) types
@@ -570,4 +596,194 @@ export interface S3PreviewMetadata {
   proxyUrl: string  // URL to proxy through backend (not direct S3 access)
   bandCount?: number  // Number of bands in raster (1 = potential DEM)
   metadata?: unknown
+}
+
+// ============================================================================
+// QGIS Projects Types
+// ============================================================================
+
+// QGIS Project stored on the filesystem
+export interface QGISProject {
+  id: string
+  name: string
+  path: string         // Full path to .qgs or .qgz file
+  title?: string       // Project title from metadata
+  lastModified: string
+  size: number
+}
+
+// QGIS Project create/add request
+export interface QGISProjectCreate {
+  name: string
+  path: string
+}
+
+// QGIS Project render request (for qgis-js)
+export interface QGISProjectRenderRequest {
+  projectId: string
+  srid: string
+  extent: {
+    xmin: number
+    ymin: number
+    xmax: number
+    ymax: number
+  }
+  width: number
+  height: number
+  pixelRatio?: number
+}
+
+// ============================================================================
+// GeoNode Types
+// ============================================================================
+
+export interface GeoNodeConnection {
+  id: string
+  name: string
+  url: string
+  username?: string
+  has_token: boolean
+  is_active: boolean
+}
+
+export interface GeoNodeConnectionCreate {
+  name: string
+  url: string
+  username?: string
+  password?: string
+  token?: string
+}
+
+export interface GeoNodeTestResult {
+  success: boolean
+  error?: string
+}
+
+export interface GeoNodeOwner {
+  pk: number
+  username: string
+  first_name?: string
+  last_name?: string
+}
+
+export interface GeoNodeCategory {
+  identifier: string
+  gn_description?: string
+}
+
+export interface GeoNodeBBox {
+  coords: number[]
+  srid: string
+}
+
+export interface GeoNodeResource {
+  pk: number
+  uuid: string
+  title: string
+  abstract?: string
+  resource_type: string
+  subtype?: string
+  owner: GeoNodeOwner
+  category?: GeoNodeCategory
+  date: string
+  date_type: string
+  created: string
+  last_updated: string
+  thumbnail_url?: string
+  detail_url?: string
+  featured: boolean
+  is_published: boolean
+  bbox_polygon?: GeoNodeBBox
+  srid?: string
+  ll_bbox_polygon?: GeoNodeBBox
+  data?: Record<string, unknown>
+}
+
+export interface GeoNodeDataset extends GeoNodeResource {
+  alternate?: string
+  store?: string
+  workspace?: string
+}
+
+export interface GeoNodeMap extends GeoNodeResource {
+  data?: Record<string, unknown>
+}
+
+export interface GeoNodeDocument extends GeoNodeResource {
+  doc_url?: string
+  extension?: string
+}
+
+export interface GeoNodeGeoStory extends GeoNodeResource {
+  data?: Record<string, unknown>
+}
+
+export interface GeoNodeDashboard extends GeoNodeResource {
+  data?: Record<string, unknown>
+}
+
+export interface GeoNodeResourcesResponse {
+  links: {
+    next?: string
+    previous?: string
+  }
+  page: number
+  page_size: number
+  total: number
+  resources: GeoNodeResource[]
+}
+
+export interface GeoNodeDatasetsResponse {
+  links: {
+    next?: string
+    previous?: string
+  }
+  page: number
+  page_size: number
+  total: number
+  datasets: GeoNodeDataset[]
+}
+
+export interface GeoNodeMapsResponse {
+  links: {
+    next?: string
+    previous?: string
+  }
+  page: number
+  page_size: number
+  total: number
+  maps: GeoNodeMap[]
+}
+
+export interface GeoNodeDocumentsResponse {
+  links: {
+    next?: string
+    previous?: string
+  }
+  page: number
+  page_size: number
+  total: number
+  documents: GeoNodeDocument[]
+}
+
+export interface GeoNodeGeoStoriesResponse {
+  links: {
+    next?: string
+    previous?: string
+  }
+  page: number
+  page_size: number
+  total: number
+  geostories: GeoNodeGeoStory[]
+}
+
+export interface GeoNodeDashboardsResponse {
+  links: {
+    next?: string
+    previous?: string
+  }
+  page: number
+  page_size: number
+  total: number
+  dashboards: GeoNodeDashboard[]
 }

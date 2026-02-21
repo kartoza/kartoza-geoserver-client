@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 
 // SearchResult represents a single search result
 type SearchResult struct {
-	Type         string   `json:"type"`         // workspace, datastore, coveragestore, layer, style, layergroup, pgservice, pgschema, pgtable, pgview, pgcolumn, pgfunction
+	Type         string   `json:"type"`         // workspace, datastore, coveragestore, layer, style, layergroup, pgservice, pgschema, pgtable, pgview, pgcolumn, pgfunction, s3connection, s3bucket, s3object, qgisproject, geonodeconnection, geonodedataset, geonodemap, geonodedocument
 	Name         string   `json:"name"`
 	Workspace    string   `json:"workspace,omitempty"`
 	StoreName    string   `json:"storeName,omitempty"`
@@ -27,6 +28,18 @@ type SearchResult struct {
 	SchemaName  string `json:"schemaName,omitempty"`  // PostgreSQL schema name
 	TableName   string `json:"tableName,omitempty"`   // PostgreSQL table/view name
 	DataType    string `json:"dataType,omitempty"`    // Column data type or function return type
+	// S3-specific fields
+	S3ConnectionID string `json:"s3ConnectionId,omitempty"` // S3 connection ID
+	S3Bucket       string `json:"s3Bucket,omitempty"`       // S3 bucket name
+	S3Key          string `json:"s3Key,omitempty"`          // S3 object key
+	// QGIS-specific fields
+	QGISProjectID   string `json:"qgisProjectId,omitempty"`   // QGIS project ID
+	QGISProjectPath string `json:"qgisProjectPath,omitempty"` // QGIS project file path
+	// GeoNode-specific fields
+	GeoNodeConnectionID string `json:"geonodeConnectionId,omitempty"` // GeoNode connection ID
+	GeoNodeResourcePK   int    `json:"geonodeResourcePk,omitempty"`   // GeoNode resource primary key
+	GeoNodeAlternate    string `json:"geonodeAlternate,omitempty"`    // GeoNode dataset alternate (workspace:layer)
+	GeoNodeURL          string `json:"geonodeUrl,omitempty"`          // GeoNode base URL
 }
 
 // SearchResponse represents the search API response
@@ -236,6 +249,18 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		pgResults := s.searchPostgreSQLEntities(query)
 		results = append(results, pgResults...)
 	}
+
+	// Search S3 connections
+	s3Results := s.searchS3Entities(query)
+	results = append(results, s3Results...)
+
+	// Search QGIS projects
+	qgisResults := s.searchQGISProjects(query)
+	results = append(results, qgisResults...)
+
+	// Search GeoNode connections and resources
+	geonodeResults := s.searchGeoNodeEntities(query)
+	results = append(results, geonodeResults...)
 
 	// Limit results
 	maxResults := 50
@@ -524,6 +549,168 @@ func (s *Server) searchPGFunctions(db *sql.DB, serviceName, query string) []Sear
 			Icon:        "\uf121", // code icon
 			Description: schemaName + "." + funcName + "()",
 		})
+	}
+
+	return results
+}
+
+// searchS3Entities searches S3 connections and buckets
+func (s *Server) searchS3Entities(query string) []SearchResult {
+	var results []SearchResult
+
+	for _, conn := range s.config.S3Connections {
+		// Search connection name
+		if matchesQuery(conn.Name, query) {
+			results = append(results, SearchResult{
+				Type:           "s3connection",
+				Name:           conn.Name,
+				ServerName:     conn.Name,
+				S3ConnectionID: conn.ID,
+				Tags:           []string{"S3", "Connection"},
+				Icon:           "\uf0c2", // cloud icon
+				Description:    conn.Endpoint,
+			})
+		}
+
+		// Try to list buckets and search them
+		client := s.getS3Client(conn.ID)
+		if client == nil {
+			continue
+		}
+
+		buckets, err := client.ListBuckets(context.Background())
+		if err != nil {
+			continue
+		}
+
+		for _, bucket := range buckets {
+			if matchesQuery(bucket.Name, query) {
+				results = append(results, SearchResult{
+					Type:           "s3bucket",
+					Name:           bucket.Name,
+					ServerName:     conn.Name,
+					S3ConnectionID: conn.ID,
+					S3Bucket:       bucket.Name,
+					Tags:           []string{"S3", "Bucket"},
+					Icon:           "\uf0e8", // bucket/sitemap icon
+					Description:    conn.Name + "/" + bucket.Name,
+				})
+			}
+		}
+	}
+
+	return results
+}
+
+// searchQGISProjects searches QGIS projects
+func (s *Server) searchQGISProjects(query string) []SearchResult {
+	var results []SearchResult
+
+	for _, project := range s.config.QGISProjects {
+		// Search project name and title
+		if matchesQuery(project.Name, query) || (project.Title != "" && matchesQuery(project.Title, query)) {
+			results = append(results, SearchResult{
+				Type:            "qgisproject",
+				Name:            project.Name,
+				ServerName:      "QGIS Projects",
+				QGISProjectID:   project.ID,
+				QGISProjectPath: project.Path,
+				Tags:            []string{"QGIS", "Project"},
+				Icon:            "\uf279", // map icon
+				Description:     project.Path,
+			})
+		}
+	}
+
+	return results
+}
+
+// searchGeoNodeEntities searches GeoNode connections and resources
+func (s *Server) searchGeoNodeEntities(query string) []SearchResult {
+	var results []SearchResult
+
+	for _, conn := range s.config.GeoNodeConnections {
+		// Search connection name
+		if matchesQuery(conn.Name, query) {
+			results = append(results, SearchResult{
+				Type:                "geonodeconnection",
+				Name:                conn.Name,
+				ServerName:          conn.Name,
+				GeoNodeConnectionID: conn.ID,
+				GeoNodeURL:          conn.URL,
+				Tags:                []string{"GeoNode", "Connection"},
+				Icon:                "\uf0ac", // globe icon
+				Description:         conn.URL,
+			})
+		}
+
+		// Get GeoNode client and search resources
+		client := s.getGeoNodeClient(conn.ID)
+		if client == nil {
+			continue
+		}
+
+		// Search datasets - fetch all and filter locally
+		datasetsResp, err := client.GetDatasets(1, 100)
+		if err == nil {
+			for _, dataset := range datasetsResp.Datasets {
+				// Local filtering by query
+				if matchesQuery(dataset.Title, query) || matchesQuery(dataset.Alternate, query) {
+					results = append(results, SearchResult{
+						Type:                "geonodedataset",
+						Name:                dataset.Title,
+						ServerName:          conn.Name,
+						GeoNodeConnectionID: conn.ID,
+						GeoNodeResourcePK:   dataset.PK.Int(),
+						GeoNodeAlternate:    dataset.Alternate,
+						GeoNodeURL:          conn.URL,
+						Tags:                []string{"GeoNode", "Dataset"},
+						Icon:                "\uf5fd", // layers icon
+						Description:         dataset.Alternate,
+					})
+				}
+			}
+		}
+
+		// Search maps - fetch all and filter locally
+		mapsResp, err := client.GetMaps(1, 50)
+		if err == nil {
+			for _, m := range mapsResp.Maps {
+				// Local filtering by query
+				if matchesQuery(m.Title, query) {
+					results = append(results, SearchResult{
+						Type:                "geonodemap",
+						Name:                m.Title,
+						ServerName:          conn.Name,
+						GeoNodeConnectionID: conn.ID,
+						GeoNodeResourcePK:   m.PK.Int(),
+						GeoNodeURL:          conn.URL,
+						Tags:                []string{"GeoNode", "Map"},
+						Icon:                "\uf279", // map icon
+					})
+				}
+			}
+		}
+
+		// Search documents - fetch all and filter locally
+		docsResp, err := client.GetDocuments(1, 50)
+		if err == nil {
+			for _, doc := range docsResp.Documents {
+				// Local filtering by query
+				if matchesQuery(doc.Title, query) {
+					results = append(results, SearchResult{
+						Type:                "geonodedocument",
+						Name:                doc.Title,
+						ServerName:          conn.Name,
+						GeoNodeConnectionID: conn.ID,
+						GeoNodeResourcePK:   doc.PK.Int(),
+						GeoNodeURL:          conn.URL,
+						Tags:                []string{"GeoNode", "Document"},
+						Icon:                "\uf15b", // file icon
+					})
+				}
+			}
+		}
 	}
 
 	return results

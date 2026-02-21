@@ -42,6 +42,17 @@ import type {
   S3PreviewMetadata,
   ConversionJob,
   ConversionToolStatus,
+  QGISProject,
+  QGISProjectCreate,
+  GeoNodeConnection,
+  GeoNodeConnectionCreate,
+  GeoNodeTestResult,
+  GeoNodeDatasetsResponse,
+  GeoNodeMapsResponse,
+  GeoNodeDocumentsResponse,
+  GeoNodeGeoStoriesResponse,
+  GeoNodeDashboardsResponse,
+  GeoNodeResourcesResponse,
 } from '../types'
 
 const API_BASE = '/api'
@@ -790,7 +801,7 @@ export function downloadSyncLogs(taskId: string): void {
 // ============================================================================
 
 export interface SearchResult {
-  type: 'workspace' | 'datastore' | 'coveragestore' | 'layer' | 'style' | 'layergroup' | 'pgservice' | 'pgschema' | 'pgtable' | 'pgview' | 'pgcolumn' | 'pgfunction'
+  type: 'workspace' | 'datastore' | 'coveragestore' | 'layer' | 'style' | 'layergroup' | 'pgservice' | 'pgschema' | 'pgtable' | 'pgview' | 'pgcolumn' | 'pgfunction' | 's3connection' | 's3bucket' | 's3object' | 'qgisproject' | 'geonodeconnection' | 'geonodedataset' | 'geonodemap' | 'geonodedocument' | 'geonodegeostory' | 'geonodedashboard'
   name: string
   workspace?: string
   storeName?: string
@@ -805,6 +816,18 @@ export interface SearchResult {
   schemaName?: string
   tableName?: string
   dataType?: string
+  // S3-specific fields
+  s3ConnectionId?: string
+  s3Bucket?: string
+  s3Key?: string
+  // QGIS-specific fields
+  qgisProjectId?: string
+  qgisProjectPath?: string
+  // GeoNode-specific fields
+  geonodeConnectionId?: string
+  geonodeResourcePk?: number
+  geonodeAlternate?: string
+  geonodeUrl?: string
 }
 
 export interface SearchResponse {
@@ -1463,4 +1486,335 @@ export async function getS3PreviewMetadata(
   const url = `${API_BASE}/s3/preview/${connectionId}/${bucketName}?key=${encodeURIComponent(key)}`
   const response = await fetch(url)
   return handleResponse<S3PreviewMetadata>(response)
+}
+
+// ============================================================================
+// QGIS Projects API
+// ============================================================================
+
+// Get all QGIS projects
+export async function getQGISProjects(): Promise<QGISProject[]> {
+  const response = await fetch(`${API_BASE}/qgis/projects`)
+  return handleResponse<QGISProject[]>(response)
+}
+
+// Get a single QGIS project
+export async function getQGISProject(id: string): Promise<QGISProject> {
+  const response = await fetch(`${API_BASE}/qgis/projects/${id}`)
+  return handleResponse<QGISProject>(response)
+}
+
+// Upload a QGIS project file
+export async function uploadQGISProject(
+  file: File,
+  name?: string,
+  onProgress?: (progress: number) => void
+): Promise<QGISProject> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable && onProgress) {
+        const progress = Math.round((e.loaded / e.total) * 100)
+        onProgress(progress)
+      }
+    })
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const response = JSON.parse(xhr.responseText)
+          resolve(response)
+        } catch {
+          reject(new Error('Invalid response from server'))
+        }
+      } else {
+        try {
+          const error = JSON.parse(xhr.responseText)
+          reject(new Error(error.error || `HTTP ${xhr.status}`))
+        } catch {
+          reject(new Error(xhr.responseText || `HTTP ${xhr.status}`))
+        }
+      }
+    })
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Network error'))
+    })
+
+    xhr.open('POST', `${API_BASE}/qgis/projects`)
+
+    const formData = new FormData()
+    formData.append('file', file)
+    if (name) {
+      formData.append('name', name)
+    }
+
+    xhr.send(formData)
+  })
+}
+
+// Update a QGIS project
+export async function updateQGISProject(id: string, project: Partial<QGISProjectCreate>): Promise<QGISProject> {
+  const response = await fetch(`${API_BASE}/qgis/projects/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(project),
+  })
+  return handleResponse<QGISProject>(response)
+}
+
+// Delete a QGIS project (removes from list, not from disk)
+export async function deleteQGISProject(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/qgis/projects/${id}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<void>(response)
+}
+
+// Get QGIS project file content (returns the raw .qgs XML or extracts from .qgz)
+export async function getQGISProjectFile(id: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE}/qgis/projects/${id}/file`)
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(error.error || `HTTP ${response.status}`)
+  }
+  return response.blob()
+}
+
+// QGIS Project Metadata types
+export interface QGISExtent {
+  xMin: number
+  yMin: number
+  xMax: number
+  yMax: number
+}
+
+export interface QGISLayer {
+  id: string
+  name: string
+  type: string  // "raster", "vector", "xyz", "wms", etc.
+  provider: string
+  source: string
+  visible: boolean
+  tileUrl?: string  // For XYZ/TMS layers
+  wmsUrl?: string   // For WMS layers
+  wmsLayers?: string
+}
+
+export interface QGISProjectMetadata {
+  title: string
+  crs: string
+  extent?: QGISExtent
+  layers: QGISLayer[]
+  version: string
+  saveUser?: string
+  saveDate?: string
+}
+
+// Get QGIS project metadata (parsed from XML)
+export async function getQGISProjectMetadata(id: string): Promise<QGISProjectMetadata> {
+  const response = await fetch(`${API_BASE}/qgis/projects/${id}/metadata`)
+  return handleResponse<QGISProjectMetadata>(response)
+}
+
+// ============================================================================
+// GeoNode API
+// ============================================================================
+
+// Get all GeoNode connections
+export async function getGeoNodeConnections(): Promise<GeoNodeConnection[]> {
+  const response = await fetch(`${API_BASE}/geonode/connections`)
+  return handleResponse<GeoNodeConnection[]>(response)
+}
+
+// Get a single GeoNode connection
+export async function getGeoNodeConnection(id: string): Promise<GeoNodeConnection> {
+  const response = await fetch(`${API_BASE}/geonode/connections/${id}`)
+  return handleResponse<GeoNodeConnection>(response)
+}
+
+// Create a new GeoNode connection
+export async function createGeoNodeConnection(conn: GeoNodeConnectionCreate): Promise<GeoNodeConnection> {
+  const response = await fetch(`${API_BASE}/geonode/connections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<GeoNodeConnection>(response)
+}
+
+// Update a GeoNode connection
+export async function updateGeoNodeConnection(id: string, conn: Partial<GeoNodeConnectionCreate>): Promise<GeoNodeConnection> {
+  const response = await fetch(`${API_BASE}/geonode/connections/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<GeoNodeConnection>(response)
+}
+
+// Delete a GeoNode connection
+export async function deleteGeoNodeConnection(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/geonode/connections/${id}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<void>(response)
+}
+
+// Test an existing GeoNode connection
+export async function testGeoNodeConnection(id: string): Promise<GeoNodeTestResult> {
+  const response = await fetch(`${API_BASE}/geonode/connections/${id}/test`, {
+    method: 'POST',
+  })
+  return handleResponse<GeoNodeTestResult>(response)
+}
+
+// Test GeoNode connection without saving
+export async function testGeoNodeConnectionDirect(conn: GeoNodeConnectionCreate): Promise<GeoNodeTestResult> {
+  const response = await fetch(`${API_BASE}/geonode/connections/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<GeoNodeTestResult>(response)
+}
+
+// Get all resources for a GeoNode connection
+export async function getGeoNodeResources(
+  connectionId: string,
+  resourceType?: string,
+  page?: number,
+  pageSize?: number
+): Promise<GeoNodeResourcesResponse> {
+  let url = `${API_BASE}/geonode/connections/${connectionId}/resources`
+  const params = new URLSearchParams()
+  if (resourceType) params.append('type', resourceType)
+  if (page) params.append('page', page.toString())
+  if (pageSize) params.append('page_size', pageSize.toString())
+  if (params.toString()) url += `?${params.toString()}`
+  const response = await fetch(url)
+  return handleResponse<GeoNodeResourcesResponse>(response)
+}
+
+// Get datasets for a GeoNode connection
+export async function getGeoNodeDatasets(
+  connectionId: string,
+  page?: number,
+  pageSize?: number
+): Promise<GeoNodeDatasetsResponse> {
+  let url = `${API_BASE}/geonode/connections/${connectionId}/datasets`
+  const params = new URLSearchParams()
+  if (page) params.append('page', page.toString())
+  if (pageSize) params.append('page_size', pageSize.toString())
+  if (params.toString()) url += `?${params.toString()}`
+  const response = await fetch(url)
+  return handleResponse<GeoNodeDatasetsResponse>(response)
+}
+
+// Get maps for a GeoNode connection
+export async function getGeoNodeMaps(
+  connectionId: string,
+  page?: number,
+  pageSize?: number
+): Promise<GeoNodeMapsResponse> {
+  let url = `${API_BASE}/geonode/connections/${connectionId}/maps`
+  const params = new URLSearchParams()
+  if (page) params.append('page', page.toString())
+  if (pageSize) params.append('page_size', pageSize.toString())
+  if (params.toString()) url += `?${params.toString()}`
+  const response = await fetch(url)
+  return handleResponse<GeoNodeMapsResponse>(response)
+}
+
+// Get documents for a GeoNode connection
+export async function getGeoNodeDocuments(
+  connectionId: string,
+  page?: number,
+  pageSize?: number
+): Promise<GeoNodeDocumentsResponse> {
+  let url = `${API_BASE}/geonode/connections/${connectionId}/documents`
+  const params = new URLSearchParams()
+  if (page) params.append('page', page.toString())
+  if (pageSize) params.append('page_size', pageSize.toString())
+  if (params.toString()) url += `?${params.toString()}`
+  const response = await fetch(url)
+  return handleResponse<GeoNodeDocumentsResponse>(response)
+}
+
+// Get geostories for a GeoNode connection
+export async function getGeoNodeGeoStories(
+  connectionId: string,
+  page?: number,
+  pageSize?: number
+): Promise<GeoNodeGeoStoriesResponse> {
+  let url = `${API_BASE}/geonode/connections/${connectionId}/geostories`
+  const params = new URLSearchParams()
+  if (page) params.append('page', page.toString())
+  if (pageSize) params.append('page_size', pageSize.toString())
+  if (params.toString()) url += `?${params.toString()}`
+  const response = await fetch(url)
+  return handleResponse<GeoNodeGeoStoriesResponse>(response)
+}
+
+// Get dashboards for a GeoNode connection
+export async function getGeoNodeDashboards(
+  connectionId: string,
+  page?: number,
+  pageSize?: number
+): Promise<GeoNodeDashboardsResponse> {
+  let url = `${API_BASE}/geonode/connections/${connectionId}/dashboards`
+  const params = new URLSearchParams()
+  if (page) params.append('page', page.toString())
+  if (pageSize) params.append('page_size', pageSize.toString())
+  if (params.toString()) url += `?${params.toString()}`
+  const response = await fetch(url)
+  return handleResponse<GeoNodeDashboardsResponse>(response)
+}
+
+// Upload a dataset to GeoNode
+export async function uploadGeoNodeDataset(
+  connectionId: string,
+  file: File,
+  title?: string,
+  abstract?: string
+): Promise<{ success: boolean; id?: number; status?: string; message?: string; error?: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (title) formData.append('title', title)
+  if (abstract) formData.append('abstract', abstract)
+
+  const response = await fetch(`${API_BASE}/geonode/connections/${connectionId}/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+  return handleResponse(response)
+}
+
+// Download a dataset from GeoNode
+// Returns a blob for file download
+export async function downloadGeoNodeDataset(
+  connectionId: string,
+  datasetPk: number,
+  alternate: string,
+  format: 'gpkg' | 'shp' | 'csv' | 'json' | 'xlsx' = 'gpkg'
+): Promise<{ blob: Blob; filename: string }> {
+  const url = `${API_BASE}/geonode/connections/${connectionId}/download/${datasetPk}/${encodeURIComponent(alternate)}?format=${format}`
+  const response = await fetch(url)
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(error || `HTTP ${response.status}`)
+  }
+
+  const blob = await response.blob()
+  // Get filename from Content-Disposition header if available
+  const cd = response.headers.get('Content-Disposition')
+  let filename = `${alternate.replace(':', '_')}.${format}`
+  if (cd) {
+    const match = cd.match(/filename="?([^"]+)"?/)
+    if (match) filename = match[1]
+  }
+
+  return { blob, filename }
 }

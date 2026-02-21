@@ -1,5 +1,13 @@
 import { create } from 'zustand'
 
+// Export MapViewState for use in preview components
+export interface MapViewState {
+  center: [number, number]  // [lng, lat]
+  zoom: number
+  pitch: number
+  bearing: number
+}
+
 export type DialogType =
   | 'connection'
   | 'workspace'
@@ -21,6 +29,10 @@ export type DialogType =
   | 's3connection'
   | 's3upload'
   | 'pointcloud'
+  | 'qgisproject'
+  | 'qgispreview'
+  | 'geonode'
+  | 'geonodeupload'
   | null
 
 export type DialogMode = 'create' | 'edit' | 'delete' | 'view'
@@ -52,6 +64,19 @@ interface S3PreviewState {
   objectKey: string
 }
 
+interface QGISPreviewState {
+  projectId: string
+  projectName: string
+}
+
+interface GeoNodePreviewState {
+  geonodeUrl: string    // Base URL of GeoNode (e.g., https://mygeocommunity.org)
+  layerName: string     // The alternate field (e.g., geonode:layer_name)
+  workspace: string     // Usually 'geonode'
+  title: string         // Display title
+  connectionId: string  // GeoNode connection ID
+}
+
 interface Settings {
   showHiddenPGServices: boolean
   instanceName: string
@@ -68,6 +93,15 @@ interface UIState {
 
   // S3 Preview state
   activeS3Preview: S3PreviewState | null
+
+  // QGIS Preview state
+  activeQGISPreview: QGISPreviewState | null
+
+  // GeoNode Preview state
+  activeGeoNodePreview: GeoNodePreviewState | null
+
+  // GeoNode map view state (persisted across layer changes)
+  geonodeMapView: MapViewState | null
 
   // Status messages
   statusMessage: string
@@ -89,6 +123,9 @@ interface UIState {
   setPreview: (preview: PreviewState | null) => void
   setPreviewMode: (mode: PreviewMode) => void
   setS3Preview: (preview: S3PreviewState | null) => void
+  setQGISPreview: (preview: QGISPreviewState | null) => void
+  setGeoNodePreview: (preview: GeoNodePreviewState | null) => void
+  setGeoNodeMapView: (view: MapViewState | null) => void
   setStatus: (message: string) => void
   setError: (message: string | null) => void
   setSuccess: (message: string | null) => void
@@ -127,6 +164,9 @@ export const useUIStore = create<UIState>((set) => ({
   activePreview: null,
   previewMode: '2d',
   activeS3Preview: null,
+  activeQGISPreview: null,
+  activeGeoNodePreview: null,
+  geonodeMapView: null,
   statusMessage: 'Ready',
   errorMessage: null,
   successMessage: null,
@@ -143,8 +183,8 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   setPreview: (preview) => {
-    // Clear S3 preview when setting GeoServer preview
-    set({ activePreview: preview, activeS3Preview: null })
+    // Clear S3, QGIS, and GeoNode previews when setting GeoServer preview
+    set({ activePreview: preview, activeS3Preview: null, activeQGISPreview: null, activeGeoNodePreview: null })
   },
 
   setPreviewMode: (mode) => {
@@ -152,8 +192,27 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   setS3Preview: (preview) => {
-    // Clear GeoServer preview when setting S3 preview
-    set({ activeS3Preview: preview, activePreview: null })
+    // Clear GeoServer, QGIS, and GeoNode previews when setting S3 preview
+    set({ activeS3Preview: preview, activePreview: null, activeQGISPreview: null, activeGeoNodePreview: null })
+  },
+
+  setQGISPreview: (preview) => {
+    // Clear GeoServer, S3, and GeoNode previews when setting QGIS preview
+    set({ activeQGISPreview: preview, activePreview: null, activeS3Preview: null, activeGeoNodePreview: null })
+  },
+
+  setGeoNodePreview: (preview) => {
+    // Clear GeoServer, S3, and QGIS previews when setting GeoNode preview
+    // Clear map view only when closing the preview (preview is null)
+    if (preview === null) {
+      set({ activeGeoNodePreview: null, activePreview: null, activeS3Preview: null, activeQGISPreview: null, geonodeMapView: null })
+    } else {
+      set({ activeGeoNodePreview: preview, activePreview: null, activeS3Preview: null, activeQGISPreview: null })
+    }
+  },
+
+  setGeoNodeMapView: (view) => {
+    set({ geonodeMapView: view })
   },
 
   setStatus: (message) => {

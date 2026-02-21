@@ -21,7 +21,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("kartoza-geoserver-web %s\n", version)
+		fmt.Printf("kartoza-cloudbench %s\n", version)
 		os.Exit(0)
 	}
 
@@ -34,7 +34,7 @@ func main() {
 	// Create and start web server
 	server := webserver.New(cfg)
 
-	fmt.Printf("Starting Kartoza GeoServer Web Client %s\n", version)
+	fmt.Printf("Starting Kartoza CloudBench %s\n", version)
 	fmt.Printf("Server listening on http://localhost%s\n", *addr)
 	fmt.Println("Press Ctrl+C to stop")
 

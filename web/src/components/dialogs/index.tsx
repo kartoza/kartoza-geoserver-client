@@ -13,6 +13,10 @@ import PGServiceDashboardDialog from './PGServiceDashboardDialog'
 import PGUploadDialog from './PGUploadDialog'
 import S3ConnectionDialog from './S3ConnectionDialog'
 import S3UploadDialog from './S3UploadDialog'
+import QGISProjectDialog from './QGISProjectDialog'
+import QGISPreviewDialog from './QGISPreviewDialog'
+import GeoNodeConnectionDialog from './GeoNodeConnectionDialog'
+import GeoNodeUploadDialog from './GeoNodeUploadDialog'
 import { SettingsDialog } from './SettingsDialog'
 import { SyncDialog } from './SyncDialog'
 import { StyleDialog } from './StyleDialog'
@@ -39,6 +43,10 @@ export default function Dialogs() {
       <PGUploadDialog />
       <S3ConnectionDialog />
       <S3UploadDialog />
+      <QGISProjectDialog />
+      <QGISPreviewDialog />
+      <GeoNodeConnectionDialog />
+      <GeoNodeUploadDialog />
     </>
   )
 }

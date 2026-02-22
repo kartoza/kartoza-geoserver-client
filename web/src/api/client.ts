@@ -40,6 +40,7 @@ import type {
   S3Object,
   S3UploadResult,
   S3PreviewMetadata,
+  S3AttributeTableResponse,
   ConversionJob,
   ConversionToolStatus,
   QGISProject,
@@ -1486,6 +1487,19 @@ export async function getS3PreviewMetadata(
   const url = `${API_BASE}/s3/preview/${connectionId}/${bucketName}?key=${encodeURIComponent(key)}`
   const response = await fetch(url)
   return handleResponse<S3PreviewMetadata>(response)
+}
+
+// Get S3 object attribute table data (for parquet/geoparquet)
+export async function getS3Attributes(
+  connectionId: string,
+  bucketName: string,
+  key: string,
+  limit: number = 100,
+  offset: number = 0
+): Promise<S3AttributeTableResponse> {
+  const url = `${API_BASE}/s3/attributes/${connectionId}/${bucketName}?key=${encodeURIComponent(key)}&limit=${limit}&offset=${offset}`
+  const response = await fetch(url)
+  return handleResponse<S3AttributeTableResponse>(response)
 }
 
 // ============================================================================

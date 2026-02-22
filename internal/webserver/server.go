@@ -185,6 +185,8 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/s3/conversion/jobs/", s.handleConversionJobByID)
 	mux.HandleFunc("/api/s3/preview/", s.handleS3Preview)
 	mux.HandleFunc("/api/s3/proxy/", s.handleS3Proxy)
+	mux.HandleFunc("/api/s3/geojson/", s.handleS3GeoJSON)
+	mux.HandleFunc("/api/s3/attributes/", s.handleS3Attributes)
 
 	// API routes - Data Import (ogr2ogr and raster2pgsql)
 	mux.HandleFunc("/api/pg/import", s.handlePGImport)

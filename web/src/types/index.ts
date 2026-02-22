@@ -587,15 +587,29 @@ export interface S3PreviewBounds {
 }
 
 export interface S3PreviewMetadata {
-  format: string  // "cog", "copc", "geoparquet", "geojson", "geotiff"
-  previewType: string  // "raster", "pointcloud", "vector"
+  format: string  // "cog", "copc", "geoparquet", "geojson", "geotiff", "parquet"
+  previewType: string  // "raster", "pointcloud", "vector", "table"
   bounds?: S3PreviewBounds
   crs?: string
   size: number
   key: string
   proxyUrl: string  // URL to proxy through backend (not direct S3 access)
+  geojsonUrl?: string  // URL to get GeoParquet as GeoJSON (for map preview)
+  attributesUrl?: string  // URL to get attributes as JSON table (for table view)
   bandCount?: number  // Number of bands in raster (1 = potential DEM)
+  featureCount?: number  // Number of features/rows
+  fieldNames?: string[]  // Column names for table view
   metadata?: unknown
+}
+
+// S3 Attribute Table Response
+export interface S3AttributeTableResponse {
+  fields: string[]
+  rows: Record<string, unknown>[]
+  total: number
+  limit: number
+  offset: number
+  hasMore: boolean
 }
 
 // ============================================================================

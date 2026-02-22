@@ -16,3 +16,4 @@ When debugging frontend issues where old code appears to be running:
 - First check what the server is actually serving (curl check above)
 - If serving old assets, restart the Go server
 - Browser cache is rarely the issue if the asset hash changed
+- You do not need to ask me to deploy after each improvement. Just do it, but make sure it is a clean build and that you have killed the old server process before launching the new one.

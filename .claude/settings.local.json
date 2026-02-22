@@ -29,7 +29,12 @@
       "Bash(ss:*)",
       "Bash(netstat:*)",
       "Bash(kill:*)",
-      "Bash(dmesg:*)"
+      "Bash(dmesg:*)",
+      "WebFetch(domain:qgis.github.io)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:docs.geonode.org)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

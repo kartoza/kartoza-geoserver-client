@@ -3,6 +3,7 @@ package webserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -874,15 +875,19 @@ func (s *Server) handleS3Presign(w http.ResponseWriter, r *http.Request, client 
 
 // S3PreviewMetadata represents metadata for S3 layer preview
 type S3PreviewMetadata struct {
-	Format      string      `json:"format"`      // "cog", "copc", "geoparquet", "geojson", "geotiff", "qgisproject"
-	PreviewType string      `json:"previewType"` // "raster", "pointcloud", "vector", "qgisproject"
-	Bounds      *S3Bounds   `json:"bounds,omitempty"`
-	CRS         string      `json:"crs,omitempty"`
-	Size        int64       `json:"size"`
-	Key         string      `json:"key"`
-	ProxyURL    string      `json:"proxyUrl"`   // URL to proxy through backend
-	BandCount   int         `json:"bandCount,omitempty"` // Number of bands (1 = potential DEM)
-	Metadata    interface{} `json:"metadata,omitempty"` // Format-specific metadata
+	Format        string      `json:"format"`                  // "cog", "copc", "geoparquet", "geojson", "geotiff", "qgisproject", "parquet"
+	PreviewType   string      `json:"previewType"`             // "raster", "pointcloud", "vector", "qgisproject", "table"
+	Bounds        *S3Bounds   `json:"bounds,omitempty"`
+	CRS           string      `json:"crs,omitempty"`
+	Size          int64       `json:"size"`
+	Key           string      `json:"key"`
+	ProxyURL      string      `json:"proxyUrl"`                // URL to proxy through backend
+	GeoJSONURL    string      `json:"geojsonUrl,omitempty"`    // URL to get GeoParquet converted to GeoJSON
+	AttributesURL string      `json:"attributesUrl,omitempty"` // URL to get attributes as JSON table
+	BandCount     int         `json:"bandCount,omitempty"`     // Number of bands (1 = potential DEM)
+	FeatureCount  int64       `json:"featureCount,omitempty"`  // Number of features/rows
+	FieldNames    []string    `json:"fieldNames,omitempty"`    // Column names for table view
+	Metadata      interface{} `json:"metadata,omitempty"`      // Format-specific metadata
 }
 
 // S3Bounds represents geographic bounds
@@ -960,6 +965,10 @@ func (s *Server) handleS3Preview(w http.ResponseWriter, r *http.Request) {
 			format = "pointcloud"
 		case ".qgs", ".qgz":
 			format = "qgisproject"
+		case ".parquet":
+			format = "parquet"
+		case ".geoparquet":
+			format = "geoparquet"
 		default:
 			format = "unknown"
 		}
@@ -974,6 +983,8 @@ func (s *Server) handleS3Preview(w http.ResponseWriter, r *http.Request) {
 		previewType = "pointcloud"
 	case "geoparquet", "geojson", "geopackage":
 		previewType = "vector"
+	case "parquet":
+		previewType = "table"
 	case "qgisproject":
 		previewType = "qgisproject"
 	}
@@ -1002,6 +1013,29 @@ func (s *Server) handleS3Preview(w http.ResponseWriter, r *http.Request) {
 		if bounds != nil {
 			metadata.Bounds = bounds
 			metadata.CRS = "EPSG:4326"
+		}
+	}
+
+	// For GeoParquet/Parquet, add conversion endpoints and extract info
+	if format == "geoparquet" || format == "parquet" {
+		// URL for GeoJSON conversion (for map preview)
+		if format == "geoparquet" {
+			metadata.GeoJSONURL = "/api/s3/geojson/" + connID + "/" + bucket + "?key=" + objectKey
+		}
+		// URL for attributes table (for table view)
+		metadata.AttributesURL = "/api/s3/attributes/" + connID + "/" + bucket + "?key=" + objectKey
+
+		// Extract parquet info (bounds, fields, feature count) by downloading file first
+		tempFile, err := s.downloadS3ToTemp(ctx, client, bucket, objectKey)
+		if err == nil {
+			defer os.Remove(tempFile)
+			parquetInfo := s.extractParquetInfo(ctx, tempFile)
+			if parquetInfo != nil {
+				metadata.Bounds = parquetInfo.Bounds
+				metadata.CRS = parquetInfo.CRS
+				metadata.FeatureCount = parquetInfo.FeatureCount
+				metadata.FieldNames = parquetInfo.FieldNames
+			}
 		}
 	}
 
@@ -1298,4 +1332,382 @@ func formatInt64(n int64) string {
 		n /= 10
 	}
 	return string(buf[i:])
+}
+
+// ParquetInfo holds extracted information about a parquet/geoparquet file
+type ParquetInfo struct {
+	Bounds       *S3Bounds
+	CRS          string
+	FeatureCount int64
+	FieldNames   []string
+}
+
+// extractParquetInfo extracts metadata from a Parquet/GeoParquet file using ogrinfo
+// filePath should be a local file path (already downloaded from S3)
+func (s *Server) extractParquetInfo(ctx context.Context, filePath string) *ParquetInfo {
+	// Use ogrinfo to read from local file
+	cmd := exec.CommandContext(ctx, "ogrinfo", "-so", "-al", filePath)
+	output, err := cmd.Output()
+	if err != nil {
+		log.Printf("extractParquetInfo: ogrinfo failed: %v", err)
+		return nil
+	}
+
+	info := &ParquetInfo{}
+	outputStr := string(output)
+	lines := strings.Split(outputStr, "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Parse feature count
+		if strings.HasPrefix(line, "Feature Count:") {
+			countStr := strings.TrimSpace(strings.TrimPrefix(line, "Feature Count:"))
+			if count, err := parseInt64(countStr); err == nil {
+				info.FeatureCount = count
+			}
+		}
+
+		// Parse extent (bounds)
+		if strings.HasPrefix(line, "Extent:") {
+			// Format: Extent: (minX, minY) - (maxX, maxY)
+			info.Bounds = s.parseOGRExtent(line)
+		}
+
+		// Parse geometry column (presence indicates spatial data)
+		if strings.HasPrefix(line, "Geometry Column =") {
+			info.CRS = "EPSG:4326" // Assume WGS84 for GeoParquet
+		}
+
+		// Parse field names - they appear after "Geometry:" line
+		if strings.Contains(line, ":") && !strings.HasPrefix(line, "INFO") &&
+			!strings.HasPrefix(line, "Layer name") && !strings.HasPrefix(line, "Feature Count") &&
+			!strings.HasPrefix(line, "Extent") && !strings.HasPrefix(line, "Geometry") &&
+			!strings.HasPrefix(line, "FID Column") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				fieldName := strings.TrimSpace(parts[0])
+				if fieldName != "" && !strings.Contains(fieldName, " ") {
+					info.FieldNames = append(info.FieldNames, fieldName)
+				}
+			}
+		}
+	}
+
+	return info
+}
+
+// parseOGRExtent parses extent from ogrinfo output
+func (s *Server) parseOGRExtent(line string) *S3Bounds {
+	// Format: Extent: (minX, minY) - (maxX, maxY)
+	line = strings.TrimPrefix(line, "Extent:")
+	line = strings.TrimSpace(line)
+	line = strings.ReplaceAll(line, "(", "")
+	line = strings.ReplaceAll(line, ")", "")
+	parts := strings.Split(line, " - ")
+	if len(parts) != 2 {
+		return nil
+	}
+
+	minParts := strings.Split(strings.TrimSpace(parts[0]), ", ")
+	maxParts := strings.Split(strings.TrimSpace(parts[1]), ", ")
+	if len(minParts) != 2 || len(maxParts) != 2 {
+		return nil
+	}
+
+	var minX, minY, maxX, maxY float64
+	if _, err := fmt.Sscanf(minParts[0], "%f", &minX); err != nil {
+		return nil
+	}
+	if _, err := fmt.Sscanf(minParts[1], "%f", &minY); err != nil {
+		return nil
+	}
+	if _, err := fmt.Sscanf(maxParts[0], "%f", &maxX); err != nil {
+		return nil
+	}
+	if _, err := fmt.Sscanf(maxParts[1], "%f", &maxY); err != nil {
+		return nil
+	}
+
+	return &S3Bounds{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY}
+}
+
+// handleS3GeoJSON converts GeoParquet to GeoJSON and returns it
+// Pattern: /api/s3/geojson/{connectionId}/{bucket}?key=object/path&limit=1000
+func (s *Server) handleS3GeoJSON(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		s.handleCORS(w)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		s.jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse path: /api/s3/geojson/{connectionId}/{bucket}
+	path := strings.TrimPrefix(r.URL.Path, "/api/s3/geojson/")
+	parts := strings.SplitN(path, "/", 2)
+	if len(parts) < 2 {
+		s.jsonError(w, "Connection ID and bucket required", http.StatusBadRequest)
+		return
+	}
+
+	connID := parts[0]
+	bucket := parts[1]
+	objectKey := r.URL.Query().Get("key")
+	if objectKey == "" {
+		s.jsonError(w, "Object key required", http.StatusBadRequest)
+		return
+	}
+
+	// Get optional limit (default 1000 features for map preview)
+	limitStr := r.URL.Query().Get("limit")
+	limit := 1000
+	if limitStr != "" {
+		if l, err := parseInt64(limitStr); err == nil && l > 0 {
+			limit = int(l)
+		}
+	}
+
+	client := s.getS3Client(connID)
+	if client == nil {
+		s.jsonError(w, "S3 connection not found", http.StatusNotFound)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Download file from S3 to temp file (proxy through our API)
+	tempFile, err := s.downloadS3ToTemp(ctx, client, bucket, objectKey)
+	if err != nil {
+		s.jsonError(w, "Failed to download file from S3: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer os.Remove(tempFile)
+
+	// Use ogr2ogr to convert GeoParquet to GeoJSON with limit
+	// -unsetFid avoids FID field mapping issues with Arrow/Parquet
+	args := []string{
+		"-f", "GeoJSON",
+		"-t_srs", "EPSG:4326", // Ensure output is in WGS84
+		"-unsetFid",           // Avoid FID field mapping issues
+		"/vsistdout/",         // Output to stdout
+		tempFile,
+		"-limit", fmt.Sprintf("%d", limit),
+	}
+
+	cmd := exec.CommandContext(ctx, "ogr2ogr", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		// Check if it's a non-spatial parquet file
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			log.Printf("handleS3GeoJSON: ogr2ogr failed: %s", string(exitErr.Stderr))
+		}
+		s.jsonError(w, "Failed to convert to GeoJSON - file may not contain geometry: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set headers for GeoJSON response
+	w.Header().Set("Content-Type", "application/geo+json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Write(output)
+}
+
+// AttributeTableResponse represents the response for attribute table data
+type AttributeTableResponse struct {
+	Fields   []string                 `json:"fields"`
+	Rows     []map[string]interface{} `json:"rows"`
+	Total    int64                    `json:"total"`
+	Limit    int                      `json:"limit"`
+	Offset   int                      `json:"offset"`
+	HasMore  bool                     `json:"hasMore"`
+}
+
+// handleS3Attributes returns attribute data from a Parquet/GeoParquet file as JSON
+// Pattern: /api/s3/attributes/{connectionId}/{bucket}?key=object/path&limit=100&offset=0
+func (s *Server) handleS3Attributes(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		s.handleCORS(w)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		s.jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse path: /api/s3/attributes/{connectionId}/{bucket}
+	path := strings.TrimPrefix(r.URL.Path, "/api/s3/attributes/")
+	parts := strings.SplitN(path, "/", 2)
+	if len(parts) < 2 {
+		s.jsonError(w, "Connection ID and bucket required", http.StatusBadRequest)
+		return
+	}
+
+	connID := parts[0]
+	bucket := parts[1]
+	objectKey := r.URL.Query().Get("key")
+	if objectKey == "" {
+		s.jsonError(w, "Object key required", http.StatusBadRequest)
+		return
+	}
+
+	// Get pagination parameters
+	limitStr := r.URL.Query().Get("limit")
+	limit := 100
+	if limitStr != "" {
+		if l, err := parseInt64(limitStr); err == nil && l > 0 && l <= 1000 {
+			limit = int(l)
+		}
+	}
+
+	offsetStr := r.URL.Query().Get("offset")
+	offset := 0
+	if offsetStr != "" {
+		if o, err := parseInt64(offsetStr); err == nil && o >= 0 {
+			offset = int(o)
+		}
+	}
+
+	client := s.getS3Client(connID)
+	if client == nil {
+		s.jsonError(w, "S3 connection not found", http.StatusNotFound)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Download file from S3 to temp file (proxy through our API)
+	tempFile, err := s.downloadS3ToTemp(ctx, client, bucket, objectKey)
+	if err != nil {
+		s.jsonError(w, "Failed to download file from S3: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer os.Remove(tempFile)
+
+	// Use ogr2ogr to convert to GeoJSON (which includes all attributes)
+	// Then parse the JSON and extract just the properties
+	// -unsetFid avoids FID field mapping issues with Arrow/Parquet
+	args := []string{
+		"-f", "GeoJSON",
+		"-unsetFid", // Avoid FID field mapping issues
+		"/vsistdout/",
+		tempFile,
+		"-limit", fmt.Sprintf("%d", limit+offset+1), // Get one extra to check hasMore
+	}
+
+	cmd := exec.CommandContext(ctx, "ogr2ogr", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			log.Printf("handleS3Attributes: ogr2ogr failed: %s", string(exitErr.Stderr))
+		}
+		s.jsonError(w, "Failed to read attributes: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Parse GeoJSON
+	var geojson struct {
+		Type     string `json:"type"`
+		Features []struct {
+			Properties map[string]interface{} `json:"properties"`
+		} `json:"features"`
+	}
+	if err := json.Unmarshal(output, &geojson); err != nil {
+		s.jsonError(w, "Failed to parse GeoJSON: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Extract fields from first feature
+	var fields []string
+	if len(geojson.Features) > 0 {
+		for k := range geojson.Features[0].Properties {
+			fields = append(fields, k)
+		}
+	}
+
+	// Apply offset and limit
+	start := offset
+	if start > len(geojson.Features) {
+		start = len(geojson.Features)
+	}
+	end := start + limit
+	hasMore := false
+	if end >= len(geojson.Features) {
+		end = len(geojson.Features)
+	} else {
+		hasMore = true
+	}
+
+	// Extract rows (properties only)
+	rows := make([]map[string]interface{}, 0, end-start)
+	for i := start; i < end; i++ {
+		rows = append(rows, geojson.Features[i].Properties)
+	}
+
+	// Get total count using ogrinfo on the temp file
+	totalCount := int64(len(geojson.Features))
+	infoCmd := exec.CommandContext(ctx, "ogrinfo", "-so", "-al", tempFile)
+	if infoOutput, err := infoCmd.Output(); err == nil {
+		for _, line := range strings.Split(string(infoOutput), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "Feature Count:") {
+				countStr := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "Feature Count:"))
+				if count, err := parseInt64(countStr); err == nil {
+					totalCount = count
+					hasMore = int64(offset+limit) < totalCount
+				}
+				break
+			}
+		}
+	}
+
+	response := AttributeTableResponse{
+		Fields:  fields,
+		Rows:    rows,
+		Total:   totalCount,
+		Limit:   limit,
+		Offset:  offset,
+		HasMore: hasMore,
+	}
+
+	s.jsonResponse(w, response)
+}
+
+// downloadS3ToTemp downloads an S3 object to a temporary file and returns the file path
+// The caller is responsible for removing the temp file when done
+func (s *Server) downloadS3ToTemp(ctx context.Context, client *s3client.Client, bucket, key string) (string, error) {
+	// Determine file extension from key
+	ext := filepath.Ext(key)
+	if ext == "" {
+		ext = ".parquet"
+	}
+
+	// Create temp file with appropriate extension
+	tempFile, err := os.CreateTemp("", "s3preview-*"+ext)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tempPath := tempFile.Name()
+
+	// Get object from S3
+	obj, err := client.GetObject(ctx, bucket, key)
+	if err != nil {
+		tempFile.Close()
+		os.Remove(tempPath)
+		return "", fmt.Errorf("failed to get object from S3: %w", err)
+	}
+	defer obj.Close()
+
+	// Copy to temp file
+	_, err = io.Copy(tempFile, obj)
+	tempFile.Close()
+	if err != nil {
+		os.Remove(tempPath)
+		return "", fmt.Errorf("failed to download object: %w", err)
+	}
+
+	return tempPath, nil
 }

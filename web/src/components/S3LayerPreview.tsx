@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   Box,
   Card,
@@ -24,7 +24,7 @@ import {
   SliderThumb,
   SliderMark,
 } from '@chakra-ui/react'
-import { FiInfo, FiRefreshCw, FiX, FiMap, FiBox, FiDownload, FiTriangle } from 'react-icons/fi'
+import { FiInfo, FiRefreshCw, FiX, FiMap, FiBox, FiDownload, FiTriangle, FiTable } from 'react-icons/fi'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { LidarControl } from 'maplibre-gl-lidar'
@@ -32,8 +32,11 @@ import 'maplibre-gl-lidar/style.css'
 import * as GeoTIFF from 'geotiff'
 import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
+import { parquetReadObjects } from 'hyparquet'
+import { compressors } from 'hyparquet-compressors'
 import * as api from '../api/client'
-import type { S3PreviewMetadata } from '../types'
+import type { S3PreviewMetadata, S3AttributeTableResponse } from '../types'
+import type { FeatureCollection, Feature, Geometry } from 'geojson'
 
 // Disable Cesium Ion (we don't use it)
 Cesium.Ion.defaultAccessToken = ''
@@ -45,7 +48,7 @@ interface S3LayerPreviewProps {
   onClose?: () => void
 }
 
-type ViewMode = '2d' | '3d' | 'dem3d'
+type ViewMode = '2d' | '3d' | 'dem3d' | 'table'
 
 export default function S3LayerPreview({
   connectionId,
@@ -71,6 +74,15 @@ export default function S3LayerPreview({
   const [viewMode, setViewMode] = useState<ViewMode>('2d')
   const [verticalExaggeration, setVerticalExaggeration] = useState(1.5)
   const [pointCloudLoaded, setPointCloudLoaded] = useState(false)
+  // Table view state
+  const [tableData, setTableData] = useState<S3AttributeTableResponse | null>(null)
+  const [tableLoading, setTableLoading] = useState(false)
+  const [tableOffset, setTableOffset] = useState(0)
+  const tableLimit = 50
+  // GeoParquet client-side data
+  const [geoparquetData, setGeoparquetData] = useState<FeatureCollection | null>(null)
+  const [geoparquetLoading, setGeoparquetLoading] = useState(false)
+  const [geoparquetError, setGeoparquetError] = useState<string | null>(null)
 
   const cardBg = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
@@ -95,6 +107,79 @@ export default function S3LayerPreview({
         setIsLoading(false)
       })
   }, [connectionId, bucketName, objectKey])
+
+  // Load GeoParquet data client-side using hyparquet
+  const loadGeoParquet = useCallback(async (proxyUrl: string) => {
+    setGeoparquetLoading(true)
+    setGeoparquetError(null)
+
+    try {
+      // Fetch the parquet file via proxy
+      const response = await fetch(proxyUrl)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch GeoParquet: ${response.status}`)
+      }
+
+      const arrayBuffer = await response.arrayBuffer()
+
+      // Use hyparquet to read the parquet file as objects
+      // hyparquet automatically decodes GeoParquet geometry columns to GeoJSON
+      // Include compressors for zstd, lz4, brotli, gzip support
+      const rows = await parquetReadObjects({ file: arrayBuffer, compressors })
+
+      // Find the geometry column (commonly named 'geometry', 'geom', or 'wkb_geometry')
+      let geometryColumn = 'geometry'
+      if (rows.length > 0) {
+        const firstRow = rows[0]
+        if ('geometry' in firstRow) {
+          geometryColumn = 'geometry'
+        } else if ('geom' in firstRow) {
+          geometryColumn = 'geom'
+        } else if ('wkb_geometry' in firstRow) {
+          geometryColumn = 'wkb_geometry'
+        }
+      }
+
+      // Convert to GeoJSON FeatureCollection
+      const features: Feature[] = rows.map((row) => {
+        const geometry = row[geometryColumn] as Geometry
+        const properties: Record<string, unknown> = {}
+
+        // Copy all non-geometry properties
+        for (const [key, value] of Object.entries(row)) {
+          if (key !== geometryColumn) {
+            properties[key] = value
+          }
+        }
+
+        return {
+          type: 'Feature' as const,
+          geometry,
+          properties,
+        }
+      })
+
+      const featureCollection: FeatureCollection = {
+        type: 'FeatureCollection',
+        features,
+      }
+
+      console.log(`Loaded ${features.length} features from GeoParquet client-side`)
+      setGeoparquetData(featureCollection)
+    } catch (err) {
+      console.error('Failed to load GeoParquet client-side:', err)
+      setGeoparquetError(err instanceof Error ? err.message : 'Failed to load GeoParquet')
+    } finally {
+      setGeoparquetLoading(false)
+    }
+  }, [])
+
+  // Trigger GeoParquet loading when metadata indicates geoparquet format
+  useEffect(() => {
+    if (metadata?.format === 'geoparquet' && metadata.proxyUrl && !geoparquetData && !geoparquetLoading) {
+      loadGeoParquet(metadata.proxyUrl)
+    }
+  }, [metadata, geoparquetData, geoparquetLoading, loadGeoParquet])
 
   // Initialize map when metadata is loaded
   useEffect(() => {
@@ -257,56 +342,50 @@ export default function S3LayerPreview({
       }
 
       loadCOG()
-    } else if (metadata.previewType === 'vector' && (metadata.format === 'geojson' || metadata.format === 'geoparquet')) {
+    } else if (metadata.previewType === 'vector' && metadata.format === 'geojson') {
       // GeoJSON: Load directly from proxy URL
-      if (metadata.format === 'geojson') {
-        map.current.addSource('s3-layer', {
-          type: 'geojson',
-          data: metadata.proxyUrl,
-        })
+      map.current.addSource('s3-layer', {
+        type: 'geojson',
+        data: metadata.proxyUrl,
+      })
 
-        // Add fill layer for polygons
-        map.current.addLayer({
-          id: 's3-layer-fill',
-          type: 'fill',
-          source: 's3-layer',
-          paint: {
-            'fill-color': '#0080ff',
-            'fill-opacity': 0.4,
-          },
-          filter: ['==', '$type', 'Polygon'],
-        })
+      // Add fill layer for polygons
+      map.current.addLayer({
+        id: 's3-layer-fill',
+        type: 'fill',
+        source: 's3-layer',
+        paint: {
+          'fill-color': '#0080ff',
+          'fill-opacity': 0.4,
+        },
+        filter: ['==', '$type', 'Polygon'],
+      })
 
-        // Add line layer for lines and polygon outlines
-        map.current.addLayer({
-          id: 's3-layer-line',
-          type: 'line',
-          source: 's3-layer',
-          paint: {
-            'line-color': '#0060c0',
-            'line-width': 2,
-          },
-          filter: ['any', ['==', '$type', 'LineString'], ['==', '$type', 'Polygon']],
-        })
+      // Add line layer for lines and polygon outlines
+      map.current.addLayer({
+        id: 's3-layer-line',
+        type: 'line',
+        source: 's3-layer',
+        paint: {
+          'line-color': '#0060c0',
+          'line-width': 2,
+        },
+        filter: ['any', ['==', '$type', 'LineString'], ['==', '$type', 'Polygon']],
+      })
 
-        // Add circle layer for points
-        map.current.addLayer({
-          id: 's3-layer-point',
-          type: 'circle',
-          source: 's3-layer',
-          paint: {
-            'circle-radius': 6,
-            'circle-color': '#0080ff',
-            'circle-stroke-width': 2,
-            'circle-stroke-color': '#ffffff',
-          },
-          filter: ['==', '$type', 'Point'],
-        })
-      } else if (metadata.format === 'geoparquet') {
-        // GeoParquet: Needs server-side conversion or specialized library
-        // For now, show a message that it requires processing
-        console.log('GeoParquet format detected - requires server-side conversion for preview')
-      }
+      // Add circle layer for points
+      map.current.addLayer({
+        id: 's3-layer-point',
+        type: 'circle',
+        source: 's3-layer',
+        paint: {
+          'circle-radius': 6,
+          'circle-color': '#0080ff',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff',
+        },
+        filter: ['==', '$type', 'Point'],
+      })
     }
 
     // Fit to bounds if available
@@ -321,9 +400,75 @@ export default function S3LayerPreview({
     }
   }, [mapLoaded, metadata])
 
+  // Add GeoParquet data to map when loaded client-side
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !geoparquetData || metadata?.format !== 'geoparquet') return
+
+    // Remove existing layer/source if present
+    if (map.current.getLayer('s3-layer-fill')) map.current.removeLayer('s3-layer-fill')
+    if (map.current.getLayer('s3-layer-line')) map.current.removeLayer('s3-layer-line')
+    if (map.current.getLayer('s3-layer-point')) map.current.removeLayer('s3-layer-point')
+    if (map.current.getSource('s3-layer')) map.current.removeSource('s3-layer')
+
+    // Add the GeoJSON data parsed client-side
+    map.current.addSource('s3-layer', {
+      type: 'geojson',
+      data: geoparquetData,
+    })
+
+    // Add fill layer for polygons
+    map.current.addLayer({
+      id: 's3-layer-fill',
+      type: 'fill',
+      source: 's3-layer',
+      paint: {
+        'fill-color': '#0080ff',
+        'fill-opacity': 0.4,
+      },
+      filter: ['==', '$type', 'Polygon'],
+    })
+
+    // Add line layer for lines and polygon outlines
+    map.current.addLayer({
+      id: 's3-layer-line',
+      type: 'line',
+      source: 's3-layer',
+      paint: {
+        'line-color': '#0060c0',
+        'line-width': 2,
+      },
+      filter: ['any', ['==', '$type', 'LineString'], ['==', '$type', 'Polygon']],
+    })
+
+    // Add circle layer for points
+    map.current.addLayer({
+      id: 's3-layer-point',
+      type: 'circle',
+      source: 's3-layer',
+      paint: {
+        'circle-radius': 6,
+        'circle-color': '#0080ff',
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+      },
+      filter: ['==', '$type', 'Point'],
+    })
+
+    // Fit bounds based on data
+    if (geoparquetData.features.length > 0 && metadata?.bounds) {
+      const bounds: [number, number, number, number] = [
+        metadata.bounds.minX,
+        metadata.bounds.minY,
+        metadata.bounds.maxX,
+        metadata.bounds.maxY,
+      ]
+      map.current.fitBounds(bounds, { padding: 50, maxZoom: 15 })
+    }
+  }, [mapLoaded, geoparquetData, metadata])
+
   // Update view mode (2D/3D) for MapLibre
   useEffect(() => {
-    if (!map.current || !mapLoaded || viewMode === 'dem3d') return
+    if (!map.current || !mapLoaded || viewMode === 'dem3d' || viewMode === 'table') return
 
     switch (viewMode) {
       case '2d':
@@ -343,6 +488,58 @@ export default function S3LayerPreview({
         break
     }
   }, [viewMode, mapLoaded])
+
+  // Load table data when table view is selected
+  // For GeoParquet, use client-side data; for others, use server endpoint
+  useEffect(() => {
+    if (viewMode !== 'table') return
+
+    // For GeoParquet with client-side data, convert to table format
+    if (metadata?.format === 'geoparquet' && geoparquetData) {
+      const features = geoparquetData.features
+      const allFields = new Set<string>()
+      features.forEach(f => {
+        if (f.properties) {
+          Object.keys(f.properties).forEach(k => allFields.add(k))
+        }
+      })
+      const fields = Array.from(allFields)
+
+      // Paginate the data
+      const start = tableOffset
+      const end = Math.min(start + tableLimit, features.length)
+      const pageFeatures = features.slice(start, end)
+
+      const rows = pageFeatures.map(f => ({ ...(f.properties || {}) }))
+
+      setTableData({
+        fields,
+        rows,
+        total: features.length,
+        limit: tableLimit,
+        offset: tableOffset,
+        hasMore: end < features.length,
+      })
+      return
+    }
+
+    // For non-GeoParquet, use server endpoint
+    if (!metadata?.attributesUrl) return
+
+    const loadTableData = async () => {
+      setTableLoading(true)
+      try {
+        const data = await api.getS3Attributes(connectionId, bucketName, objectKey, tableLimit, tableOffset)
+        setTableData(data)
+      } catch (err) {
+        console.error('Failed to load table data:', err)
+      } finally {
+        setTableLoading(false)
+      }
+    }
+
+    loadTableData()
+  }, [viewMode, metadata, geoparquetData, connectionId, bucketName, objectKey, tableOffset])
 
   // Initialize Cesium viewer for DEM 3D mode
   useEffect(() => {
@@ -911,6 +1108,19 @@ export default function S3LayerPreview({
                   />
                 </Tooltip>
               )}
+              {/* Table View - for geoparquet (client-side) or formats with attributesUrl */}
+              {(metadata?.format === 'geoparquet' || metadata?.attributesUrl) && (
+                <Tooltip label="Table View">
+                  <IconButton
+                    aria-label="Table"
+                    icon={<FiTable />}
+                    color="white"
+                    bg={viewMode === 'table' ? 'whiteAlpha.300' : undefined}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => setViewMode('table')}
+                  />
+                </Tooltip>
+              )}
             </ButtonGroup>
 
             <Divider orientation="vertical" h="24px" borderColor="whiteAlpha.400" />
@@ -1012,7 +1222,7 @@ export default function S3LayerPreview({
         position="relative"
         bg="gray.100"
       >
-        {/* MapLibre container - hidden in DEM 3D mode */}
+        {/* MapLibre container - hidden in DEM 3D and table modes */}
         <Box
           ref={mapContainer}
           position="absolute"
@@ -1020,7 +1230,7 @@ export default function S3LayerPreview({
           left={0}
           right={0}
           bottom={0}
-          display={viewMode === 'dem3d' ? 'none' : 'block'}
+          display={viewMode === 'dem3d' || viewMode === 'table' ? 'none' : 'block'}
         />
         {/* Cesium container - shown only in DEM 3D mode */}
         <Box
@@ -1032,8 +1242,80 @@ export default function S3LayerPreview({
           bottom={0}
           display={viewMode === 'dem3d' ? 'block' : 'none'}
         />
+        {/* Table View Container */}
+        {viewMode === 'table' && (
+          <Box
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            overflow="auto"
+            bg="white"
+            p={4}
+          >
+            {tableLoading ? (
+              <VStack justify="center" h="100%">
+                <Spinner size="xl" color="kartoza.500" />
+                <Text mt={2} color="gray.600">Loading attribute data...</Text>
+              </VStack>
+            ) : tableData ? (
+              <Box>
+                <HStack mb={4} justify="space-between">
+                  <Text fontSize="sm" color="gray.600">
+                    Showing {tableData.offset + 1} - {tableData.offset + tableData.rows.length} of {tableData.total} rows
+                  </Text>
+                  <HStack>
+                    <IconButton
+                      aria-label="Previous page"
+                      icon={<Text fontSize="sm">&lt;</Text>}
+                      size="sm"
+                      onClick={() => setTableOffset(Math.max(0, tableOffset - tableLimit))}
+                      isDisabled={tableOffset === 0}
+                    />
+                    <IconButton
+                      aria-label="Next page"
+                      icon={<Text fontSize="sm">&gt;</Text>}
+                      size="sm"
+                      onClick={() => setTableOffset(tableOffset + tableLimit)}
+                      isDisabled={!tableData.hasMore}
+                    />
+                  </HStack>
+                </HStack>
+                <Box overflowX="auto">
+                  <Box as="table" width="100%" fontSize="sm">
+                    <Box as="thead" bg="gray.100">
+                      <Box as="tr">
+                        {tableData.fields.map((field, idx) => (
+                          <Box as="th" key={idx} px={3} py={2} textAlign="left" fontWeight="600" whiteSpace="nowrap">
+                            {field}
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                    <Box as="tbody">
+                      {tableData.rows.map((row, rowIdx) => (
+                        <Box as="tr" key={rowIdx} _hover={{ bg: 'gray.50' }} borderBottom="1px solid" borderColor="gray.100">
+                          {tableData.fields.map((field, colIdx) => (
+                            <Box as="td" key={colIdx} px={3} py={2} whiteSpace="nowrap" maxW="300px" overflow="hidden" textOverflow="ellipsis">
+                              {String(row[field] ?? '')}
+                            </Box>
+                          ))}
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            ) : (
+              <VStack justify="center" h="100%">
+                <Text color="gray.500">No attribute data available</Text>
+              </VStack>
+            )}
+          </Box>
+        )}
         {/* Loading spinner for MapLibre */}
-        {viewMode !== 'dem3d' && !mapLoaded && (
+        {viewMode !== 'dem3d' && viewMode !== 'table' && !mapLoaded && (
           <Box
             position="absolute"
             top="50%"
@@ -1043,6 +1325,38 @@ export default function S3LayerPreview({
           >
             <Spinner size="xl" color="kartoza.500" />
             <Text mt={2} color="gray.600">Loading map...</Text>
+          </Box>
+        )}
+        {/* Loading spinner for GeoParquet client-side loading */}
+        {viewMode !== 'dem3d' && viewMode !== 'table' && mapLoaded && geoparquetLoading && (
+          <Box
+            position="absolute"
+            top="50%"
+            left="50%"
+            transform="translate(-50%, -50%)"
+            textAlign="center"
+            bg="whiteAlpha.800"
+            p={4}
+            borderRadius="lg"
+            zIndex={10}
+          >
+            <Spinner size="xl" color="blue.500" />
+            <Text mt={2} color="gray.700">Loading GeoParquet...</Text>
+          </Box>
+        )}
+        {/* Error display for GeoParquet loading */}
+        {geoparquetError && (
+          <Box
+            position="absolute"
+            top={4}
+            left={4}
+            right={4}
+            zIndex={10}
+          >
+            <Alert status="error" borderRadius="md">
+              <AlertIcon />
+              <AlertDescription>{geoparquetError}</AlertDescription>
+            </Alert>
           </Box>
         )}
         {/* Loading spinner for Cesium */}
@@ -1108,12 +1422,14 @@ export default function S3LayerPreview({
         <HStack justify="space-between" fontSize="xs" color="gray.500">
           <Text>Bucket: {bucketName}</Text>
           <HStack spacing={4}>
-            <Badge colorScheme={viewMode === '2d' ? 'blue' : viewMode === 'dem3d' ? 'green' : 'purple'}>
-              {viewMode === 'dem3d' ? 'DEM 3D' : viewMode.toUpperCase()} Mode
+            <Badge colorScheme={viewMode === '2d' ? 'blue' : viewMode === 'dem3d' ? 'green' : viewMode === 'table' ? 'teal' : 'purple'}>
+              {viewMode === 'dem3d' ? 'DEM 3D' : viewMode === 'table' ? 'Table' : viewMode.toUpperCase()} Mode
             </Badge>
             <Text>
               {viewMode === 'dem3d'
                 ? 'Drag to rotate, scroll to zoom'
+                : viewMode === 'table'
+                ? 'Browse attribute data'
                 : `Zoom with scroll, drag to pan${viewMode !== '2d' ? ', Ctrl+drag to rotate' : ''}`}
             </Text>
           </HStack>

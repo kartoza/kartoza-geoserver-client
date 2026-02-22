@@ -140,15 +140,33 @@ export default function S3LayerPreview({
         }
       }
 
+      // Helper to convert BigInt values to numbers (MapLibre/JSON don't support BigInt)
+      const convertBigInts = (obj: unknown): unknown => {
+        if (typeof obj === 'bigint') {
+          return Number(obj)
+        }
+        if (Array.isArray(obj)) {
+          return obj.map(convertBigInts)
+        }
+        if (obj !== null && typeof obj === 'object') {
+          const result: Record<string, unknown> = {}
+          for (const [k, v] of Object.entries(obj)) {
+            result[k] = convertBigInts(v)
+          }
+          return result
+        }
+        return obj
+      }
+
       // Convert to GeoJSON FeatureCollection
       const features: Feature[] = rows.map((row) => {
-        const geometry = row[geometryColumn] as Geometry
+        const geometry = convertBigInts(row[geometryColumn]) as Geometry
         const properties: Record<string, unknown> = {}
 
-        // Copy all non-geometry properties
+        // Copy all non-geometry properties, converting BigInts
         for (const [key, value] of Object.entries(row)) {
           if (key !== geometryColumn) {
-            properties[key] = value
+            properties[key] = convertBigInts(value)
           }
         }
 
@@ -165,6 +183,10 @@ export default function S3LayerPreview({
       }
 
       console.log(`Loaded ${features.length} features from GeoParquet client-side`)
+      if (features.length > 0) {
+        console.log('First feature geometry:', JSON.stringify(features[0].geometry, null, 2))
+        console.log('First feature geometry type:', features[0].geometry?.type)
+      }
       setGeoparquetData(featureCollection)
     } catch (err) {
       console.error('Failed to load GeoParquet client-side:', err)

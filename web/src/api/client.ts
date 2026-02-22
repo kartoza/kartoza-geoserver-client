@@ -54,6 +54,9 @@ import type {
   GeoNodeGeoStoriesResponse,
   GeoNodeDashboardsResponse,
   GeoNodeResourcesResponse,
+  DuckDBTableInfo,
+  DuckDBQueryRequest,
+  DuckDBQueryResponse,
 } from '../types'
 
 const API_BASE = '/api'
@@ -1831,4 +1834,51 @@ export async function downloadGeoNodeDataset(
   }
 
   return { blob, filename }
+}
+
+// ============================================================================
+// DuckDB Query API (for Parquet/GeoParquet files in S3)
+// ============================================================================
+
+// Get table info/metadata for a Parquet file using DuckDB
+export async function getDuckDBTableInfo(
+  connectionId: string,
+  bucketName: string,
+  key: string
+): Promise<DuckDBTableInfo> {
+  const url = `${API_BASE}/s3/duckdb/${connectionId}/${bucketName}?key=${encodeURIComponent(key)}`
+  const response = await fetch(url)
+  return handleResponse<DuckDBTableInfo>(response)
+}
+
+// Execute a DuckDB SQL query against a Parquet file
+export async function executeDuckDBQuery(
+  connectionId: string,
+  bucketName: string,
+  key: string,
+  request: DuckDBQueryRequest
+): Promise<DuckDBQueryResponse> {
+  const url = `${API_BASE}/s3/duckdb/${connectionId}/${bucketName}?key=${encodeURIComponent(key)}`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  return handleResponse<DuckDBQueryResponse>(response)
+}
+
+// Execute a DuckDB query and return results as GeoJSON (for map visualization)
+export async function executeDuckDBQueryAsGeoJSON(
+  connectionId: string,
+  bucketName: string,
+  key: string,
+  request: DuckDBQueryRequest
+): Promise<GeoJSON.FeatureCollection> {
+  const url = `${API_BASE}/s3/duckdb/geojson/${connectionId}/${bucketName}?key=${encodeURIComponent(key)}`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  return handleResponse<GeoJSON.FeatureCollection>(response)
 }

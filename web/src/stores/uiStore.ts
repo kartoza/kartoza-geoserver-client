@@ -33,6 +33,7 @@ export type DialogType =
   | 'qgispreview'
   | 'geonode'
   | 'geonodeupload'
+  | 'duckdbquery'
   | null
 
 export type DialogMode = 'create' | 'edit' | 'delete' | 'view'

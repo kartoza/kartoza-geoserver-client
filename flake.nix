@@ -59,13 +59,14 @@
             "-X main.version=${version}"
           ];
 
-          # Wrap binary to include gdal and postgis in PATH
+          # Wrap binary to include gdal, postgis, and duckdb in PATH
           postInstall = ''
             wrapProgram $out/bin/kartoza-cloudbench \
               --prefix PATH : ${
                 final.lib.makeBinPath [
                   final.gdal
                   final.postgresqlPackages.postgis
+                  final.duckdb
                 ]
               }
           '';
@@ -107,13 +108,14 @@
             "-X main.version=${version}"
           ];
 
-          # Wrap binary to include gdal and postgis in PATH
+          # Wrap binary to include gdal, postgis, and duckdb in PATH
           postInstall = ''
             wrapProgram $out/bin/web \
               --prefix PATH : ${
                 final.lib.makeBinPath [
                   final.gdal
                   final.postgresqlPackages.postgis
+                  final.duckdb
                 ]
               }
           '';
@@ -220,6 +222,7 @@
             gdal # Provides ogr2ogr for vector data import and COG conversion
             pdal # Provides COPC (Cloud Optimized Point Cloud) conversion
             postgresqlPackages.postgis # Provides raster2pgsql for raster data import
+            duckdb # Analytical database for querying Parquet/GeoParquet files
 
             # Documentation
             mkdocsEnv

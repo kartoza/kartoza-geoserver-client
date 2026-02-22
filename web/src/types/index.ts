@@ -613,6 +613,45 @@ export interface S3AttributeTableResponse {
 }
 
 // ============================================================================
+// DuckDB Query Types
+// ============================================================================
+
+// DuckDB column info
+export interface DuckDBColumnInfo {
+  name: string
+  type: string
+}
+
+// DuckDB table metadata response
+export interface DuckDBTableInfo {
+  columns: DuckDBColumnInfo[]
+  rowCount: number
+  geometryColumn?: string
+  bbox?: [number, number, number, number] // [minX, minY, maxX, maxY]
+  sampleQueries?: string[]
+}
+
+// DuckDB query request
+export interface DuckDBQueryRequest {
+  sql: string
+  limit?: number
+  offset?: number
+}
+
+// DuckDB query response
+export interface DuckDBQueryResponse {
+  columns: string[]
+  columnTypes?: string[]
+  rows: Record<string, unknown>[]
+  rowCount: number
+  totalCount?: number
+  hasMore: boolean
+  geometryColumn?: string
+  sql?: string
+  error?: string
+}
+
+// ============================================================================
 // QGIS Projects Types
 // ============================================================================
 

@@ -36,8 +36,9 @@ This document provides a detailed specification of all features, behaviors, and 
 30. [Terria Integration](#terria-integration)
 31. [S3 Storage Integration](#s3-storage-integration)
 32. [Cloud-Native Format Conversion](#cloud-native-format-conversion)
-33. [Future Enhancements](#future-enhancements)
-34. [Version History](#version-history)
+33. [DuckDB Query Engine](#duckdb-query-engine)
+34. [Future Enhancements](#future-enhancements)
+35. [Version History](#version-history)
 
 ---
 
@@ -67,6 +68,7 @@ Kartoza CloudBench is a unified platform for GeoServer and PostgreSQL management
 - **Table Data Viewer**: Browse PostgreSQL table data with infinite scroll
 - **S3 Storage Integration**: Connect to S3-compatible storage (MinIO, AWS S3, Wasabi, etc.)
 - **Cloud-Native Conversion**: Convert geospatial files to cloud-native formats (COG, COPC, GeoParquet)
+- **DuckDB Query Engine**: Query Parquet/GeoParquet files with SQL, visualize results on map
 
 ---
 
@@ -2257,6 +2259,129 @@ Jobs are managed asynchronously with status tracking:
 - **Conversion Tool Status**: Visual indicators in S3ConnectionPanel showing tool availability
 - **Upload Dialog Conversion Options**: Toggle conversion and select target format during upload
 - **Progress Tracking**: Real-time conversion progress in upload dialog
+
+---
+
+## DuckDB Query Engine
+
+The application integrates DuckDB for querying Parquet and GeoParquet files stored in S3, enabling SQL-based analysis of cloud-native vector data without requiring a traditional database server.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **SQL Queries** | Execute arbitrary SQL queries against Parquet/GeoParquet files |
+| **Table Metadata** | View schema, row counts, column types, and geometry information |
+| **Spatial Functions** | Full DuckDB Spatial extension support (ST_AsText, ST_X, ST_Y, etc.) |
+| **Result Pagination** | Navigate large result sets with limit/offset support |
+| **Map Visualization** | View spatial query results on an interactive map |
+| **CSV Export** | Export query results to CSV format |
+| **Sample Queries** | Pre-generated sample queries based on file schema |
+
+### Supported File Formats
+
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| Parquet | `.parquet` | Apache Parquet columnar format |
+| GeoParquet | `.geoparquet` | GeoParquet with WKB geometry |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/s3/duckdb/{connId}/{bucket}?key=path` | GET | Get table metadata and sample queries |
+| `/api/s3/duckdb/{connId}/{bucket}?key=path` | POST | Execute SQL query against file |
+| `/api/s3/duckdb/geojson/{connId}/{bucket}?key=path` | POST | Execute query and return GeoJSON |
+
+### Query Request
+
+```json
+POST /api/s3/duckdb/{connId}/{bucket}?key=data/file.geoparquet
+Content-Type: application/json
+
+{
+  "sql": "SELECT * FROM data WHERE population > 1000",
+  "limit": 100,
+  "offset": 0
+}
+```
+
+### Query Response
+
+```json
+{
+  "columns": ["name", "population", "geometry"],
+  "rows": [
+    {"name": "City A", "population": 50000, "geometry": "..."},
+    {"name": "City B", "population": 25000, "geometry": "..."}
+  ],
+  "rowCount": 2,
+  "hasMore": false,
+  "geometryColumn": "geometry",
+  "sql": "SELECT * FROM data WHERE population > 1000"
+}
+```
+
+### Table Metadata Response
+
+```json
+{
+  "columns": [
+    {"name": "name", "type": "VARCHAR"},
+    {"name": "population", "type": "BIGINT"},
+    {"name": "geometry", "type": "BLOB"}
+  ],
+  "rowCount": 1500,
+  "geometryColumn": "geometry",
+  "bbox": [-180, -90, 180, 90],
+  "sampleQueries": [
+    "SELECT * FROM 'data' LIMIT 10",
+    "SELECT COUNT(*) as count FROM 'data'",
+    "SELECT *, ST_AsText(ST_GeomFromWKB(geometry)) as geom_text FROM 'data' LIMIT 10"
+  ]
+}
+```
+
+### SQL Validation
+
+For security, the query engine validates SQL before execution:
+
+| Allowed | Blocked |
+|---------|---------|
+| SELECT statements | DROP, DELETE, TRUNCATE |
+| WITH clauses (CTEs) | INSERT, UPDATE |
+| Spatial functions | CREATE, ALTER |
+| Aggregations | GRANT, REVOKE |
+| JOINs within the file | COPY, EXPORT, ATTACH |
+
+### Web UI Components
+
+- **DuckDBQueryDialog**: Full-screen query interface with SQL editor, results table, and map view
+- **S3ObjectNode**: Query action button for Parquet/GeoParquet files
+- **Tab Views**: Switch between Table, Map, and Schema views
+- **Sample Query Buttons**: One-click execution of suggested queries
+
+### TUI Components
+
+- **DuckDBQuery**: Query component with SQL input, results viewport, and schema view
+- **Keyboard Shortcuts**: Ctrl+E/F5 to execute, Tab to switch views, Esc to close
+
+### DuckDB Extensions
+
+The following DuckDB extensions are automatically installed:
+
+| Extension | Purpose |
+|-----------|---------|
+| `spatial` | Geometry functions (ST_X, ST_Y, ST_AsText, ST_GeomFromWKB, etc.) |
+| `httpfs` | (Future) Direct S3 access without local download |
+
+### Usage Notes
+
+1. **Table Reference**: Use `'data'` as the table name in queries - it's automatically replaced with the file path
+2. **Geometry Handling**: Geometry columns are stored as WKB; use ST_GeomFromWKB() to work with them
+3. **Large Files**: Files are downloaded to a temp directory for querying; large files may take time to load
+4. **Query Timeout**: Queries have a 5-minute timeout by default
+5. **Result Limits**: Maximum 10,000 rows per query for performance
 
 ---
 

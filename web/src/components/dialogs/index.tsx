@@ -17,6 +17,7 @@ import QGISProjectDialog from './QGISProjectDialog'
 import QGISPreviewDialog from './QGISPreviewDialog'
 import GeoNodeConnectionDialog from './GeoNodeConnectionDialog'
 import GeoNodeUploadDialog from './GeoNodeUploadDialog'
+import DuckDBQueryDialog from './DuckDBQueryDialog'
 import { SettingsDialog } from './SettingsDialog'
 import { SyncDialog } from './SyncDialog'
 import { StyleDialog } from './StyleDialog'
@@ -47,6 +48,7 @@ export default function Dialogs() {
       <QGISPreviewDialog />
       <GeoNodeConnectionDialog />
       <GeoNodeUploadDialog />
+      <DuckDBQueryDialog />
     </>
   )
 }

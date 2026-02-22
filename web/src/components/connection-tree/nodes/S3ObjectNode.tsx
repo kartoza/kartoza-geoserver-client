@@ -43,6 +43,12 @@ function isMapPreviewable(key: string): boolean {
   return false
 }
 
+// Helper to determine if file can be queried with DuckDB
+function isQueryable(key: string): boolean {
+  const ext = getFileExtension(key)
+  return ['parquet', 'geoparquet'].includes(ext)
+}
+
 export function S3ObjectNode({ connectionId, bucket, object }: S3ObjectNodeProps) {
   const nodeId = generateNodeId('s3object', connectionId, bucket, object.key)
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
@@ -143,6 +149,20 @@ export function S3ObjectNode({ connectionId, bucket, object }: S3ObjectNodeProps
     queryClient.invalidateQueries({ queryKey: ['s3objects', connectionId, bucket, object.key] })
   }
 
+  const handleQuery = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    // Open DuckDB query dialog with file info
+    openDialog('duckdbquery', {
+      mode: 'view',
+      data: {
+        s3ConnectionId: connectionId,
+        s3BucketName: bucket,
+        s3ObjectKey: object.key,
+        displayName: displayName,
+      },
+    })
+  }
+
   return (
     <Box>
       <TreeNodeRow
@@ -153,6 +173,7 @@ export function S3ObjectNode({ connectionId, bucket, object }: S3ObjectNodeProps
         onClick={handleClick}
         onDelete={handleDelete}
         onPreview={!object.isFolder && isMapPreviewable(object.key) ? handlePreview : undefined}
+        onQuery={!object.isFolder && isQueryable(object.key) ? handleQuery : undefined}
         onDownloadData={!object.isFolder ? handleDownloadData : undefined}
         downloadDataLabel={displayName}
         onRefresh={object.isFolder ? handleRefresh : undefined}

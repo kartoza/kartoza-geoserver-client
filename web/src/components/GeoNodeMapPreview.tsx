@@ -21,10 +21,11 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useUIStore, type MapViewState } from '../stores/uiStore'
 
 interface GeoNodeMapPreviewProps {
-  geonodeUrl: string      // Base URL of GeoNode (e.g., https://mygeocommunity.org)
+  geonodeUrl: string      // Base URL of GeoNode (e.g., https://mygeocommunity.org) - kept for reference only
   layerName: string       // The alternate field (e.g., geonode:layer_name)
   title: string           // Display title
-  connectionId: string    // GeoNode connection ID
+  connectionId: string    // GeoNode connection ID - used for WMS proxy
+  detailUrl?: string      // Full URL to view this resource in GeoNode
   onClose?: () => void
 }
 
@@ -34,6 +35,8 @@ export default function GeoNodeMapPreview({
   geonodeUrl,
   layerName,
   title,
+  connectionId,
+  detailUrl,
   onClose,
 }: GeoNodeMapPreviewProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -50,10 +53,10 @@ export default function GeoNodeMapPreview({
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const metaBg = useColorModeValue('gray.50', 'gray.700')
 
-  // Build WMS tile URL for GeoNode's GeoServer
+  // Build WMS tile URL using our proxy to avoid CORS issues
   const buildWmsTileUrl = (cacheBuster?: string): string => {
-    // GeoNode uses GeoServer at /geoserver/wms
-    const wmsUrl = `${geonodeUrl}/geoserver/wms`
+    // Use our backend proxy to avoid CORS issues with external GeoServers
+    const proxyUrl = `/api/geonode/connections/${connectionId}/wms`
 
     const params = new URLSearchParams({
       SERVICE: 'WMS',
@@ -72,7 +75,7 @@ export default function GeoNodeMapPreview({
     }
 
     // Append BBOX with the unencoded MapLibre placeholder
-    return `${wmsUrl}?${params.toString()}&BBOX={bbox-epsg-3857}`
+    return `${proxyUrl}?${params.toString()}&BBOX={bbox-epsg-3857}`
   }
 
   // Save map view state when map moves
@@ -184,7 +187,7 @@ export default function GeoNodeMapPreview({
     // Try to get layer bounds from GeoServer capabilities
     // For now, we'll just keep the world view
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapLoaded, layerName, geonodeUrl, refreshKey])
+  }, [mapLoaded, layerName, connectionId, refreshKey])
 
   // Update view mode (2D/3D)
   useEffect(() => {
@@ -214,11 +217,13 @@ export default function GeoNodeMapPreview({
   }
 
   const openInGeoNode = () => {
-    // Construct the GeoNode viewer URL
-    // GeoNode typically uses /catalogue/#/dataset/{pk} or /layers/{alternate}
-    // The alternate format is workspace:layername, so we need to construct the URL
-    const viewerUrl = `${geonodeUrl}/catalogue/#/dataset/${layerName.replace(':', '/')}`
-    window.open(viewerUrl, '_blank')
+    // Use the detail URL if provided, otherwise we can't reliably construct the URL
+    if (detailUrl) {
+      window.open(detailUrl, '_blank')
+    } else {
+      // Fallback: try to open the GeoNode base URL
+      window.open(geonodeUrl, '_blank')
+    }
   }
 
   return (

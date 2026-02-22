@@ -68,6 +68,9 @@ func (s *Server) handleGeoNodeConnectionByID(w http.ResponseWriter, r *http.Requ
 			} else {
 				http.Error(w, "Dataset PK required for download", http.StatusBadRequest)
 			}
+		case "wms":
+			// Proxy WMS requests to GeoNode's GeoServer
+			s.handleGeoNodeWMSProxy(w, r, connID)
 		default:
 			http.Error(w, "Unknown sub-resource", http.StatusNotFound)
 		}
@@ -629,4 +632,79 @@ func (s *Server) handleGeoNodeDownload(w http.ResponseWriter, r *http.Request, c
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.Write(data)
+}
+
+// handleGeoNodeWMSProxy proxies WMS requests to GeoNode's GeoServer
+// GET /api/geonode/connections/{id}/wms?SERVICE=WMS&...
+// This solves CORS issues when fetching WMS tiles from external GeoServers
+func (s *Server) handleGeoNodeWMSProxy(w http.ResponseWriter, r *http.Request, connID string) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	conn := s.config.GetGeoNodeConnection(connID)
+	if conn == nil {
+		http.Error(w, "Connection not found", http.StatusNotFound)
+		return
+	}
+
+	// Build the GeoServer WMS URL
+	// GeoNode typically exposes GeoServer at /geoserver/ows (public OWS endpoint)
+	// This endpoint often has less restrictive auth than /geoserver/wms
+	geoserverURL := conn.URL + "/geoserver/ows"
+
+	// Forward all query parameters
+	targetURL, err := url.Parse(geoserverURL)
+	if err != nil {
+		http.Error(w, "Invalid GeoServer URL", http.StatusInternalServerError)
+		return
+	}
+	targetURL.RawQuery = r.URL.RawQuery
+
+	// Create request to GeoServer
+	req, err := http.NewRequest(http.MethodGet, targetURL.String(), nil)
+	if err != nil {
+		http.Error(w, "Failed to create request", http.StatusInternalServerError)
+		return
+	}
+
+	// Forward relevant headers
+	if acceptHeader := r.Header.Get("Accept"); acceptHeader != "" {
+		req.Header.Set("Accept", acceptHeader)
+	}
+
+	// Set a proper User-Agent to avoid being blocked
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; CloudBench/1.0; WMS Proxy)")
+
+	// Note: We intentionally do NOT send authentication for WMS proxy requests
+	// Public layers should be accessible without auth, and sending invalid/partial
+	// credentials can cause the server to reject the request with 401
+
+	// Create a client
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, "Failed to fetch from GeoServer: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Copy response headers (selectively)
+	if contentType := resp.Header.Get("Content-Type"); contentType != "" {
+		w.Header().Set("Content-Type", contentType)
+	}
+	if contentLength := resp.Header.Get("Content-Length"); contentLength != "" {
+		w.Header().Set("Content-Length", contentLength)
+	}
+
+	// Add CORS and CORP headers to allow cross-origin embedding
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Cross-Origin-Resource-Policy", "cross-origin")
+
+	// Set the status code
+	w.WriteHeader(resp.StatusCode)
+
+	// Stream the response body
+	io.Copy(w, resp.Body)
 }

@@ -72,6 +72,7 @@ export function GeoNodeResourcePanel({ node }: GeoNodeResourcePanelProps) {
       workspace: node.geonodeAlternate.split(':')[0] || 'geonode',
       title: node.name,
       connectionId: node.geonodeConnectionId,
+      detailUrl: node.geonodeDetailUrl,
     })
   }
 

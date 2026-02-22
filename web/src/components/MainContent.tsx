@@ -120,6 +120,7 @@ export default function MainContent() {
           layerName={activeGeoNodePreview.layerName}
           title={activeGeoNodePreview.title}
           connectionId={activeGeoNodePreview.connectionId}
+          detailUrl={activeGeoNodePreview.detailUrl}
           onClose={() => setGeoNodePreview(null)}
         />
       </Box>

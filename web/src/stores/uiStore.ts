@@ -75,6 +75,7 @@ interface GeoNodePreviewState {
   workspace: string     // Usually 'geonode'
   title: string         // Display title
   connectionId: string  // GeoNode connection ID
+  detailUrl?: string    // Full URL to view this resource in GeoNode
 }
 
 interface Settings {

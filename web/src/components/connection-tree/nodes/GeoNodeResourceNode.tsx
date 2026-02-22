@@ -35,7 +35,11 @@ export function GeoNodeResourceNode({
     geonodeResourceUuid: resource.uuid,
     geonodeResourceType: resource.resource_type,
     geonodeThumbnailUrl: resource.thumbnail_url,
-    geonodeDetailUrl: resource.detail_url ? `${connectionUrl}${resource.detail_url}` : undefined,
+    geonodeDetailUrl: resource.detail_url
+      ? (resource.detail_url.startsWith('http://') || resource.detail_url.startsWith('https://'))
+        ? resource.detail_url  // Already an absolute URL
+        : `${connectionUrl}${resource.detail_url}`  // Relative URL, prepend base
+      : undefined,
     geonodeAlternate: isDataset ? datasetResource.alternate : undefined,
     geonodeUrl: connectionUrl,
   }

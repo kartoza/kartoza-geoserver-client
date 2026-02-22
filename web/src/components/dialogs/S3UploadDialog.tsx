@@ -237,9 +237,9 @@ export default function S3UploadDialog() {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={closeDialog} size="lg" isCentered>
+    <Modal isOpen={isOpen} onClose={closeDialog} size="3xl" isCentered>
       <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
-      <ModalContent borderRadius="xl" overflow="hidden">
+      <ModalContent borderRadius="xl" overflow="hidden" maxH="90vh">
         {/* Gradient Header */}
         <Box
           bg="linear-gradient(135deg, #c06c00 0%, #e08900 50%, #f0a020 100%)"
@@ -261,135 +261,145 @@ export default function S3UploadDialog() {
         </Box>
         <ModalCloseButton color="white" />
 
-        <ModalBody py={6}>
-          <VStack spacing={4}>
-            {/* Bucket Selection */}
-            <FormControl isRequired>
-              <FormLabel fontWeight="500" color="gray.700">Target Bucket</FormLabel>
-              <Select
-                value={selectedBucket}
-                onChange={(e) => setSelectedBucket(e.target.value)}
-                placeholder="Select a bucket"
-                size="lg"
-                borderRadius="lg"
-              >
-                {buckets?.map((bucket) => (
-                  <option key={bucket.name} value={bucket.name}>
-                    {bucket.name}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
+        <ModalBody py={4} overflowY="auto">
+          {/* Two-column layout for file selection and options */}
+          <HStack spacing={4} align="stretch">
+            {/* Left column: File selection */}
+            <VStack spacing={3} flex="1" align="stretch">
+              {/* Bucket Selection */}
+              <FormControl isRequired size="sm">
+                <FormLabel fontWeight="500" color="gray.700" fontSize="sm">Target Bucket</FormLabel>
+                <Select
+                  value={selectedBucket}
+                  onChange={(e) => setSelectedBucket(e.target.value)}
+                  placeholder="Select a bucket"
+                  size="sm"
+                  borderRadius="lg"
+                >
+                  {buckets?.map((bucket) => (
+                    <option key={bucket.name} value={bucket.name}>
+                      {bucket.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
 
-            {/* File Drop Zone */}
-            <FormControl>
-              <FormLabel fontWeight="500" color="gray.700">File</FormLabel>
-              <Box
-                border="2px dashed"
-                borderColor={selectedFile ? 'orange.400' : dropzoneBorderColor}
-                borderRadius="lg"
-                p={6}
-                bg={selectedFile ? 'orange.50' : dropzoneBg}
-                textAlign="center"
-                cursor="pointer"
-                transition="all 0.2s"
-                _hover={{ borderColor: 'orange.400', bg: 'orange.50' }}
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  hidden
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleFileSelect(file)
-                  }}
-                />
-                {selectedFile ? (
-                  <VStack spacing={2}>
-                    <Icon as={FiFile} boxSize={8} color="orange.500" />
-                    <Text fontWeight="500" color="gray.700">{selectedFile.name}</Text>
-                    <Text fontSize="sm" color="gray.500">{formatFileSize(selectedFile.size)}</Text>
-                    {recommendedFormat && (
-                      <Badge colorScheme="orange">
-                        Recommended: Convert to {recommendedFormat.toUpperCase()}
-                      </Badge>
-                    )}
-                  </VStack>
-                ) : (
-                  <VStack spacing={2}>
-                    <Icon as={FiUpload} boxSize={8} color="gray.400" />
-                    <Text color="gray.600">
-                      Drop a file here or click to browse
-                    </Text>
-                    <Text fontSize="sm" color="gray.500">
-                      Supports geospatial formats (GeoTIFF, Shapefile, LAS, etc.)
-                    </Text>
-                  </VStack>
-                )}
-              </Box>
-            </FormControl>
-
-            {/* Object Key (path) */}
-            <FormControl>
-              <FormLabel fontWeight="500" color="gray.700">Object Key (optional)</FormLabel>
-              <Input
-                value={customKey}
-                onChange={(e) => setCustomKey(e.target.value)}
-                placeholder="path/to/file.tif"
-                size="lg"
-                borderRadius="lg"
-              />
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                Leave empty to use the original filename
-              </Text>
-            </FormControl>
-
-            {/* Cloud-Native Conversion Options */}
-            {recommendedFormat && (
-              <Box w="100%" p={4} bg="orange.50" borderRadius="lg" border="1px solid" borderColor="orange.200">
-                <HStack justify="space-between" mb={3}>
-                  <Text fontWeight="500" color="gray.700">Convert to Cloud-Native Format</Text>
-                  <Switch
-                    isChecked={convertToCloudNative}
-                    onChange={(e) => setConvertToCloudNative(e.target.checked)}
-                    colorScheme="orange"
+              {/* File Drop Zone */}
+              <FormControl flex="1">
+                <FormLabel fontWeight="500" color="gray.700" fontSize="sm">File</FormLabel>
+                <Box
+                  border="2px dashed"
+                  borderColor={selectedFile ? 'orange.400' : dropzoneBorderColor}
+                  borderRadius="lg"
+                  p={4}
+                  bg={selectedFile ? 'orange.50' : dropzoneBg}
+                  textAlign="center"
+                  cursor="pointer"
+                  transition="all 0.2s"
+                  _hover={{ borderColor: 'orange.400', bg: 'orange.50' }}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  minH="120px"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleFileSelect(file)
+                    }}
                   />
-                </HStack>
+                  {selectedFile ? (
+                    <VStack spacing={1}>
+                      <Icon as={FiFile} boxSize={6} color="orange.500" />
+                      <Text fontWeight="500" color="gray.700" fontSize="sm" noOfLines={1}>{selectedFile.name}</Text>
+                      <Text fontSize="xs" color="gray.500">{formatFileSize(selectedFile.size)}</Text>
+                      {recommendedFormat && (
+                        <Badge colorScheme="orange" fontSize="xs">
+                          → {recommendedFormat.toUpperCase()}
+                        </Badge>
+                      )}
+                    </VStack>
+                  ) : (
+                    <VStack spacing={1}>
+                      <Icon as={FiUpload} boxSize={6} color="gray.400" />
+                      <Text color="gray.600" fontSize="sm">
+                        Drop file or click to browse
+                      </Text>
+                      <Text fontSize="xs" color="gray.500">
+                        GeoTIFF, Shapefile, LAS, GeoPackage...
+                      </Text>
+                    </VStack>
+                  )}
+                </Box>
+              </FormControl>
 
-                {convertToCloudNative && (
-                  <VStack spacing={3} align="stretch">
-                    <Select
-                      value={targetFormat}
-                      onChange={(e) => setTargetFormat(e.target.value)}
-                      size="md"
-                      borderRadius="lg"
-                    >
-                      <option value="cog" disabled={!canConvert('cog')}>
-                        COG (Cloud Optimized GeoTIFF) {!canConvert('cog') && '- GDAL not available'}
-                      </option>
-                      <option value="copc" disabled={!canConvert('copc')}>
-                        COPC (Cloud Optimized Point Cloud) {!canConvert('copc') && '- PDAL not available'}
-                      </option>
-                      <option value="geoparquet" disabled={!canConvert('geoparquet')}>
-                        GeoParquet {!canConvert('geoparquet') && '- ogr2ogr not available'}
-                      </option>
-                    </Select>
+              {/* Object Key (path) */}
+              <FormControl>
+                <FormLabel fontWeight="500" color="gray.700" fontSize="sm">Object Key (optional)</FormLabel>
+                <Input
+                  value={customKey}
+                  onChange={(e) => setCustomKey(e.target.value)}
+                  placeholder="path/to/file.tif"
+                  size="sm"
+                  borderRadius="lg"
+                />
+                <Text fontSize="xs" color="gray.500" mt={1}>
+                  Leave empty to use original filename
+                </Text>
+              </FormControl>
+            </VStack>
 
-                    {/* GeoPackage-specific options */}
-                    {isGeoPackage && targetFormat === 'geoparquet' && (
-                      <Box p={3} bg="blue.50" borderRadius="md" border="1px solid" borderColor="blue.200">
-                        <VStack align="stretch" spacing={2}>
-                          <Text fontSize="sm" color="blue.700" fontWeight="500">
+            {/* Right column: Conversion options */}
+            <VStack spacing={3} flex="1" align="stretch">
+              {/* Cloud-Native Conversion Options */}
+              {recommendedFormat ? (
+                <Box p={3} bg="orange.50" borderRadius="lg" border="1px solid" borderColor="orange.200" h="100%">
+                  <HStack justify="space-between" mb={2}>
+                    <Text fontWeight="500" color="gray.700" fontSize="sm">Convert to Cloud-Native</Text>
+                    <Switch
+                      isChecked={convertToCloudNative}
+                      onChange={(e) => setConvertToCloudNative(e.target.checked)}
+                      colorScheme="orange"
+                      size="sm"
+                    />
+                  </HStack>
+
+                  {convertToCloudNative && (
+                    <VStack spacing={2} align="stretch">
+                      <Select
+                        value={targetFormat}
+                        onChange={(e) => setTargetFormat(e.target.value)}
+                        size="sm"
+                        borderRadius="lg"
+                      >
+                        <option value="cog" disabled={!canConvert('cog')}>
+                          COG {!canConvert('cog') && '- unavailable'}
+                        </option>
+                        <option value="copc" disabled={!canConvert('copc')}>
+                          COPC {!canConvert('copc') && '- unavailable'}
+                        </option>
+                        <option value="geoparquet" disabled={!canConvert('geoparquet')}>
+                          GeoParquet {!canConvert('geoparquet') && '- unavailable'}
+                        </option>
+                      </Select>
+
+                      {/* GeoPackage-specific options */}
+                      {isGeoPackage && targetFormat === 'geoparquet' && (
+                        <Box p={2} bg="blue.50" borderRadius="md" border="1px solid" borderColor="blue.200">
+                          <Text fontSize="xs" color="blue.700" fontWeight="500" mb={1}>
                             GeoPackage Layer Extraction
                           </Text>
-                          <Text fontSize="xs" color="gray.600">
-                            All layers in the GeoPackage will be extracted as separate GeoParquet files.
+                          <Text fontSize="xs" color="gray.600" mb={2}>
+                            All layers extracted as separate GeoParquet/Parquet files.
                           </Text>
                           <HStack justify="space-between">
-                            <Text fontSize="sm" color="gray.700">Create subfolder for layers</Text>
+                            <Text fontSize="xs" color="gray.700">Create subfolder</Text>
                             <Switch
                               isChecked={createSubfolder}
                               onChange={(e) => setCreateSubfolder(e.target.checked)}
@@ -397,38 +407,42 @@ export default function S3UploadDialog() {
                               size="sm"
                             />
                           </HStack>
-                          <Text fontSize="xs" color="gray.500">
-                            {createSubfolder
-                              ? 'Layers will be placed in a folder named after the GeoPackage'
-                              : 'Layers will be placed directly in the current folder'}
+                        </Box>
+                      )}
+
+                      {!canConvert(targetFormat) && (
+                        <Alert status="warning" size="sm" borderRadius="md" py={1} px={2}>
+                          <AlertIcon boxSize={3} />
+                          <Text fontSize="xs">
+                            Tool not available. Upload without conversion.
                           </Text>
-                        </VStack>
-                      </Box>
-                    )}
+                        </Alert>
+                      )}
+                    </VStack>
+                  )}
+                </Box>
+              ) : (
+                <Box p={3} bg="gray.50" borderRadius="lg" border="1px solid" borderColor="gray.200" h="100%">
+                  <Text fontSize="sm" color="gray.500" textAlign="center">
+                    Select a file to see conversion options
+                  </Text>
+                </Box>
+              )}
+            </VStack>
+          </HStack>
 
-                    {!canConvert(targetFormat) && (
-                      <Alert status="warning" size="sm" borderRadius="md">
-                        <AlertIcon />
-                        <Text fontSize="sm">
-                          Required tool not available. The file will be uploaded without conversion.
-                        </Text>
-                      </Alert>
-                    )}
-                  </VStack>
-                )}
-              </Box>
-            )}
-
+          {/* Status section - below the two columns */}
+          <VStack spacing={2} mt={4} align="stretch">
             {/* Upload Progress */}
             {isUploading && (
               <Box w="100%">
-                <HStack justify="space-between" mb={2}>
-                  <Text fontSize="sm" color="gray.600">Uploading...</Text>
-                  <Text fontSize="sm" color="gray.600">{uploadProgress}%</Text>
+                <HStack justify="space-between" mb={1}>
+                  <Text fontSize="xs" color="gray.600">Uploading...</Text>
+                  <Text fontSize="xs" color="gray.600">{uploadProgress}%</Text>
                 </HStack>
                 <Progress
                   value={uploadProgress}
-                  size="sm"
+                  size="xs"
                   colorScheme="orange"
                   borderRadius="full"
                   hasStripe
@@ -439,20 +453,20 @@ export default function S3UploadDialog() {
 
             {/* Conversion Job Progress */}
             {conversionJob && conversionJob.status === 'running' && (
-              <Box w="100%" p={4} bg="blue.50" borderRadius="lg">
-                <HStack mb={2}>
-                  <Icon as={FiRefreshCw} className="spin" color="blue.500" />
-                  <Text fontWeight="500" color="blue.700">Converting...</Text>
+              <Box w="100%" p={2} bg="blue.50" borderRadius="lg">
+                <HStack mb={1}>
+                  <Icon as={FiRefreshCw} className="spin" color="blue.500" boxSize={3} />
+                  <Text fontWeight="500" color="blue.700" fontSize="xs">Converting...</Text>
                 </HStack>
                 <Progress
                   value={conversionJob.progress}
-                  size="sm"
+                  size="xs"
                   colorScheme="blue"
                   borderRadius="full"
                   hasStripe
                   isAnimated
                 />
-                <Text fontSize="sm" color="gray.600" mt={2}>
+                <Text fontSize="xs" color="gray.600" mt={1}>
                   {conversionJob.message}
                 </Text>
               </Box>
@@ -471,9 +485,10 @@ export default function S3UploadDialog() {
                     status={uploadResult.success ? 'success' : 'error'}
                     borderRadius="lg"
                     variant="subtle"
+                    py={2}
                   >
-                    <AlertIcon as={uploadResult.success ? FiCheckCircle : FiAlertCircle} />
-                    <Text fontSize="sm">{uploadResult.message}</Text>
+                    <AlertIcon as={uploadResult.success ? FiCheckCircle : FiAlertCircle} boxSize={4} />
+                    <Text fontSize="xs">{uploadResult.message}</Text>
                   </Alert>
                 </motion.div>
               )}
@@ -484,10 +499,10 @@ export default function S3UploadDialog() {
                   animate={{ opacity: 1, y: 0 }}
                   style={{ width: '100%' }}
                 >
-                  <Alert status="success" borderRadius="lg" variant="subtle">
-                    <AlertIcon as={FiCheckCircle} />
+                  <Alert status="success" borderRadius="lg" variant="subtle" py={2}>
+                    <AlertIcon as={FiCheckCircle} boxSize={4} />
                     <Box>
-                      <Text fontSize="sm" fontWeight="500">Conversion Complete</Text>
+                      <Text fontSize="xs" fontWeight="500">Conversion Complete</Text>
                       <Text fontSize="xs" color="gray.600">
                         Output: {conversionJob.outputPath}
                       </Text>
@@ -502,10 +517,10 @@ export default function S3UploadDialog() {
                   animate={{ opacity: 1, y: 0 }}
                   style={{ width: '100%' }}
                 >
-                  <Alert status="error" borderRadius="lg" variant="subtle">
-                    <AlertIcon as={FiAlertCircle} />
+                  <Alert status="error" borderRadius="lg" variant="subtle" py={2}>
+                    <AlertIcon as={FiAlertCircle} boxSize={4} />
                     <Box>
-                      <Text fontSize="sm" fontWeight="500">Conversion Failed</Text>
+                      <Text fontSize="xs" fontWeight="500">Conversion Failed</Text>
                       <Text fontSize="xs" color="gray.600">
                         {conversionJob.error}
                       </Text>

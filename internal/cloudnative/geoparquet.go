@@ -185,7 +185,7 @@ func ListGeoPackageLayers(ctx context.Context, gpkgPath string) ([]string, error
 	return layers, nil
 }
 
-// ConvertGeoPackageLayerToGeoParquet converts a single layer from a GeoPackage to GeoParquet
+// ConvertGeoPackageLayerToGeoParquet converts a single spatial layer from a GeoPackage to GeoParquet
 func ConvertGeoPackageLayerToGeoParquet(ctx context.Context, gpkgPath, layerName, outputPath string, opts ConversionOptions, progress ProgressCallback) error {
 	// Build ogr2ogr command for specific layer
 	args := []string{
@@ -226,11 +226,52 @@ func ConvertGeoPackageLayerToGeoParquet(ctx context.Context, gpkgPath, layerName
 	return nil
 }
 
+// ConvertGeoPackageLayerToParquet converts a single non-spatial layer from a GeoPackage to Parquet
+func ConvertGeoPackageLayerToParquet(ctx context.Context, gpkgPath, layerName, outputPath string, opts ConversionOptions, progress ProgressCallback) error {
+	// Build ogr2ogr command for specific layer (non-spatial)
+	args := []string{
+		"-f", "Parquet",
+	}
+
+	// Add compression option
+	compression := opts.ParquetCompression
+	if compression == "" {
+		compression = "ZSTD"
+	}
+	args = append(args, "-lco", fmt.Sprintf("COMPRESSION=%s", compression))
+
+	// Add row group size if specified
+	if opts.ParquetRowGroup > 0 {
+		args = append(args, "-lco", fmt.Sprintf("ROW_GROUP_SIZE=%d", opts.ParquetRowGroup))
+	}
+
+	// No geometry encoding for non-spatial data
+
+	// Output and input paths with layer name
+	args = append(args, outputPath, gpkgPath, layerName)
+
+	if progress != nil {
+		progress(0, fmt.Sprintf("Converting layer %s to Parquet...", layerName))
+	}
+
+	cmd := exec.CommandContext(ctx, "ogr2ogr", args...)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("ogr2ogr failed for layer %s: %w", layerName, err)
+	}
+
+	if progress != nil {
+		progress(100, fmt.Sprintf("Layer %s conversion complete", layerName))
+	}
+
+	return nil
+}
+
 // GeoPackageLayerInfo contains information about a layer in a GeoPackage
 type GeoPackageLayerInfo struct {
 	Name         string `json:"name"`
 	GeometryType string `json:"geometryType,omitempty"`
 	FeatureCount int64  `json:"featureCount,omitempty"`
+	HasGeometry  bool   `json:"hasGeometry"` // true if layer has spatial geometry
 }
 
 // GetGeoPackageLayerInfo returns detailed info about layers in a GeoPackage
@@ -250,6 +291,8 @@ func GetGeoPackageLayerInfo(ctx context.Context, gpkgPath string) ([]GeoPackageL
 
 		if strings.HasPrefix(line, "Layer name:") {
 			if currentLayer != nil {
+				// Determine if the layer has geometry based on geometry type
+				currentLayer.HasGeometry = isGeometryType(currentLayer.GeometryType)
 				layers = append(layers, *currentLayer)
 			}
 			currentLayer = &GeoPackageLayerInfo{
@@ -270,8 +313,36 @@ func GetGeoPackageLayerInfo(ctx context.Context, gpkgPath string) ([]GeoPackageL
 	}
 	// Don't forget the last layer
 	if currentLayer != nil {
+		currentLayer.HasGeometry = isGeometryType(currentLayer.GeometryType)
 		layers = append(layers, *currentLayer)
 	}
 
 	return layers, nil
+}
+
+// isGeometryType returns true if the geometry type indicates a spatial layer
+func isGeometryType(geomType string) bool {
+	if geomType == "" {
+		return false
+	}
+	geomType = strings.ToLower(geomType)
+	// Remove spaces for easier matching (e.g., "Multi Line String" -> "multilinestring")
+	geomTypeNoSpaces := strings.ReplaceAll(geomType, " ", "")
+	// "None" or "Unknown (any)" typically indicates a non-spatial table
+	if geomType == "none" || geomType == "unknown (any)" || geomType == "unknown" {
+		return false
+	}
+	// Common spatial geometry types (check both with and without spaces)
+	spatialTypes := []string{
+		"point", "linestring", "polygon", "multipoint", "multilinestring",
+		"multipolygon", "geometrycollection", "geometry", "curve", "surface",
+		"multicurve", "multisurface", "compoundcurve", "curvepolygon",
+		"polyhedralsurface", "tin", "triangle", "line", "string",
+	}
+	for _, t := range spatialTypes {
+		if strings.Contains(geomType, t) || strings.Contains(geomTypeNoSpaces, t) {
+			return true
+		}
+	}
+	return false
 }

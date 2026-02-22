@@ -2169,6 +2169,43 @@ The application supports converting geospatial data to cloud-native formats opti
 - ZSTD compression by default
 - Compatible with DuckDB, Apache Arrow, and Python geospatial libraries
 
+### GeoPackage Layer Extraction
+
+When uploading a GeoPackage file with conversion enabled, the application automatically extracts all layers and converts them to the appropriate Parquet format:
+
+| Layer Type | Output Format | File Extension | Description |
+|------------|---------------|----------------|-------------|
+| Spatial (with geometry) | GeoParquet | `.geoparquet` | Includes WKB-encoded geometry column |
+| Non-spatial (attribute table) | Parquet | `.parquet` | Standard columnar format without geometry |
+
+**Conversion Process:**
+1. Upload GeoPackage file with `convert=true` option
+2. Application analyzes each layer using `ogrinfo` to detect geometry type
+3. Layers with valid geometry types (Point, Polygon, LineString, etc.) → `.geoparquet`
+4. Layers without geometry (None, Unknown) → `.parquet`
+5. Optional: Create subfolder named after the GeoPackage to organize output files
+
+**Layer Geometry Detection:**
+- Valid spatial types: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection, Curve, Surface, etc.
+- Non-spatial indicators: "None", "Unknown (any)", empty geometry type
+
+**API Response:**
+```json
+{
+  "success": true,
+  "converted": true,
+  "format": "geoparquet/parquet",
+  "gpkgExtracted": true,
+  "layerCount": 3,
+  "createSubfolder": true,
+  "files": [
+    {"layer": "roads", "key": "data/roads.geoparquet", "size": 1024000, "hasGeometry": true, "format": "geoparquet"},
+    {"layer": "buildings", "key": "data/buildings.geoparquet", "size": 2048000, "hasGeometry": true, "format": "geoparquet"},
+    {"layer": "metadata", "key": "data/metadata.parquet", "size": 4096, "hasGeometry": false, "format": "parquet"}
+  ]
+}
+```
+
 ### Conversion Job Management
 
 Jobs are managed asynchronously with status tracking:

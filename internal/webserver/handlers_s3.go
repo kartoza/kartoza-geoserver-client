@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -51,7 +52,7 @@ type S3ObjectResponse struct {
 	Size            int64  `json:"size"`
 	LastModified    string `json:"lastModified"`
 	ContentType     string `json:"contentType,omitempty"`
-	IsDir           bool   `json:"isDir"`
+	IsFolder        bool   `json:"isFolder"`
 	CloudNativeType string `json:"cloudNativeType,omitempty"` // "cog", "copc", "geoparquet", or ""
 }
 
@@ -505,7 +506,7 @@ func (s *Server) listS3Objects(w http.ResponseWriter, r *http.Request, client *s
 			Size:            obj.Size,
 			LastModified:    obj.LastModified.Format(time.RFC3339),
 			ContentType:     obj.ContentType,
-			IsDir:           obj.IsDir,
+			IsFolder:        obj.IsDir,
 			CloudNativeType: cnType,
 		}
 	}
@@ -538,20 +539,28 @@ func (s *Server) uploadS3Object(w http.ResponseWriter, r *http.Request, client *
 	createSubfolder := r.FormValue("subfolder") == "true" // For GeoPackage layer extraction
 	prefix := r.FormValue("prefix")                       // Current folder prefix
 
+	// Debug logging
+	log.Printf("[S3 Upload] File: %s, Convert: %v, Subfolder: %v, Prefix: %s",
+		header.Filename, convertToCloudNative, createSubfolder, prefix)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	// If conversion requested, save to temp file first
 	if convertToCloudNative {
 		ext := strings.ToLower(filepath.Ext(header.Filename))
+		log.Printf("[S3 Upload] Extension detected: %s", ext)
 
-		// Special handling for GeoPackage - extract all layers as GeoParquet
+		// Special handling for GeoPackage - extract all layers as GeoParquet/Parquet
 		if ext == ".gpkg" {
+			log.Printf("[S3 Upload] Processing GeoPackage file")
 			// Save to temp file
 			tempDir := os.TempDir()
 			tempPath := filepath.Join(tempDir, header.Filename)
+			log.Printf("[S3 Upload] Saving to temp path: %s", tempPath)
 			tempFile, err := os.Create(tempPath)
 			if err != nil {
+				log.Printf("[S3 Upload] ERROR: Failed to create temp file: %v", err)
 				s.jsonError(w, "Failed to create temp file", http.StatusInternalServerError)
 				return
 			}
@@ -559,19 +568,30 @@ func (s *Server) uploadS3Object(w http.ResponseWriter, r *http.Request, client *
 
 			if _, err := io.Copy(tempFile, file); err != nil {
 				tempFile.Close()
+				log.Printf("[S3 Upload] ERROR: Failed to save temp file: %v", err)
 				s.jsonError(w, "Failed to save temp file", http.StatusInternalServerError)
 				return
 			}
 			tempFile.Close()
+			log.Printf("[S3 Upload] Temp file saved successfully")
 
-			// Get list of layers in the GeoPackage
-			layers, err := cloudnative.ListGeoPackageLayers(ctx, tempPath)
+			// Get detailed info about layers in the GeoPackage (including geometry detection)
+			log.Printf("[S3 Upload] Getting layer info from GeoPackage")
+			layerInfos, err := cloudnative.GetGeoPackageLayerInfo(ctx, tempPath)
 			if err != nil {
-				s.jsonError(w, "Failed to list layers: "+err.Error(), http.StatusInternalServerError)
+				log.Printf("[S3 Upload] ERROR: Failed to get layer info: %v", err)
+				s.jsonError(w, "Failed to get layer info: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			if len(layers) == 0 {
+			log.Printf("[S3 Upload] Found %d layers in GeoPackage", len(layerInfos))
+			for i, layer := range layerInfos {
+				log.Printf("[S3 Upload]   Layer %d: %s (geom: %s, hasGeometry: %v)",
+					i, layer.Name, layer.GeometryType, layer.HasGeometry)
+			}
+
+			if len(layerInfos) == 0 {
+				log.Printf("[S3 Upload] ERROR: No layers found in GeoPackage")
 				s.jsonError(w, "No layers found in GeoPackage", http.StatusBadRequest)
 				return
 			}
@@ -591,52 +611,84 @@ func (s *Server) uploadS3Object(w http.ResponseWriter, r *http.Request, client *
 				outputPrefix = prefix
 			}
 
-			// Convert each layer
+			// Convert each layer - spatial layers to GeoParquet, non-spatial to Parquet
 			opts := cloudnative.DefaultConversionOptions()
 			var uploadedFiles []map[string]interface{}
 
-			for _, layerName := range layers {
-				outputPath := filepath.Join(tempDir, layerName+".parquet")
-				defer os.Remove(outputPath)
+			log.Printf("[S3 Upload] Starting conversion of %d layers", len(layerInfos))
 
-				if err := cloudnative.ConvertGeoPackageLayerToGeoParquet(ctx, tempPath, layerName, outputPath, opts, nil); err != nil {
-					// Skip layers that fail (might be non-spatial tables)
+			for _, layerInfo := range layerInfos {
+				var fileExt string
+				var contentType string
+				var convErr error
+				var outputPath string
+
+				if layerInfo.HasGeometry {
+					// Spatial layer -> GeoParquet (.geoparquet)
+					fileExt = ".geoparquet"
+					contentType = "application/vnd.apache.parquet"
+					outputPath = filepath.Join(tempDir, layerInfo.Name+fileExt)
+					log.Printf("[S3 Upload] Converting layer '%s' to GeoParquet: %s", layerInfo.Name, outputPath)
+					convErr = cloudnative.ConvertGeoPackageLayerToGeoParquet(ctx, tempPath, layerInfo.Name, outputPath, opts, nil)
+				} else {
+					// Non-spatial table -> Parquet (.parquet)
+					fileExt = ".parquet"
+					contentType = "application/vnd.apache.parquet"
+					outputPath = filepath.Join(tempDir, layerInfo.Name+fileExt)
+					log.Printf("[S3 Upload] Converting layer '%s' to Parquet: %s", layerInfo.Name, outputPath)
+					convErr = cloudnative.ConvertGeoPackageLayerToParquet(ctx, tempPath, layerInfo.Name, outputPath, opts, nil)
+				}
+
+				if convErr != nil {
+					// Skip layers that fail conversion
+					log.Printf("[S3 Upload] ERROR: Failed to convert layer '%s': %v", layerInfo.Name, convErr)
 					continue
 				}
+				log.Printf("[S3 Upload] Successfully converted layer '%s'", layerInfo.Name)
 
 				// Upload converted file
 				convertedFile, err := os.Open(outputPath)
 				if err != nil {
+					log.Printf("[S3 Upload] ERROR: Failed to open converted file '%s': %v", outputPath, err)
 					continue
 				}
 
 				stat, _ := convertedFile.Stat()
-				targetKey := outputPrefix + layerName + ".parquet"
+				targetKey := outputPrefix + layerInfo.Name + fileExt
+				log.Printf("[S3 Upload] Uploading '%s' (%d bytes) to S3 key: %s", layerInfo.Name, stat.Size(), targetKey)
 
 				putOpts := s3client.PutOptions{
-					ContentType: "application/vnd.apache.parquet",
+					ContentType: contentType,
 				}
 
 				if err := client.PutObject(ctx, bucketName, targetKey, convertedFile, stat.Size(), putOpts); err != nil {
 					convertedFile.Close()
+					log.Printf("[S3 Upload] ERROR: Failed to upload '%s': %v", targetKey, err)
 					continue
 				}
 				convertedFile.Close()
+				os.Remove(outputPath) // Clean up immediately after upload
+
+				log.Printf("[S3 Upload] Successfully uploaded '%s'", targetKey)
 
 				uploadedFiles = append(uploadedFiles, map[string]interface{}{
-					"layer": layerName,
-					"key":   targetKey,
-					"size":  stat.Size(),
+					"layer":       layerInfo.Name,
+					"key":         targetKey,
+					"size":        stat.Size(),
+					"hasGeometry": layerInfo.HasGeometry,
+					"format":      fileExt[1:], // Remove leading dot
 				})
 			}
 
+			log.Printf("[S3 Upload] Completed: %d layers converted and uploaded", len(uploadedFiles))
+
 			s.jsonResponse(w, map[string]interface{}{
-				"success":        true,
-				"converted":      true,
-				"format":         "geoparquet",
-				"gpkgExtracted":  true,
-				"layerCount":     len(uploadedFiles),
-				"files":          uploadedFiles,
+				"success":         true,
+				"converted":       true,
+				"format":          "geoparquet/parquet",
+				"gpkgExtracted":   true,
+				"layerCount":      len(uploadedFiles),
+				"files":           uploadedFiles,
 				"createSubfolder": createSubfolder,
 			})
 			return
@@ -1054,7 +1106,7 @@ func getContentType(filename string) string {
 		return "image/jpeg"
 	case ".json", ".geojson":
 		return "application/json"
-	case ".parquet":
+	case ".parquet", ".geoparquet":
 		return "application/vnd.apache.parquet"
 	case ".gpkg":
 		return "application/geopackage+sqlite3"

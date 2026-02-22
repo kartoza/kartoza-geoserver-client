@@ -3,9 +3,6 @@ import {
   Modal,
   ModalOverlay,
   ModalContent,
-  ModalBody,
-  ModalCloseButton,
-  ModalHeader,
   Text,
   Box,
   Table,
@@ -25,33 +22,37 @@ import {
   IconButton,
   Flex,
   useColorModeValue,
-  Tooltip,
-  Textarea,
-  Select,
+  Icon,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
   Tabs,
   TabList,
-  TabPanels,
   Tab,
-  TabPanel,
-  Divider,
-  Code,
   useToast,
 } from '@chakra-ui/react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   FiPlay,
-  FiChevronLeft,
-  FiChevronRight,
   FiDownload,
-  FiMap,
-  FiTable,
-  FiCode,
+  FiChevronDown,
   FiDatabase,
+  FiTable,
+  FiMap,
+  FiX,
+  FiCopy,
+  FiSearch,
 } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import * as api from '../../api/client'
-import type { DuckDBTableInfo, DuckDBQueryResponse } from '../../types'
+import type { DuckDBTableInfo } from '../../types'
+import { SQLEditor } from '../SQLEditor'
+import { springs } from '../../utils/animations'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+
+const MotionBox = motion(Box)
 
 export default function DuckDBQueryDialog() {
   const activeDialog = useUIStore((state) => state.activeDialog)
@@ -67,8 +68,8 @@ export default function DuckDBQueryDialog() {
   return (
     <Modal isOpen={isOpen} onClose={closeDialog} size="full" scrollBehavior="inside">
       <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
-      <ModalContent maxH="95vh" maxW="95vw" m={4} borderRadius="xl" overflow="hidden">
-        <DuckDBQueryContent dialogData={dialogData} />
+      <ModalContent maxH="95vh" maxW="95vw" m={4} borderRadius="2xl" overflow="hidden">
+        <DuckDBQueryContent dialogData={dialogData} onClose={closeDialog} />
       </ModalContent>
     </Modal>
   )
@@ -83,33 +84,105 @@ interface DuckDBQueryContentProps {
       displayName?: string
     }
   } | null
+  onClose: () => void
 }
 
-function DuckDBQueryContent({ dialogData }: DuckDBQueryContentProps) {
+// Result type matching PostGIS pattern
+interface DuckDBResult {
+  columns: { name: string; type: string }[]
+  rows: Record<string, unknown>[]
+  has_more: boolean
+  total_count?: number
+  duration_ms: number
+}
+
+function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
   const [tableInfo, setTableInfo] = useState<DuckDBTableInfo | null>(null)
-  const [queryResult, setQueryResult] = useState<DuckDBQueryResponse | null>(null)
+  const [result, setResult] = useState<DuckDBResult | null>(null)
   const [geojsonData, setGeojsonData] = useState<GeoJSON.FeatureCollection | null>(null)
   const [sql, setSql] = useState('')
   const [loading, setLoading] = useState(true)
-  const [queryLoading, setQueryLoading] = useState(false)
+  const [executing, setExecuting] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(100)
-  const [activeTab, setActiveTab] = useState(0) // 0=table, 1=map
+  const [offset, setOffset] = useState(0)
+  const [activeView, setActiveView] = useState<'table' | 'map'>('table')
+  const limit = 100
   const toast = useToast()
+
+  // Resizable splitter
+  const [splitPosition, setSplitPosition] = useState(() => {
+    const saved = localStorage.getItem('duckdb-query-split')
+    return saved ? parseInt(saved, 10) : 50
+  })
+  const [isDragging, setIsDragging] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const splitPositionRef = useRef(splitPosition)
+  const tableContainerRef = useRef<HTMLDivElement>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
 
-  const tableBg = useColorModeValue('white', 'gray.800')
+  // Colors
+  const bgColor = useColorModeValue('white', 'gray.800')
   const headerBg = useColorModeValue('gray.50', 'gray.700')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
-  const hoverBg = useColorModeValue('gray.50', 'gray.700')
-  const codeBg = useColorModeValue('gray.100', 'gray.700')
+  const hoverBg = useColorModeValue('blue.50', 'blue.900')
 
   const connectionId = dialogData?.data?.s3ConnectionId ?? ''
   const bucketName = dialogData?.data?.s3BucketName ?? ''
   const objectKey = dialogData?.data?.s3ObjectKey ?? ''
   const displayName = dialogData?.data?.displayName ?? objectKey.split('/').pop() ?? ''
+
+  // Splitter handlers
+  useEffect(() => {
+    splitPositionRef.current = splitPosition
+  }, [splitPosition])
+
+  const handleSplitterMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const newPosition = ((e.clientX - rect.left) / rect.width) * 100
+      const clamped = Math.max(25, Math.min(75, newPosition))
+      setSplitPosition(clamped)
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+      localStorage.setItem('duckdb-query-split', splitPositionRef.current.toString())
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging])
+
+  // Infinite scroll
+  useEffect(() => {
+    const container = tableContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      if (scrollHeight - scrollTop - clientHeight < 100 && result?.has_more && !loadingMore) {
+        loadMore()
+      }
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [result, loadingMore])
 
   // Fetch table info on mount
   useEffect(() => {
@@ -126,8 +199,8 @@ function DuckDBQueryContent({ dialogData }: DuckDBQueryContentProps) {
       try {
         const info = await api.getDuckDBTableInfo(connectionId, bucketName, objectKey)
         setTableInfo(info)
-        // Set default query
-        setSql(info.sampleQueries?.[0] || "SELECT * FROM 'data' LIMIT 100")
+        // Set default SQL
+        setSql(info.sampleQueries?.[0] || "SELECT * FROM data LIMIT 100")
       } catch (err) {
         setError((err as Error).message)
       } finally {
@@ -139,52 +212,93 @@ function DuckDBQueryContent({ dialogData }: DuckDBQueryContentProps) {
   }, [connectionId, bucketName, objectKey])
 
   // Execute SQL query
-  const executeQuery = useCallback(async () => {
+  const executeQuery = useCallback(async (appendResults = false) => {
     if (!connectionId || !bucketName || !objectKey || !sql.trim()) {
       return
     }
 
-    setQueryLoading(true)
-    setError(null)
+    const startTime = Date.now()
+
+    if (appendResults) {
+      setLoadingMore(true)
+    } else {
+      setExecuting(true)
+      setError(null)
+      setResult(null)
+      setOffset(0)
+    }
 
     try {
-      const result = await api.executeDuckDBQuery(connectionId, bucketName, objectKey, {
+      const currentOffset = appendResults ? offset : 0
+      const response = await api.executeDuckDBQuery(connectionId, bucketName, objectKey, {
         sql,
-        limit: pageSize,
-        offset: page * pageSize,
+        limit: limit,
+        offset: currentOffset,
       })
 
-      if (result.error) {
-        setError(result.error)
-        setQueryResult(null)
-      } else {
-        setQueryResult(result)
-        setError(null)
-      }
+      const duration = Date.now() - startTime
 
-      // If the result has geometry, also fetch GeoJSON for map
-      if (result.geometryColumn && !result.error) {
-        try {
-          const geojson = await api.executeDuckDBQueryAsGeoJSON(connectionId, bucketName, objectKey, {
-            sql,
-            limit: 1000, // Limit for map performance
+      if (response.error) {
+        setError(response.error)
+        setResult(null)
+      } else {
+        // Convert to result format with column types
+        const columns = response.columns.map((name, i) => ({
+          name,
+          type: response.columnTypes?.[i] || 'unknown',
+        }))
+
+        if (appendResults && result) {
+          setResult({
+            columns,
+            rows: [...result.rows, ...response.rows],
+            has_more: response.hasMore,
+            total_count: response.totalCount,
+            duration_ms: duration,
           })
-          setGeojsonData(geojson)
-        } catch {
-          // GeoJSON fetch can fail silently, table view still works
+          setOffset(currentOffset + response.rowCount)
+        } else {
+          setResult({
+            columns,
+            rows: response.rows,
+            has_more: response.hasMore,
+            total_count: response.totalCount,
+            duration_ms: duration,
+          })
+          setOffset(response.rowCount)
+        }
+
+        // If spatial, also fetch GeoJSON
+        if (response.geometryColumn && !appendResults) {
+          try {
+            const geojson = await api.executeDuckDBQueryAsGeoJSON(connectionId, bucketName, objectKey, {
+              sql,
+              limit: 1000,
+            })
+            setGeojsonData(geojson)
+          } catch {
+            // GeoJSON fetch can fail silently
+          }
         }
       }
     } catch (err) {
       setError((err as Error).message)
-      setQueryResult(null)
+      setResult(null)
     } finally {
-      setQueryLoading(false)
+      setExecuting(false)
+      setLoadingMore(false)
     }
-  }, [connectionId, bucketName, objectKey, sql, page, pageSize])
+  }, [connectionId, bucketName, objectKey, sql, offset, result])
 
-  // Initialize map when switching to map tab
+  const loadMore = useCallback(() => {
+    if (result?.has_more && !loadingMore) {
+      executeQuery(true)
+    }
+  }, [result, loadingMore, executeQuery])
+
+  // Initialize map when switching to map view
   useEffect(() => {
-    if (activeTab !== 1 || !mapContainerRef.current || !geojsonData) return
+    if (activeView !== 'map' || !mapContainerRef.current || !geojsonData) return
 
     // Clean up existing map
     if (mapRef.current) {
@@ -204,13 +318,7 @@ function DuckDBQueryContent({ dialogData }: DuckDBQueryContentProps) {
             attribution: '&copy; OpenStreetMap Contributors',
           },
         },
-        layers: [
-          {
-            id: 'osm',
-            type: 'raster',
-            source: 'osm',
-          },
-        ],
+        layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
       },
       center: [0, 0],
       zoom: 2,
@@ -219,65 +327,47 @@ function DuckDBQueryContent({ dialogData }: DuckDBQueryContentProps) {
     map.addControl(new maplibregl.NavigationControl(), 'top-right')
 
     map.on('load', () => {
-      // Add GeoJSON source
-      map.addSource('query-results', {
-        type: 'geojson',
-        data: geojsonData,
-      })
+      map.addSource('query-results', { type: 'geojson', data: geojsonData })
 
-      // Detect geometry type and add appropriate layer
       const features = geojsonData.features
-      if (features.length > 0) {
-        const firstGeom = features[0].geometry
-        if (firstGeom) {
-          const geomType = firstGeom.type
+      if (features.length > 0 && features[0].geometry) {
+        const geomType = features[0].geometry.type
 
-          if (geomType === 'Point' || geomType === 'MultiPoint') {
-            map.addLayer({
-              id: 'query-results-layer',
-              type: 'circle',
-              source: 'query-results',
-              paint: {
-                'circle-radius': 6,
-                'circle-color': '#3182ce',
-                'circle-stroke-color': '#ffffff',
-                'circle-stroke-width': 2,
-              },
-            })
-          } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
-            map.addLayer({
-              id: 'query-results-layer',
-              type: 'line',
-              source: 'query-results',
-              paint: {
-                'line-color': '#3182ce',
-                'line-width': 3,
-              },
-            })
-          } else {
-            // Polygon or other
-            map.addLayer({
-              id: 'query-results-fill',
-              type: 'fill',
-              source: 'query-results',
-              paint: {
-                'fill-color': '#3182ce',
-                'fill-opacity': 0.3,
-              },
-            })
-            map.addLayer({
-              id: 'query-results-layer',
-              type: 'line',
-              source: 'query-results',
-              paint: {
-                'line-color': '#3182ce',
-                'line-width': 2,
-              },
-            })
-          }
+        if (geomType === 'Point' || geomType === 'MultiPoint') {
+          map.addLayer({
+            id: 'query-results-layer',
+            type: 'circle',
+            source: 'query-results',
+            paint: {
+              'circle-radius': 6,
+              'circle-color': '#3182ce',
+              'circle-stroke-color': '#ffffff',
+              'circle-stroke-width': 2,
+            },
+          })
+        } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+          map.addLayer({
+            id: 'query-results-layer',
+            type: 'line',
+            source: 'query-results',
+            paint: { 'line-color': '#3182ce', 'line-width': 3 },
+          })
+        } else {
+          map.addLayer({
+            id: 'query-results-fill',
+            type: 'fill',
+            source: 'query-results',
+            paint: { 'fill-color': '#3182ce', 'fill-opacity': 0.3 },
+          })
+          map.addLayer({
+            id: 'query-results-layer',
+            type: 'line',
+            source: 'query-results',
+            paint: { 'line-color': '#3182ce', 'line-width': 2 },
+          })
         }
 
-        // Fit bounds to data
+        // Fit bounds
         const bounds = new maplibregl.LngLatBounds()
         features.forEach((feature) => {
           if (feature.geometry) {
@@ -290,27 +380,22 @@ function DuckDBQueryContent({ dialogData }: DuckDBQueryContentProps) {
         }
       }
 
-      // Add click popup
+      // Click popup
       map.on('click', 'query-results-layer', (e) => {
-        if (e.features && e.features[0]) {
+        if (e.features?.[0]) {
           const props = e.features[0].properties
           const html = Object.entries(props || {})
             .map(([k, v]) => `<strong>${k}:</strong> ${v}`)
             .join('<br>')
-
           new maplibregl.Popup()
             .setLngLat(e.lngLat)
-            .setHTML(`<div style="max-height: 200px; overflow-y: auto;">${html}</div>`)
+            .setHTML(`<div style="max-height:200px;overflow-y:auto;">${html}</div>`)
             .addTo(map)
         }
       })
 
-      map.on('mouseenter', 'query-results-layer', () => {
-        map.getCanvas().style.cursor = 'pointer'
-      })
-      map.on('mouseleave', 'query-results-layer', () => {
-        map.getCanvas().style.cursor = ''
-      })
+      map.on('mouseenter', 'query-results-layer', () => { map.getCanvas().style.cursor = 'pointer' })
+      map.on('mouseleave', 'query-results-layer', () => { map.getCanvas().style.cursor = '' })
     })
 
     mapRef.current = map
@@ -321,16 +406,15 @@ function DuckDBQueryContent({ dialogData }: DuckDBQueryContentProps) {
         mapRef.current = null
       }
     }
-  }, [activeTab, geojsonData])
+  }, [activeView, geojsonData])
 
-  // Helper to extract coordinates from geometry
   function getCoordinates(geometry: GeoJSON.Geometry): [number, number][] {
     const coords: [number, number][] = []
-    const extract = (c: GeoJSON.Position | GeoJSON.Position[] | GeoJSON.Position[][] | GeoJSON.Position[][][]) => {
-      if (typeof c[0] === 'number') {
+    const extract = (c: unknown) => {
+      if (Array.isArray(c) && typeof c[0] === 'number') {
         coords.push([c[0] as number, c[1] as number])
-      } else {
-        (c as unknown[]).forEach((inner) => extract(inner as GeoJSON.Position))
+      } else if (Array.isArray(c)) {
+        c.forEach(extract)
       }
     }
     if ('coordinates' in geometry) {
@@ -339,391 +423,414 @@ function DuckDBQueryContent({ dialogData }: DuckDBQueryContentProps) {
     return coords
   }
 
-  const handleExportCSV = () => {
-    if (!queryResult?.rows) return
-
-    const headers = queryResult.columns.join(',')
-    const rows = queryResult.rows.map((row) =>
-      queryResult.columns.map((col) => {
-        const cell = row[col]
-        if (cell === null || cell === undefined) return ''
-        const str = String(cell)
-        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-          return `"${str.replace(/"/g, '""')}"`
-        }
-        return str
-      }).join(',')
-    ).join('\n')
-
-    const csv = `${headers}\n${rows}`
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${displayName}_query_result.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-
+  const copySQL = () => {
+    navigator.clipboard.writeText(sql)
     toast({
-      title: 'Export Complete',
-      description: `Exported ${queryResult.rowCount} rows to CSV`,
+      title: 'Copied',
+      description: 'SQL copied to clipboard',
       status: 'success',
-      duration: 3000,
+      duration: 2000,
     })
   }
 
-  const handleSampleQuery = (query: string) => {
-    setSql(query)
-    setPage(0)
+  const exportResults = (format: 'csv' | 'json') => {
+    if (!result) return
+
+    let content = ''
+    let filename = ''
+    let mimeType = ''
+
+    if (format === 'csv') {
+      const headers = result.columns.map(c => c.name).join(',')
+      const rows = result.rows.map(row =>
+        result.columns.map(col => {
+          const cell = row[col.name]
+          if (cell === null || cell === undefined) return ''
+          const str = String(cell)
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`
+          }
+          return str
+        }).join(',')
+      ).join('\n')
+      content = `${headers}\n${rows}`
+      filename = `${displayName}_query_result.csv`
+      mimeType = 'text/csv'
+    } else {
+      content = JSON.stringify(result.rows, null, 2)
+      filename = `${displayName}_query_result.json`
+      mimeType = 'application/json'
+    }
+
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   // Loading state
   if (loading) {
     return (
-      <>
-        <ModalHeader borderBottomWidth="1px">
-          <HStack spacing={3}>
-            <FiDatabase />
-            <Text>Loading {displayName}...</Text>
-          </HStack>
-        </ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <Flex justify="center" align="center" h="400px">
-            <Spinner size="xl" />
-          </Flex>
-        </ModalBody>
-      </>
-    )
-  }
-
-  // Error loading table info
-  if (error && !tableInfo) {
-    return (
-      <>
-        <ModalHeader borderBottomWidth="1px">
-          <HStack spacing={3}>
-            <FiDatabase />
-            <Text>Query {displayName}</Text>
-          </HStack>
-        </ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <Alert status="error" borderRadius="md">
-            <AlertIcon />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </ModalBody>
-      </>
+      <Flex h="100%" align="center" justify="center" p={8}>
+        <VStack spacing={4}>
+          <Spinner size="xl" color="blue.500" thickness="4px" />
+          <Text color="gray.500">Loading {displayName}...</Text>
+        </VStack>
+      </Flex>
     )
   }
 
   return (
-    <>
-      <ModalHeader borderBottomWidth="1px" py={3}>
-        <HStack spacing={3} justify="space-between">
-          <HStack spacing={3}>
-            <FiDatabase />
-            <Text>DuckDB Query: {displayName}</Text>
-            {tableInfo && (
-              <>
-                <Badge colorScheme="blue">{tableInfo.rowCount.toLocaleString()} rows</Badge>
-                <Badge colorScheme="green">{tableInfo.columns.length} columns</Badge>
-                {tableInfo.geometryColumn && (
-                  <Badge colorScheme="purple">Spatial: {tableInfo.geometryColumn}</Badge>
-                )}
-              </>
-            )}
-          </HStack>
-          <ModalCloseButton position="static" />
-        </HStack>
-      </ModalHeader>
-
-      <ModalBody p={0}>
-        <Flex h="calc(95vh - 120px)" direction="column">
-          {/* SQL Editor Section */}
-          <Box p={4} borderBottomWidth="1px">
-            <VStack spacing={3} align="stretch">
-              {/* Sample queries */}
-              {tableInfo?.sampleQueries && tableInfo.sampleQueries.length > 0 && (
-                <HStack spacing={2} flexWrap="wrap">
-                  <Text fontSize="sm" fontWeight="medium">Sample Queries:</Text>
-                  {tableInfo.sampleQueries.map((query, i) => (
-                    <Button
-                      key={i}
-                      size="xs"
-                      variant="outline"
-                      onClick={() => handleSampleQuery(query)}
-                      fontFamily="mono"
-                      maxW="300px"
-                      isTruncated
-                    >
-                      {query.substring(0, 40)}...
-                    </Button>
-                  ))}
-                </HStack>
+    <MotionBox
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={springs.default}
+      bg={bgColor}
+      h="100%"
+      display="flex"
+      flexDirection="column"
+    >
+      {/* Header */}
+      <Flex
+        px={4}
+        py={3}
+        bg={headerBg}
+        borderBottom="1px solid"
+        borderColor={borderColor}
+        align="center"
+        justify="space-between"
+      >
+        <HStack spacing={3}>
+          <Icon as={FiDatabase} color="blue.500" boxSize={5} />
+          <Text fontWeight="600" fontSize="lg">DuckDB Query</Text>
+          <Badge colorScheme="blue" borderRadius="full">{displayName}</Badge>
+          {tableInfo && (
+            <>
+              <Badge colorScheme="green" borderRadius="full">
+                {tableInfo.rowCount.toLocaleString()} rows
+              </Badge>
+              <Badge colorScheme="gray" borderRadius="full">
+                {tableInfo.columns.length} columns
+              </Badge>
+              {tableInfo.geometryColumn && (
+                <Badge colorScheme="purple" borderRadius="full">
+                  Spatial: {tableInfo.geometryColumn}
+                </Badge>
               )}
+            </>
+          )}
+        </HStack>
+        <IconButton
+          aria-label="Close"
+          icon={<FiX />}
+          variant="ghost"
+          onClick={onClose}
+        />
+      </Flex>
 
-              {/* SQL Input */}
-              <Textarea
-                value={sql}
-                onChange={(e) => setSql(e.target.value)}
-                placeholder="Enter SQL query... Use 'data' as the table name (e.g., SELECT * FROM data LIMIT 10)"
-                fontFamily="mono"
-                fontSize="sm"
-                minH="100px"
-                bg={codeBg}
-                borderRadius="md"
-              />
-
-              <HStack justify="space-between">
-                <HStack spacing={2}>
+      {/* Content Area with Resizable Splitter */}
+      <Flex ref={containerRef} flex={1} overflow="hidden" position="relative">
+        {/* Left Panel - SQL Editor */}
+        <Flex
+          w={`${splitPosition}%`}
+          flexDirection="column"
+          overflow="hidden"
+        >
+          {/* Sample Queries */}
+          {tableInfo?.sampleQueries && tableInfo.sampleQueries.length > 0 && (
+            <Box px={4} py={2} borderBottom="1px solid" borderColor={borderColor}>
+              <HStack spacing={2} flexWrap="wrap">
+                <Text fontSize="xs" color="gray.500" fontWeight="medium">Samples:</Text>
+                {tableInfo.sampleQueries.slice(0, 3).map((query, i) => (
                   <Button
-                    leftIcon={<FiPlay />}
-                    colorScheme="blue"
-                    onClick={executeQuery}
-                    isLoading={queryLoading}
-                    loadingText="Executing..."
+                    key={i}
+                    size="xs"
+                    variant="outline"
+                    onClick={() => setSql(query)}
+                    fontFamily="mono"
+                    maxW="200px"
+                    isTruncated
                   >
-                    Execute Query
+                    {query.length > 30 ? query.substring(0, 30) + '...' : query}
                   </Button>
-                  <Select
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value))
-                      setPage(0)
-                    }}
-                    w="120px"
-                  >
-                    <option value={50}>50 rows</option>
-                    <option value={100}>100 rows</option>
-                    <option value={500}>500 rows</option>
-                    <option value={1000}>1000 rows</option>
-                  </Select>
-                </HStack>
-
-                {queryResult && (
-                  <HStack spacing={2}>
-                    <Tooltip label="Export to CSV">
-                      <IconButton
-                        aria-label="Export CSV"
-                        icon={<FiDownload />}
-                        size="sm"
-                        onClick={handleExportCSV}
-                      />
-                    </Tooltip>
-                    <Badge colorScheme="green">
-                      {queryResult.rowCount} results
-                      {queryResult.hasMore && ' (more available)'}
-                    </Badge>
-                  </HStack>
-                )}
+                ))}
               </HStack>
-            </VStack>
-          </Box>
-
-          {/* Query Error */}
-          {error && (
-            <Box px={4} pt={2}>
-              <Alert status="error" borderRadius="md">
-                <AlertIcon />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
             </Box>
           )}
 
-          {/* Results Section */}
-          <Box flex={1} overflow="hidden">
-            <Tabs
-              index={activeTab}
-              onChange={setActiveTab}
-              h="100%"
-              display="flex"
-              flexDirection="column"
+          {/* SQL Editor */}
+          <Box flex={1} overflow="auto" p={4}>
+            <VStack spacing={4} align="stretch" h="100%">
+              <HStack justify="space-between">
+                <Text fontWeight="600" fontSize="sm" color="gray.600">
+                  Write your SQL query (use 'data' as table name)
+                </Text>
+                <IconButton
+                  aria-label="Copy"
+                  icon={<FiCopy />}
+                  size="sm"
+                  variant="ghost"
+                  onClick={copySQL}
+                />
+              </HStack>
+              <Box flex={1} minH="200px">
+                <SQLEditor
+                  value={sql}
+                  onChange={setSql}
+                  height="100%"
+                  placeholder="SELECT * FROM data WHERE ..."
+                />
+              </Box>
+            </VStack>
+          </Box>
+
+          {/* Execute Button - Fixed at bottom */}
+          <Box
+            px={4}
+            py={3}
+            borderTop="1px solid"
+            borderColor={borderColor}
+            bg={bgColor}
+          >
+            <Flex justify="space-between" align="center">
+              <Button
+                colorScheme="blue"
+                leftIcon={<FiPlay />}
+                onClick={() => executeQuery(false)}
+                isLoading={executing}
+                loadingText="Executing..."
+                isDisabled={!sql.trim()}
+              >
+                Execute Query
+              </Button>
+              {result && (
+                <HStack spacing={2}>
+                  <Badge colorScheme="green">
+                    {result.rows.length}{result.has_more ? '+' : ''} rows
+                  </Badge>
+                  <Badge colorScheme="gray">
+                    {result.duration_ms.toFixed(0)}ms
+                  </Badge>
+                </HStack>
+              )}
+            </Flex>
+          </Box>
+        </Flex>
+
+        {/* Resizable Splitter */}
+        <Box
+          w="4px"
+          cursor="col-resize"
+          bg={isDragging ? 'blue.400' : borderColor}
+          _hover={{ bg: 'blue.400' }}
+          transition="background 0.2s"
+          onMouseDown={handleSplitterMouseDown}
+          flexShrink={0}
+        />
+
+        {/* Right Panel - Results */}
+        <Box
+          w={`calc(${100 - splitPosition}% - 4px)`}
+          display="flex"
+          flexDirection="column"
+          overflow="hidden"
+        >
+          {/* Results Header with View Tabs */}
+          <Flex
+            px={4}
+            py={3}
+            bg={headerBg}
+            borderBottom="1px solid"
+            borderColor={borderColor}
+            align="center"
+            justify="space-between"
+          >
+            <HStack>
+              <Tabs
+                index={activeView === 'table' ? 0 : 1}
+                onChange={(i) => setActiveView(i === 0 ? 'table' : 'map')}
+                size="sm"
+                variant="soft-rounded"
+                colorScheme="blue"
+              >
+                <TabList>
+                  <Tab><HStack spacing={1}><Icon as={FiTable} /><Text>Table</Text></HStack></Tab>
+                  {geojsonData && (
+                    <Tab><HStack spacing={1}><Icon as={FiMap} /><Text>Map</Text></HStack></Tab>
+                  )}
+                </TabList>
+              </Tabs>
+              {result && (
+                <Badge colorScheme="blue" borderRadius="full" ml={2}>
+                  {result.rows.length}
+                  {result.total_count ? ` / ${result.total_count}` : ''} rows
+                </Badge>
+              )}
+            </HStack>
+            {result && (
+              <Menu>
+                <MenuButton
+                  as={Button}
+                  size="sm"
+                  variant="ghost"
+                  rightIcon={<FiChevronDown />}
+                >
+                  <Icon as={FiDownload} />
+                </MenuButton>
+                <MenuList>
+                  <MenuItem icon={<FiDownload />} onClick={() => exportResults('csv')}>
+                    Export as CSV
+                  </MenuItem>
+                  <MenuItem icon={<FiDownload />} onClick={() => exportResults('json')}>
+                    Export as JSON
+                  </MenuItem>
+                </MenuList>
+              </Menu>
+            )}
+          </Flex>
+
+          {/* Error Display */}
+          {error && (
+            <Alert status="error" borderRadius="none">
+              <AlertIcon />
+              <AlertDescription fontSize="sm">{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Results Content */}
+          {activeView === 'table' ? (
+            <Box
+              ref={tableContainerRef}
+              flex={1}
+              overflow="auto"
+              position="relative"
             >
-              <TabList px={4}>
-                <Tab>
-                  <HStack spacing={2}>
-                    <FiTable />
-                    <Text>Table View</Text>
-                  </HStack>
-                </Tab>
-                {(queryResult?.geometryColumn || geojsonData) && (
-                  <Tab>
-                    <HStack spacing={2}>
-                      <FiMap />
-                      <Text>Map View</Text>
-                    </HStack>
-                  </Tab>
-                )}
-                <Tab>
-                  <HStack spacing={2}>
-                    <FiCode />
-                    <Text>Schema</Text>
-                  </HStack>
-                </Tab>
-              </TabList>
+              {executing && !result ? (
+                <Flex h="100%" align="center" justify="center">
+                  <VStack spacing={4}>
+                    <Spinner size="xl" color="blue.500" thickness="4px" />
+                    <Text color="gray.500">Executing query...</Text>
+                  </VStack>
+                </Flex>
+              ) : result ? (
+                <>
+                  <Table size="sm" variant="simple">
+                    <Thead position="sticky" top={0} bg={headerBg} zIndex={1}>
+                      <Tr>
+                        <Th
+                          w="50px"
+                          textAlign="center"
+                          borderBottomWidth="2px"
+                          borderBottomColor={borderColor}
+                        >
+                          #
+                        </Th>
+                        {result.columns.map((col, i) => (
+                          <Th
+                            key={i}
+                            borderBottomWidth="2px"
+                            borderBottomColor={borderColor}
+                            whiteSpace="nowrap"
+                          >
+                            <VStack align="start" spacing={0}>
+                              <Text>{col.name}</Text>
+                              <Text fontSize="2xs" color="gray.400" fontWeight="normal">
+                                {col.type}
+                              </Text>
+                            </VStack>
+                          </Th>
+                        ))}
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      <AnimatePresence>
+                        {result.rows.map((row, rowIndex) => (
+                          <MotionBox
+                            as={Tr}
+                            key={rowIndex}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ delay: Math.min(rowIndex * 0.01, 0.5) }}
+                            _hover={{ bg: hoverBg }}
+                          >
+                            <Td
+                              textAlign="center"
+                              color="gray.400"
+                              fontSize="xs"
+                              fontFamily="mono"
+                            >
+                              {rowIndex + 1}
+                            </Td>
+                            {result.columns.map((col, colIndex) => {
+                              const value = row[col.name]
+                              const isNull = value === null
+                              const displayValue = isNull
+                                ? 'NULL'
+                                : typeof value === 'object'
+                                ? JSON.stringify(value)
+                                : String(value)
 
-              <TabPanels flex={1} overflow="hidden">
-                {/* Table View */}
-                <TabPanel h="100%" p={0} overflow="auto">
-                  {queryLoading ? (
-                    <Flex justify="center" align="center" h="200px">
-                      <Spinner size="xl" />
-                    </Flex>
-                  ) : queryResult && queryResult.rows.length > 0 ? (
-                    <Box overflow="auto" h="100%">
-                      <Table size="sm" variant="striped">
-                        <Thead position="sticky" top={0} bg={headerBg} zIndex={1}>
-                          <Tr>
-                            {queryResult.columns.map((col) => (
-                              <Th key={col} borderColor={borderColor}>
-                                {col}
-                              </Th>
-                            ))}
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {queryResult.rows.map((row, i) => (
-                            <Tr key={i} _hover={{ bg: hoverBg }}>
-                              {queryResult.columns.map((col) => (
-                                <Td key={col} borderColor={borderColor} maxW="300px" isTruncated>
-                                  {formatCellValue(row[col])}
+                              return (
+                                <Td
+                                  key={colIndex}
+                                  maxW="300px"
+                                  overflow="hidden"
+                                  textOverflow="ellipsis"
+                                  whiteSpace="nowrap"
+                                  color={isNull ? 'gray.400' : undefined}
+                                  fontStyle={isNull ? 'italic' : undefined}
+                                  fontSize="sm"
+                                  title={displayValue}
+                                >
+                                  {displayValue.length > 100
+                                    ? displayValue.substring(0, 100) + '...'
+                                    : displayValue}
                                 </Td>
-                              ))}
-                            </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
+                              )
+                            })}
+                          </MotionBox>
+                        ))}
+                      </AnimatePresence>
+                    </Tbody>
+                  </Table>
 
-                      {/* Pagination */}
-                      <Flex justify="center" py={4} borderTopWidth="1px" bg={tableBg}>
-                        <HStack spacing={4}>
-                          <IconButton
-                            aria-label="Previous page"
-                            icon={<FiChevronLeft />}
-                            size="sm"
-                            onClick={() => {
-                              setPage((p) => Math.max(0, p - 1))
-                              executeQuery()
-                            }}
-                            isDisabled={page === 0}
-                          />
-                          <Text fontSize="sm">
-                            Page {page + 1}
-                            {queryResult.hasMore && ' (more available)'}
-                          </Text>
-                          <IconButton
-                            aria-label="Next page"
-                            icon={<FiChevronRight />}
-                            size="sm"
-                            onClick={() => {
-                              setPage((p) => p + 1)
-                              executeQuery()
-                            }}
-                            isDisabled={!queryResult.hasMore}
-                          />
-                        </HStack>
-                      </Flex>
-                    </Box>
-                  ) : (
-                    <Flex justify="center" align="center" h="200px">
-                      <Text color="gray.500">
-                        {queryResult ? 'No results' : 'Execute a query to see results'}
+                  {/* Loading More Indicator */}
+                  {loadingMore && (
+                    <Flex py={4} justify="center">
+                      <HStack>
+                        <Spinner size="sm" />
+                        <Text fontSize="sm" color="gray.500">Loading more...</Text>
+                      </HStack>
+                    </Flex>
+                  )}
+
+                  {/* End of Results */}
+                  {!result.has_more && result.rows.length > 0 && (
+                    <Flex py={4} justify="center">
+                      <Text fontSize="sm" color="gray.400">
+                        End of results ({result.rows.length} rows)
                       </Text>
                     </Flex>
                   )}
-                </TabPanel>
-
-                {/* Map View */}
-                {(queryResult?.geometryColumn || geojsonData) && (
-                  <TabPanel h="100%" p={0}>
-                    {geojsonData ? (
-                      <Box ref={mapContainerRef} w="100%" h="100%" />
-                    ) : (
-                      <Flex justify="center" align="center" h="100%">
-                        <VStack>
-                          <Text color="gray.500">Execute a query to see results on the map</Text>
-                          {queryResult?.geometryColumn && (
-                            <Text fontSize="sm" color="gray.400">
-                              Geometry column detected: {queryResult.geometryColumn}
-                            </Text>
-                          )}
-                        </VStack>
-                      </Flex>
-                    )}
-                  </TabPanel>
-                )}
-
-                {/* Schema View */}
-                <TabPanel h="100%" overflow="auto">
-                  {tableInfo && (
-                    <Box p={4}>
-                      <VStack align="stretch" spacing={4}>
-                        <Box>
-                          <Text fontWeight="bold" mb={2}>File Information</Text>
-                          <HStack spacing={4} flexWrap="wrap">
-                            <Badge>Rows: {tableInfo.rowCount.toLocaleString()}</Badge>
-                            <Badge>Columns: {tableInfo.columns.length}</Badge>
-                            {tableInfo.geometryColumn && (
-                              <Badge colorScheme="purple">
-                                Geometry: {tableInfo.geometryColumn}
-                              </Badge>
-                            )}
-                            {tableInfo.bbox && (
-                              <Badge colorScheme="green">
-                                Bbox: [{tableInfo.bbox.map((v) => v.toFixed(4)).join(', ')}]
-                              </Badge>
-                            )}
-                          </HStack>
-                        </Box>
-
-                        <Divider />
-
-                        <Box>
-                          <Text fontWeight="bold" mb={2}>Columns</Text>
-                          <Table size="sm" variant="simple">
-                            <Thead>
-                              <Tr>
-                                <Th>Name</Th>
-                                <Th>Type</Th>
-                              </Tr>
-                            </Thead>
-                            <Tbody>
-                              {tableInfo.columns.map((col) => (
-                                <Tr key={col.name}>
-                                  <Td fontFamily="mono">{col.name}</Td>
-                                  <Td>
-                                    <Code fontSize="xs">{col.type}</Code>
-                                  </Td>
-                                </Tr>
-                              ))}
-                            </Tbody>
-                          </Table>
-                        </Box>
-                      </VStack>
-                    </Box>
-                  )}
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
-          </Box>
-        </Flex>
-      </ModalBody>
-    </>
+                </>
+              ) : (
+                <Flex h="100%" align="center" justify="center">
+                  <VStack spacing={4} color="gray.400">
+                    <Icon as={FiSearch} boxSize={12} />
+                    <Text>Execute a query to see results</Text>
+                  </VStack>
+                </Flex>
+              )}
+            </Box>
+          ) : (
+            <Box ref={mapContainerRef} flex={1} />
+          )}
+        </Box>
+      </Flex>
+    </MotionBox>
   )
-}
-
-// Helper to format cell values
-function formatCellValue(value: unknown): string {
-  if (value === null || value === undefined) return ''
-  if (typeof value === 'object') {
-    // Handle geometry or JSON objects
-    const str = JSON.stringify(value)
-    return str.length > 100 ? str.substring(0, 97) + '...' : str
-  }
-  const str = String(value)
-  return str.length > 100 ? str.substring(0, 97) + '...' : str
 }

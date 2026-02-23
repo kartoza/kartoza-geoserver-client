@@ -38,6 +38,7 @@ export type DialogType =
   | 'icebergtablepreview'
   | 'icebergtabledata'
   | 'icebergquery'
+  | 'merginmaps'
   | null
 
 export type DialogMode = 'create' | 'edit' | 'delete' | 'view'

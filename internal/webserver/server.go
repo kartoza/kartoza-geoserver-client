@@ -232,6 +232,11 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/geonode/connections/test", s.handleGeoNodeTestConnection)
 	mux.HandleFunc("/api/geonode/connections/", s.handleGeoNodeConnectionByID)
 
+	// API routes - Mergin Maps
+	mux.HandleFunc("/api/mergin/connections", s.handleMerginMapsConnections)
+	mux.HandleFunc("/api/mergin/connections/test", s.handleMerginMapsTestConnection)
+	mux.HandleFunc("/api/mergin/connections/", s.handleMerginMapsConnectionByID)
+
 	// API routes - Iceberg (Apache Iceberg REST Catalog)
 	mux.HandleFunc("/api/iceberg/connections", s.handleIcebergConnections)
 	mux.HandleFunc("/api/iceberg/connections/test", s.handleTestIcebergConnectionDirect)

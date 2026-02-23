@@ -39,6 +39,13 @@ func (a *App) buildConnectionsTree() {
 	a.loadS3ConnectionsToTree(s3Node)
 	root.AddChild(s3Node)
 
+	// Create Mergin Maps section
+	merginNode := models.NewTreeNode("Mergin Maps", models.NodeTypeMerginMapsRoot)
+	merginNode.Expanded = true
+	// Load Mergin Maps connections from config
+	a.loadMerginMapsConnectionsToTree(merginNode)
+	root.AddChild(merginNode)
+
 	a.treeView.SetRoot(root)
 }
 
@@ -49,6 +56,16 @@ func (a *App) loadS3ConnectionsToTree(s3Node *models.TreeNode) {
 		connNode.S3ConnectionID = conn.ID
 		connNode.Expanded = false // Start collapsed, expand when user clicks
 		s3Node.AddChild(connNode)
+	}
+}
+
+// loadMerginMapsConnectionsToTree loads Mergin Maps connections from config into the tree
+func (a *App) loadMerginMapsConnectionsToTree(merginNode *models.TreeNode) {
+	for _, conn := range a.config.MerginMapsConnections {
+		connNode := models.NewTreeNode(conn.Name, models.NodeTypeMerginMapsConnection)
+		connNode.MerginMapsConnectionID = conn.ID
+		connNode.Expanded = false
+		merginNode.AddChild(connNode)
 	}
 }
 

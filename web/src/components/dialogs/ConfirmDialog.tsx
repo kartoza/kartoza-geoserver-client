@@ -117,6 +117,15 @@ export default function ConfirmDialog() {
           status: 'success',
           duration: 2000,
         })
+      } else if (data?.merginMapsConnectionId) {
+        // Delete Mergin Maps connection
+        await api.deleteMerginMapsConnection(data.merginMapsConnectionId as string)
+        queryClient.invalidateQueries({ queryKey: ['merginmapsconnections'] })
+        toast({
+          title: 'Mergin Maps connection removed',
+          status: 'success',
+          duration: 2000,
+        })
       } else if (data?.connectionId && !data?.workspace) {
         // Delete connection
         await removeConnection(data.connectionId as string)

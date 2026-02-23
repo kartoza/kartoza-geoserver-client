@@ -115,6 +115,17 @@ type GeoNodeConnection struct {
 	IsActive bool   `json:"is_active"`
 }
 
+// MerginMapsConnection represents a Mergin Maps server connection configuration
+type MerginMapsConnection struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	URL      string `json:"url"`      // Base URL, defaults to "https://app.merginmaps.com"
+	Username string `json:"username"`
+	Password string `json:"password,omitempty"`
+	Token    string `json:"token,omitempty"` // Bearer token (alternative to username/password)
+	IsActive bool   `json:"is_active"`
+}
+
 // IcebergCatalogConnection represents an Apache Iceberg REST Catalog connection
 type IcebergCatalogConnection struct {
 	ID         string `json:"id"`
@@ -152,6 +163,7 @@ type Config struct {
 	QGISProjects         []QGISProject              `json:"qgis_projects,omitempty"`         // QGIS project files
 	GeoNodeConnections   []GeoNodeConnection        `json:"geonode_connections,omitempty"`   // GeoNode instance connections
 	IcebergConnections   []IcebergCatalogConnection `json:"iceberg_connections,omitempty"`   // Iceberg REST Catalog connections
+	MerginMapsConnections []MerginMapsConnection    `json:"merginmaps_connections,omitempty"` // Mergin Maps server connections
 }
 
 // GetPingInterval returns the ping interval in seconds, with a default of 60
@@ -590,6 +602,42 @@ func (c *Config) RemoveIcebergConnection(id string) {
 	for i, conn := range c.IcebergConnections {
 		if conn.ID == id {
 			c.IcebergConnections = append(c.IcebergConnections[:i], c.IcebergConnections[i+1:]...)
+			return
+		}
+	}
+}
+
+// GetMerginMapsConnection returns a Mergin Maps connection by ID
+func (c *Config) GetMerginMapsConnection(id string) *MerginMapsConnection {
+	for i := range c.MerginMapsConnections {
+		if c.MerginMapsConnections[i].ID == id {
+			return &c.MerginMapsConnections[i]
+		}
+	}
+	return nil
+}
+
+// AddMerginMapsConnection adds a new Mergin Maps connection
+func (c *Config) AddMerginMapsConnection(conn MerginMapsConnection) {
+	c.MerginMapsConnections = append(c.MerginMapsConnections, conn)
+}
+
+// UpdateMerginMapsConnection updates an existing Mergin Maps connection
+func (c *Config) UpdateMerginMapsConnection(conn MerginMapsConnection) bool {
+	for i := range c.MerginMapsConnections {
+		if c.MerginMapsConnections[i].ID == conn.ID {
+			c.MerginMapsConnections[i] = conn
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveMerginMapsConnection removes a Mergin Maps connection by ID
+func (c *Config) RemoveMerginMapsConnection(id string) {
+	for i, conn := range c.MerginMapsConnections {
+		if conn.ID == id {
+			c.MerginMapsConnections = append(c.MerginMapsConnections[:i], c.MerginMapsConnections[i+1:]...)
 			return
 		}
 	}

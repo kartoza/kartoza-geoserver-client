@@ -34,6 +34,9 @@ const (
 	NodeTypeStyle
 	NodeTypeLayerGroups
 	NodeTypeLayerGroup
+	NodeTypeMerginMapsRoot       // "Mergin Maps" container
+	NodeTypeMerginMapsConnection // A Mergin Maps server connection
+	NodeTypeMerginMapsProject    // A Mergin Maps project
 )
 
 // String returns the string representation of a NodeType
@@ -99,6 +102,12 @@ func (n NodeType) String() string {
 		return "layergroups"
 	case NodeTypeLayerGroup:
 		return "layergroup"
+	case NodeTypeMerginMapsRoot:
+		return "merginmaps"
+	case NodeTypeMerginMapsConnection:
+		return "merginmapsconnection"
+	case NodeTypeMerginMapsProject:
+		return "merginmapsproject"
 	default:
 		return "unknown"
 	}
@@ -168,6 +177,12 @@ func (n NodeType) Icon() string {
 		return "\uf5db" // fa-books
 	case NodeTypeLayerGroup:
 		return "\uf02d" // fa-book
+	case NodeTypeMerginMapsRoot:
+		return "\uf279" // fa-map (represents mapping/survey platform)
+	case NodeTypeMerginMapsConnection:
+		return "\uf233" // fa-server
+	case NodeTypeMerginMapsProject:
+		return "\uf07b" // fa-folder
 	default:
 		return "\uf128" // fa-question
 	}
@@ -201,6 +216,10 @@ type TreeNode struct {
 	S3Key          string // S3 object key (path)
 	S3Size         int64  // Object size in bytes
 	S3ContentType  string // Content type of the object
+	// Mergin Maps-specific fields
+	MerginMapsConnectionID string // Mergin Maps connection ID this node belongs to
+	MerginMapsNamespace    string // Project namespace (username or organisation)
+	MerginMapsProjectName  string // Project name within the namespace
 }
 
 // NewTreeNode creates a new tree node

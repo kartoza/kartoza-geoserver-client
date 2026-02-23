@@ -274,6 +274,9 @@ export type NodeType =
   | 'icebergconnection'   // Iceberg catalog connection
   | 'icebergnamespace'    // Iceberg namespace (database)
   | 'icebergtable'        // Iceberg table
+  | 'merginmaps'          // "Mergin Maps" container
+  | 'merginmapsconnection' // Mergin Maps server connection
+  | 'merginmapsproject'   // Mergin Maps project
   | 'workspace'
   | 'datastores'
   | 'coveragestores'
@@ -333,6 +336,10 @@ export interface TreeNode {
   icebergGeometryColumns?: string[]
   icebergRowCount?: number
   icebergSnapshotCount?: number
+  // Mergin Maps-specific fields
+  merginMapsConnectionId?: string
+  merginMapsNamespace?: string
+  merginMapsProjectName?: string
 }
 
 // GeoWebCache (GWC) types
@@ -930,4 +937,47 @@ export interface IcebergSnapshot {
   timestampMs: number
   summary?: Record<string, string>
   parentId?: number
+}
+
+// ============================================================================
+// Mergin Maps Types
+// ============================================================================
+
+export interface MerginMapsConnection {
+  id: string
+  name: string
+  url: string
+  username?: string
+  has_token: boolean
+  is_active: boolean
+}
+
+export interface MerginMapsConnectionCreate {
+  name: string
+  url?: string
+  username?: string
+  password?: string
+  token?: string
+}
+
+export interface MerginMapsTestResult {
+  success: boolean
+  error?: string
+}
+
+export interface MerginMapsProject {
+  id?: string
+  namespace: string
+  name: string
+  version?: string
+  created?: string
+  updated?: string
+  disk_usage?: number
+  tags?: string[]
+  public?: boolean
+}
+
+export interface MerginMapsProjectsResponse {
+  projects: MerginMapsProject[]
+  count: number
 }

@@ -26,6 +26,7 @@ import {
   S3ConnectionPanel,
   S3StoragePanel,
   GeoNodeResourcePanel,
+  MerginMapsProjectPanel,
 } from './panels'
 import {
   DataStoresDashboard,
@@ -366,6 +367,8 @@ export default function MainContent() {
     case 'geonodegeostory':
     case 'geonodedashboard':
       return <GeoNodeResourcePanel node={selectedNode} />
+    case 'merginmapsproject':
+      return <MerginMapsProjectPanel node={selectedNode} />
     default:
       return <Dashboard />
   }

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package postgres
 
 import (
@@ -393,24 +396,24 @@ type ServerStats struct {
 	ConnectionPercent int `json:"connection_percent"`
 
 	// Database stats
-	NumBackends      int    `json:"num_backends"`
-	XactCommit       int64  `json:"xact_commit"`
-	XactRollback     int64  `json:"xact_rollback"`
-	BlksRead         int64  `json:"blks_read"`
-	BlksHit          int64  `json:"blks_hit"`
-	TupReturned      int64  `json:"tup_returned"`
-	TupFetched       int64  `json:"tup_fetched"`
-	TupInserted      int64  `json:"tup_inserted"`
-	TupUpdated       int64  `json:"tup_updated"`
-	TupDeleted       int64  `json:"tup_deleted"`
-	CacheHitRatio    string `json:"cache_hit_ratio"`
-	DeadTuples       int64  `json:"dead_tuples"`
-	LiveTuples       int64  `json:"live_tuples"`
-	TableCount       int    `json:"table_count"`
-	IndexCount       int    `json:"index_count"`
-	ViewCount        int    `json:"view_count"`
-	FunctionCount    int    `json:"function_count"`
-	SchemaCount      int    `json:"schema_count"`
+	NumBackends   int    `json:"num_backends"`
+	XactCommit    int64  `json:"xact_commit"`
+	XactRollback  int64  `json:"xact_rollback"`
+	BlksRead      int64  `json:"blks_read"`
+	BlksHit       int64  `json:"blks_hit"`
+	TupReturned   int64  `json:"tup_returned"`
+	TupFetched    int64  `json:"tup_fetched"`
+	TupInserted   int64  `json:"tup_inserted"`
+	TupUpdated    int64  `json:"tup_updated"`
+	TupDeleted    int64  `json:"tup_deleted"`
+	CacheHitRatio string `json:"cache_hit_ratio"`
+	DeadTuples    int64  `json:"dead_tuples"`
+	LiveTuples    int64  `json:"live_tuples"`
+	TableCount    int    `json:"table_count"`
+	IndexCount    int    `json:"index_count"`
+	ViewCount     int    `json:"view_count"`
+	FunctionCount int    `json:"function_count"`
+	SchemaCount   int    `json:"schema_count"`
 
 	// Replication
 	IsInRecovery bool   `json:"is_in_recovery"`
@@ -591,9 +594,9 @@ type SchemaStats struct {
 	TotalSizeBytes int64  `json:"total_size_bytes"`
 
 	// Table stats
-	TotalRows   int64  `json:"total_rows"`
-	DeadTuples  int64  `json:"dead_tuples"`
-	TableUsage  string `json:"table_usage"`
+	TotalRows  int64  `json:"total_rows"`
+	DeadTuples int64  `json:"dead_tuples"`
+	TableUsage string `json:"table_usage"`
 
 	// Tables with details
 	Tables []TableStats `json:"tables"`
@@ -625,9 +628,9 @@ type TableStats struct {
 
 // ViewStats represents statistics about a single view
 type ViewStats struct {
-	Name        string `json:"name"`
-	Definition  string `json:"definition,omitempty"`
-	IsMaterialized bool `json:"is_materialized"`
+	Name           string `json:"name"`
+	Definition     string `json:"definition,omitempty"`
+	IsMaterialized bool   `json:"is_materialized"`
 }
 
 // GetSchemaStats retrieves comprehensive statistics about a specific schema

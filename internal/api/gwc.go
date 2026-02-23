@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package api
 
 import (
@@ -84,8 +87,8 @@ func (c *Client) GetGWCLayer(layerName string) (*models.GWCLayer, error) {
 
 	var result struct {
 		GeoServerLayer struct {
-			Name       string `json:"name"`
-			Enabled    bool   `json:"enabled"`
+			Name        string `json:"name"`
+			Enabled     bool   `json:"enabled"`
 			GridSubsets []struct {
 				GridSetName string `json:"gridSetName"`
 			} `json:"gridSubsets"`
@@ -294,13 +297,13 @@ func (c *Client) GetGWCGridSet(name string) (*models.GWCGridSet, error) {
 
 	var result struct {
 		GridSet struct {
-			Name        string  `json:"name"`
-			SRS         struct {
+			Name string `json:"name"`
+			SRS  struct {
 				Number int `json:"number"`
 			} `json:"srs"`
-			TileWidth   int     `json:"tileWidth"`
-			TileHeight  int     `json:"tileHeight"`
-			Extent      struct {
+			TileWidth  int `json:"tileWidth"`
+			TileHeight int `json:"tileHeight"`
+			Extent     struct {
 				Coords struct {
 					Double []float64 `json:"double"`
 				} `json:"coords"`
@@ -343,10 +346,10 @@ func (c *Client) GetGWCDiskQuota() (*models.GWCDiskQuota, error) {
 
 	var result struct {
 		DiskQuota struct {
-			Enabled          bool   `json:"enabled"`
-			DiskBlockSize    int    `json:"diskBlockSize"`
-			CacheCleanUpFreq int    `json:"cacheCleanUpFrequency"`
-			MaxConcurrent    int    `json:"maxConcurrentCleanUps"`
+			Enabled          bool `json:"enabled"`
+			DiskBlockSize    int  `json:"diskBlockSize"`
+			CacheCleanUpFreq int  `json:"cacheCleanUpFrequency"`
+			MaxConcurrent    int  `json:"maxConcurrentCleanUps"`
 			GlobalQuota      struct {
 				Value string `json:"value"`
 				Units string `json:"units"`
@@ -448,4 +451,3 @@ func (c *Client) TruncateAndDeleteGWCLayer(layerName string) error {
 	// Then delete the GWC layer entry
 	return c.DeleteGWCLayer(layerName)
 }
-

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package terria
 
 import (
@@ -31,14 +34,14 @@ func GetViewerHTML() string {
 
 // Server serves TerriaMap static files and provides proxy/catalog endpoints
 type Server struct {
-	config    *config.Config
-	clients   map[string]*api.Client
-	port      int
-	server    *http.Server
-	mux       *http.ServeMux
-	mu        sync.RWMutex
-	baseURL   string
-	running   bool
+	config  *config.Config
+	clients map[string]*api.Client
+	port    int
+	server  *http.Server
+	mux     *http.ServeMux
+	mu      sync.RWMutex
+	baseURL string
+	running bool
 }
 
 // NewServer creates a new Terria server

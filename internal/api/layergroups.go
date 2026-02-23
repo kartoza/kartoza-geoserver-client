@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package api
 
 import (
@@ -147,11 +150,11 @@ func (c *Client) GetLayerGroup(workspace, name string) (*models.LayerGroupDetail
 
 	var result struct {
 		LayerGroup struct {
-			Name       string `json:"name"`
-			Mode       string `json:"mode"`
-			Title      string `json:"title"`
-			Abstract   string `json:"abstractTxt"`
-			Workspace  struct {
+			Name      string `json:"name"`
+			Mode      string `json:"mode"`
+			Title     string `json:"title"`
+			Abstract  string `json:"abstractTxt"`
+			Workspace struct {
 				Name string `json:"name"`
 			} `json:"workspace"`
 			Publishables struct {
@@ -378,4 +381,3 @@ func (c *Client) DownloadLayerGroup(workspace, name string) ([]byte, error) {
 
 	return io.ReadAll(resp.Body)
 }
-

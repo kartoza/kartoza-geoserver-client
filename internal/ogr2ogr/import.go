@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package ogr2ogr
 
 import (
@@ -16,19 +19,19 @@ import (
 
 // ImportOptions configures a data import operation
 type ImportOptions struct {
-	SourceFile     string   // Path to source file (Shapefile, GeoJSON, GeoPackage, etc.)
-	TargetService  string   // PostgreSQL service name from pg_service.conf
-	TargetSchema   string   // Target schema (default: "public")
-	TableName      string   // Target table name (auto-detected from layer if empty)
-	SRID           int      // Source SRID (0 = auto-detect)
-	TargetSRID     int      // Target SRID (0 = keep source)
-	Overwrite      bool     // Overwrite existing table
-	Append         bool     // Append to existing table
-	CreateSchema   bool     // Create schema if it doesn't exist
-	SourceLayer    string   // Specific layer to import (for multi-layer formats)
-	GeometryColumn string   // Name for geometry column (default: "geom")
-	SkipFailures   bool     // Skip features that fail to import
-	Encoding       string   // Source file encoding (default: auto-detect)
+	SourceFile     string // Path to source file (Shapefile, GeoJSON, GeoPackage, etc.)
+	TargetService  string // PostgreSQL service name from pg_service.conf
+	TargetSchema   string // Target schema (default: "public")
+	TableName      string // Target table name (auto-detected from layer if empty)
+	SRID           int    // Source SRID (0 = auto-detect)
+	TargetSRID     int    // Target SRID (0 = keep source)
+	Overwrite      bool   // Overwrite existing table
+	Append         bool   // Append to existing table
+	CreateSchema   bool   // Create schema if it doesn't exist
+	SourceLayer    string // Specific layer to import (for multi-layer formats)
+	GeometryColumn string // Name for geometry column (default: "geom")
+	SkipFailures   bool   // Skip features that fail to import
+	Encoding       string // Source file encoding (default: auto-detect)
 }
 
 // ImportResult contains the result of an import operation

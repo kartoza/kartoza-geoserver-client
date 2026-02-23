@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -46,10 +49,10 @@ type ResourceWizard struct {
 	onCancel     func()
 
 	// Common fields
-	nameInput   textinput.Model
-	workspace   string
-	storeName   string // For layers - which store they belong to
-	storeType   string // "datastore" or "coveragestore"
+	nameInput textinput.Model
+	workspace string
+	storeName string // For layers - which store they belong to
+	storeType string // "datastore" or "coveragestore"
 
 	// Layer-specific toggles
 	layerEnabled    bool

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -875,8 +878,8 @@ func (s *Server) handleS3Presign(w http.ResponseWriter, r *http.Request, client 
 
 // S3PreviewMetadata represents metadata for S3 layer preview
 type S3PreviewMetadata struct {
-	Format        string      `json:"format"`                  // "cog", "copc", "geoparquet", "geojson", "geotiff", "qgisproject", "parquet"
-	PreviewType   string      `json:"previewType"`             // "raster", "pointcloud", "vector", "qgisproject", "table"
+	Format        string      `json:"format"`      // "cog", "copc", "geoparquet", "geojson", "geotiff", "qgisproject", "parquet"
+	PreviewType   string      `json:"previewType"` // "raster", "pointcloud", "vector", "qgisproject", "table"
 	Bounds        *S3Bounds   `json:"bounds,omitempty"`
 	CRS           string      `json:"crs,omitempty"`
 	Size          int64       `json:"size"`
@@ -1492,8 +1495,8 @@ func (s *Server) handleS3GeoJSON(w http.ResponseWriter, r *http.Request) {
 	args := []string{
 		"-f", "GeoJSON",
 		"-t_srs", "EPSG:4326", // Ensure output is in WGS84
-		"-unsetFid",           // Avoid FID field mapping issues
-		"/vsistdout/",         // Output to stdout
+		"-unsetFid",   // Avoid FID field mapping issues
+		"/vsistdout/", // Output to stdout
 		tempFile,
 		"-limit", fmt.Sprintf("%d", limit),
 	}
@@ -1517,12 +1520,12 @@ func (s *Server) handleS3GeoJSON(w http.ResponseWriter, r *http.Request) {
 
 // AttributeTableResponse represents the response for attribute table data
 type AttributeTableResponse struct {
-	Fields   []string                 `json:"fields"`
-	Rows     []map[string]interface{} `json:"rows"`
-	Total    int64                    `json:"total"`
-	Limit    int                      `json:"limit"`
-	Offset   int                      `json:"offset"`
-	HasMore  bool                     `json:"hasMore"`
+	Fields  []string                 `json:"fields"`
+	Rows    []map[string]interface{} `json:"rows"`
+	Total   int64                    `json:"total"`
+	Limit   int                      `json:"limit"`
+	Offset  int                      `json:"offset"`
+	HasMore bool                     `json:"hasMore"`
 }
 
 // handleS3Attributes returns attribute data from a Parquet/GeoParquet file as JSON

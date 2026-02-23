@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package tui
 
 import (
@@ -704,8 +707,8 @@ func (a *App) executeStyleEdit(workspace, styleName string, result components.St
 // layerGroupDetailsLoadedMsg is sent when layer group details are loaded for editing
 type layerGroupDetailsLoadedMsg struct {
 	details     *models.LayerGroupDetails
-	layers      []models.Layer          // Available layers in workspace
-	layerStyles map[string][]string     // layer name -> available styles
+	layers      []models.Layer      // Available layers in workspace
+	layerStyles map[string][]string // layer name -> available styles
 	err         error
 }
 

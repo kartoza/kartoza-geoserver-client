@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package api
 
 import (
@@ -125,22 +128,22 @@ func parseOWSException(data []byte, fallbackPrefix string) error {
 
 	// Common error patterns and their user-friendly messages
 	errorMappings := map[string]string{
-		"idle-session timeout":           "The database connection timed out. Please try again.",
-		"terminating connection":         "The database connection was lost. Please try again.",
-		"Could not find layer":           "Layer not found. It may have been deleted or renamed.",
-		"No such feature type":           "This layer type cannot be downloaded as a shapefile.",
-		"Feature type not found":         "Layer not found on the server.",
-		"Unknown coverage":               "Coverage not found on the server.",
-		"InvalidParameterValue":          "Invalid request parameters.",
-		"MissingParameterValue":          "Missing required parameters.",
-		"OperationNotSupported":          "This operation is not supported for this layer.",
-		"java.lang.OutOfMemoryError":     "The server ran out of memory. The dataset may be too large to download.",
-		"Connection refused":             "Cannot connect to the database server.",
-		"authentication failed":          "Database authentication failed.",
-		"does not exist":                 "The requested resource does not exist.",
-		"permission denied":              "Permission denied. Check your credentials.",
-		"WFS is not enabled":             "WFS service is not enabled for this layer.",
-		"WCS is not enabled":             "WCS service is not enabled for this coverage.",
+		"idle-session timeout":       "The database connection timed out. Please try again.",
+		"terminating connection":     "The database connection was lost. Please try again.",
+		"Could not find layer":       "Layer not found. It may have been deleted or renamed.",
+		"No such feature type":       "This layer type cannot be downloaded as a shapefile.",
+		"Feature type not found":     "Layer not found on the server.",
+		"Unknown coverage":           "Coverage not found on the server.",
+		"InvalidParameterValue":      "Invalid request parameters.",
+		"MissingParameterValue":      "Missing required parameters.",
+		"OperationNotSupported":      "This operation is not supported for this layer.",
+		"java.lang.OutOfMemoryError": "The server ran out of memory. The dataset may be too large to download.",
+		"Connection refused":         "Cannot connect to the database server.",
+		"authentication failed":      "Database authentication failed.",
+		"does not exist":             "The requested resource does not exist.",
+		"permission denied":          "Permission denied. Check your credentials.",
+		"WFS is not enabled":         "WFS service is not enabled for this layer.",
+		"WCS is not enabled":         "WCS service is not enabled for this coverage.",
 	}
 
 	// Check for known error patterns
@@ -229,4 +232,3 @@ func (c *Client) UploadGeoTIFFData(workspace, storeName string, data []byte) err
 
 	return nil
 }
-

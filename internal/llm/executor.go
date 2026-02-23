@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package llm
 
 import (
@@ -12,10 +15,10 @@ import (
 
 // QueryExecutor executes SQL queries against PostgreSQL
 type QueryExecutor struct {
-	maxRows     int
-	timeout     time.Duration
-	readOnly    bool
-	allowedOps  []string
+	maxRows    int
+	timeout    time.Duration
+	readOnly   bool
+	allowedOps []string
 }
 
 // ExecutorOption configures the executor

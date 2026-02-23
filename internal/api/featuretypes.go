@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package api
 
 import (
@@ -214,4 +217,3 @@ func (c *Client) DeleteSQLViewLayer(workspace, dataStore, layerName string) erro
 
 	return nil
 }
-

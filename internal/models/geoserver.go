@@ -1,24 +1,27 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package models
 
 // NodeType represents the type of node in the application hierarchy
 type NodeType int
 
 const (
-	NodeTypeRoot NodeType = iota
-	NodeTypeCloudBenchRoot  // Application root: "Kartoza CloudBench"
-	NodeTypeGeoServerRoot   // "GeoServer" container
-	NodeTypePostgreSQLRoot  // "PostgreSQL" container
-	NodeTypeS3Root          // "S3 Storage" container
-	NodeTypeConnection      // A GeoServer connection (server)
-	NodeTypePGService       // pg_service.conf entry
-	NodeTypePGSchema        // PostgreSQL schema
-	NodeTypePGTable         // Database table
-	NodeTypePGView          // Database view
-	NodeTypePGColumn        // Table column
-	NodeTypeS3Connection    // S3-compatible storage connection
-	NodeTypeS3Bucket        // S3 bucket
-	NodeTypeS3Folder        // Virtual folder (prefix) in S3
-	NodeTypeS3Object        // S3 object (file)
+	NodeTypeRoot           NodeType = iota
+	NodeTypeCloudBenchRoot          // Application root: "Kartoza CloudBench"
+	NodeTypeGeoServerRoot           // "GeoServer" container
+	NodeTypePostgreSQLRoot          // "PostgreSQL" container
+	NodeTypeS3Root                  // "S3 Storage" container
+	NodeTypeConnection              // A GeoServer connection (server)
+	NodeTypePGService               // pg_service.conf entry
+	NodeTypePGSchema                // PostgreSQL schema
+	NodeTypePGTable                 // Database table
+	NodeTypePGView                  // Database view
+	NodeTypePGColumn                // Table column
+	NodeTypeS3Connection            // S3-compatible storage connection
+	NodeTypeS3Bucket                // S3 bucket
+	NodeTypeS3Folder                // Virtual folder (prefix) in S3
+	NodeTypeS3Object                // S3 object (file)
 	NodeTypeWorkspace
 	NodeTypeDataStores
 	NodeTypeCoverageStores
@@ -251,15 +254,15 @@ type WorkspaceServiceSettings struct {
 
 // WorkspaceConfig holds all configuration options for creating/editing a workspace
 type WorkspaceConfig struct {
-	Name             string
-	Isolated         bool
-	Default          bool
-	Enabled          bool // Settings enabled
-	WMTSEnabled      bool
-	WMSEnabled       bool
-	WCSEnabled       bool
-	WPSEnabled       bool
-	WFSEnabled       bool
+	Name        string
+	Isolated    bool
+	Default     bool
+	Enabled     bool // Settings enabled
+	WMTSEnabled bool
+	WMSEnabled  bool
+	WCSEnabled  bool
+	WPSEnabled  bool
+	WFSEnabled  bool
 }
 
 // DataStore represents a GeoServer data store
@@ -299,25 +302,25 @@ type LayerConfig struct {
 	StoreType    string // "datastore" or "coveragestore"
 	Enabled      bool
 	Advertised   bool
-	Queryable    bool   // Only for vector layers
+	Queryable    bool // Only for vector layers
 	DefaultStyle string
 }
 
 // LayerMetadata holds comprehensive layer metadata for editing
 type LayerMetadata struct {
-	Name        string   `json:"name"`
-	NativeName  string   `json:"nativeName,omitempty"`
-	Workspace   string   `json:"workspace"`
-	Store       string   `json:"store"`
-	StoreType   string   `json:"storeType"` // "datastore" or "coveragestore"
-	Title       string   `json:"title,omitempty"`
-	Abstract    string   `json:"abstract,omitempty"`
-	Keywords    []string `json:"keywords,omitempty"`
-	NativeCRS   string   `json:"nativeCRS,omitempty"`
-	SRS         string   `json:"srs,omitempty"`
-	Enabled     bool     `json:"enabled"`
-	Advertised  bool     `json:"advertised"`
-	Queryable   bool     `json:"queryable"`
+	Name       string   `json:"name"`
+	NativeName string   `json:"nativeName,omitempty"`
+	Workspace  string   `json:"workspace"`
+	Store      string   `json:"store"`
+	StoreType  string   `json:"storeType"` // "datastore" or "coveragestore"
+	Title      string   `json:"title,omitempty"`
+	Abstract   string   `json:"abstract,omitempty"`
+	Keywords   []string `json:"keywords,omitempty"`
+	NativeCRS  string   `json:"nativeCRS,omitempty"`
+	SRS        string   `json:"srs,omitempty"`
+	Enabled    bool     `json:"enabled"`
+	Advertised bool     `json:"advertised"`
+	Queryable  bool     `json:"queryable"`
 	// Bounding boxes
 	NativeBoundingBox *BoundingBox `json:"nativeBoundingBox,omitempty"`
 	LatLonBoundingBox *BoundingBox `json:"latLonBoundingBox,omitempty"`
@@ -330,8 +333,8 @@ type LayerMetadata struct {
 	// Default style
 	DefaultStyle string `json:"defaultStyle,omitempty"`
 	// Additional vector-specific fields
-	MaxFeatures  int `json:"maxFeatures,omitempty"`
-	NumDecimals  int `json:"numDecimals,omitempty"`
+	MaxFeatures          int  `json:"maxFeatures,omitempty"`
+	NumDecimals          int  `json:"numDecimals,omitempty"`
 	OverridingServiceSRS bool `json:"overridingServiceSRS,omitempty"`
 	SkipNumberMatch      bool `json:"skipNumberMatch,omitempty"`
 	CircularArcPresent   bool `json:"circularArcPresent,omitempty"`
@@ -348,9 +351,9 @@ type BoundingBox struct {
 
 // MetadataLink represents a metadata link for a layer
 type MetadataLink struct {
-	Type         string `json:"type"`          // e.g., "text/html", "text/xml"
-	MetadataType string `json:"metadataType"`  // e.g., "ISO19115:2003", "FGDC", "TC211"
-	Content      string `json:"content"`       // URL
+	Type         string `json:"type"`         // e.g., "text/html", "text/xml"
+	MetadataType string `json:"metadataType"` // e.g., "ISO19115:2003", "FGDC", "TC211"
+	Content      string `json:"content"`      // URL
 }
 
 // LayerMetadataUpdate contains fields that can be updated
@@ -416,20 +419,20 @@ type LayerGroupCreate struct {
 
 // LayerGroupDetails contains detailed information about a layer group
 type LayerGroupDetails struct {
-	Name        string           `json:"name"`
-	Workspace   string           `json:"workspace,omitempty"`
-	Mode        string           `json:"mode"`
-	Title       string           `json:"title,omitempty"`
-	Abstract    string           `json:"abstract,omitempty"`
-	Layers      []LayerGroupItem `json:"layers"`
-	Bounds      *Bounds          `json:"bounds,omitempty"`
-	Enabled     bool             `json:"enabled"`
-	Advertised  bool             `json:"advertised"`
+	Name       string           `json:"name"`
+	Workspace  string           `json:"workspace,omitempty"`
+	Mode       string           `json:"mode"`
+	Title      string           `json:"title,omitempty"`
+	Abstract   string           `json:"abstract,omitempty"`
+	Layers     []LayerGroupItem `json:"layers"`
+	Bounds     *Bounds          `json:"bounds,omitempty"`
+	Enabled    bool             `json:"enabled"`
+	Advertised bool             `json:"advertised"`
 }
 
 // LayerGroupItem represents a layer or nested group within a layer group
 type LayerGroupItem struct {
-	Type      string `json:"type"`      // "layer" or "layerGroup"
+	Type      string `json:"type"` // "layer" or "layerGroup"
 	Name      string `json:"name"`
 	StyleName string `json:"styleName,omitempty"`
 }
@@ -470,22 +473,22 @@ type Coverage struct {
 
 // GWCLayer represents a GeoWebCache cached layer
 type GWCLayer struct {
-	Name       string   `json:"name"`
-	Href       string   `json:"href,omitempty"`
-	Enabled    bool     `json:"enabled"`
+	Name        string   `json:"name"`
+	Href        string   `json:"href,omitempty"`
+	Enabled     bool     `json:"enabled"`
 	GridSubsets []string `json:"gridSubsets,omitempty"`
 	MimeFormats []string `json:"mimeFormats,omitempty"`
 }
 
 // GWCSeedRequest represents a seed/truncate request for GWC
 type GWCSeedRequest struct {
-	Name        string   `json:"name"`
-	GridSetID   string   `json:"gridSetId"`
-	ZoomStart   int      `json:"zoomStart"`
-	ZoomStop    int      `json:"zoomStop"`
-	Format      string   `json:"format"`
-	Type        string   `json:"type"` // "seed", "reseed", or "truncate"
-	ThreadCount int      `json:"threadCount"`
+	Name        string     `json:"name"`
+	GridSetID   string     `json:"gridSetId"`
+	ZoomStart   int        `json:"zoomStart"`
+	ZoomStop    int        `json:"zoomStop"`
+	Format      string     `json:"format"`
+	Type        string     `json:"type"` // "seed", "reseed", or "truncate"
+	ThreadCount int        `json:"threadCount"`
 	Bounds      *GWCBounds `json:"bounds,omitempty"`
 }
 
@@ -500,12 +503,12 @@ type GWCBounds struct {
 
 // GWCSeedTask represents a running or pending seed task
 type GWCSeedTask struct {
-	ID              int64  `json:"id"`
-	TilesDone       int64  `json:"tilesDone"`
-	TilesTotal      int64  `json:"tilesTotal"`
-	TimeRemaining   int64  `json:"timeRemaining"` // in seconds, -1 if unknown
-	Status          string `json:"status"`        // Running, Pending, Done, Aborted
-	LayerName       string `json:"layerName"`
+	ID            int64  `json:"id"`
+	TilesDone     int64  `json:"tilesDone"`
+	TilesTotal    int64  `json:"tilesTotal"`
+	TimeRemaining int64  `json:"timeRemaining"` // in seconds, -1 if unknown
+	Status        string `json:"status"`        // Running, Pending, Done, Aborted
+	LayerName     string `json:"layerName"`
 }
 
 // GWCSeedStatus represents the status of all seeding tasks
@@ -515,14 +518,14 @@ type GWCSeedStatus struct {
 
 // GWCGridSet represents a tile grid configuration
 type GWCGridSet struct {
-	Name        string  `json:"name"`
-	SRS         string  `json:"srs"`
-	TileWidth   int     `json:"tileWidth"`
-	TileHeight  int     `json:"tileHeight"`
-	MinX        float64 `json:"minX,omitempty"`
-	MinY        float64 `json:"minY,omitempty"`
-	MaxX        float64 `json:"maxX,omitempty"`
-	MaxY        float64 `json:"maxY,omitempty"`
+	Name       string  `json:"name"`
+	SRS        string  `json:"srs"`
+	TileWidth  int     `json:"tileWidth"`
+	TileHeight int     `json:"tileHeight"`
+	MinX       float64 `json:"minX,omitempty"`
+	MinY       float64 `json:"minY,omitempty"`
+	MaxX       float64 `json:"maxX,omitempty"`
+	MaxY       float64 `json:"maxY,omitempty"`
 }
 
 // GWCDiskQuota represents disk quota configuration
@@ -552,9 +555,9 @@ type GeoServerContact struct {
 	AddressCountry  string `json:"addressCountry,omitempty"`
 
 	// Contact details
-	ContactVoice   string `json:"contactVoice,omitempty"`
-	ContactFax     string `json:"contactFacsimile,omitempty"`
-	ContactEmail   string `json:"contactEmail,omitempty"`
+	ContactVoice string `json:"contactVoice,omitempty"`
+	ContactFax   string `json:"contactFacsimile,omitempty"`
+	ContactEmail string `json:"contactEmail,omitempty"`
 
 	// Online resources
 	OnlineResource string `json:"onlineResource,omitempty"`
@@ -564,27 +567,27 @@ type GeoServerContact struct {
 // GeoServerGlobalSettings represents the GeoServer global settings
 type GeoServerGlobalSettings struct {
 	// General settings
-	Charset              string `json:"charset,omitempty"`
-	NumDecimals          int    `json:"numDecimals,omitempty"`
-	OnlineResource       string `json:"onlineResource,omitempty"`
-	Verbose              bool   `json:"verbose,omitempty"`
-	VerboseExceptions    bool   `json:"verboseExceptions,omitempty"`
+	Charset           string `json:"charset,omitempty"`
+	NumDecimals       int    `json:"numDecimals,omitempty"`
+	OnlineResource    string `json:"onlineResource,omitempty"`
+	Verbose           bool   `json:"verbose,omitempty"`
+	VerboseExceptions bool   `json:"verboseExceptions,omitempty"`
 
 	// Proxy base URL
-	ProxyBaseURL         string `json:"proxyBaseUrl,omitempty"`
-	UseHeadersProxyURL   bool   `json:"useHeadersProxyURL,omitempty"`
+	ProxyBaseURL       string `json:"proxyBaseUrl,omitempty"`
+	UseHeadersProxyURL bool   `json:"useHeadersProxyURL,omitempty"`
 
 	// Logging
-	LoggingLevel         string `json:"loggingLevel,omitempty"`
-	LoggingLocation      string `json:"loggingLocation,omitempty"`
-	StdOutLogging        bool   `json:"stdOutLogging,omitempty"`
+	LoggingLevel    string `json:"loggingLevel,omitempty"`
+	LoggingLocation string `json:"loggingLocation,omitempty"`
+	StdOutLogging   bool   `json:"stdOutLogging,omitempty"`
 
 	// Admin
-	AdminUsername        string `json:"adminUsername,omitempty"`
-	AdminPassword        string `json:"adminPassword,omitempty"`
+	AdminUsername string `json:"adminUsername,omitempty"`
+	AdminPassword string `json:"adminPassword,omitempty"`
 
 	// Contact information
-	Contact              *GeoServerContact `json:"contact,omitempty"`
+	Contact *GeoServerContact `json:"contact,omitempty"`
 }
 
 // FileType represents the type of local file

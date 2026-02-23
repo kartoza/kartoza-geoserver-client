@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package screens
 
 import (
@@ -16,16 +19,16 @@ import (
 
 // SyncKeyMap defines the key bindings for the sync screen
 type SyncKeyMap struct {
-	Up       key.Binding
-	Down     key.Binding
-	Left     key.Binding
-	Right    key.Binding
-	Enter    key.Binding
-	Space    key.Binding
-	Start    key.Binding
-	Stop     key.Binding
-	Escape   key.Binding
-	Tab      key.Binding
+	Up     key.Binding
+	Down   key.Binding
+	Left   key.Binding
+	Right  key.Binding
+	Enter  key.Binding
+	Space  key.Binding
+	Start  key.Binding
+	Stop   key.Binding
+	Escape key.Binding
+	Tab    key.Binding
 }
 
 // DefaultSyncKeyMap returns the default key bindings

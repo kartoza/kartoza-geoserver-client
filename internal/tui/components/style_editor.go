@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -161,7 +164,7 @@ type PointSymbolizer struct {
 
 // LineSymbolizer holds line style properties
 type LineSymbolizer struct {
-	StrokeColor   string  // Hex color
+	StrokeColor   string // Hex color
 	StrokeWidth   float64
 	StrokeOpacity float64 // 0.0 - 1.0
 	DashPattern   int     // Index into LineDashPatterns
@@ -181,41 +184,41 @@ type PolygonSymbolizer struct {
 
 // TextSymbolizer holds label/text style properties
 type TextSymbolizer struct {
-	Enabled     bool
-	Field       string  // Attribute field to use for labels
-	FontFamily  string
-	FontSize    float64
-	FontColor   string  // Hex color
-	FontStyle   string  // normal, italic
-	FontWeight  string  // normal, bold
-	HaloColor   string  // Hex color
-	HaloRadius  float64
-	AnchorX     float64 // 0.0 - 1.0
-	AnchorY     float64 // 0.0 - 1.0
+	Enabled       bool
+	Field         string // Attribute field to use for labels
+	FontFamily    string
+	FontSize      float64
+	FontColor     string // Hex color
+	FontStyle     string // normal, italic
+	FontWeight    string // normal, bold
+	HaloColor     string // Hex color
+	HaloRadius    float64
+	AnchorX       float64 // 0.0 - 1.0
+	AnchorY       float64 // 0.0 - 1.0
 	DisplacementX float64
 	DisplacementY float64
-	Rotation    float64
+	Rotation      float64
 }
 
 // StyleRule represents a single rule in the style
 type StyleRule struct {
-	Name          string
-	Title         string
-	Filter        string  // OGC filter expression (simplified)
-	MinScale      float64 // Min scale denominator (0 = no limit)
-	MaxScale      float64 // Max scale denominator (0 = no limit)
-	Point         *PointSymbolizer
-	Line          *LineSymbolizer
-	Polygon       *PolygonSymbolizer
-	Text          *TextSymbolizer
+	Name     string
+	Title    string
+	Filter   string  // OGC filter expression (simplified)
+	MinScale float64 // Min scale denominator (0 = no limit)
+	MaxScale float64 // Max scale denominator (0 = no limit)
+	Point    *PointSymbolizer
+	Line     *LineSymbolizer
+	Polygon  *PolygonSymbolizer
+	Text     *TextSymbolizer
 }
 
 // StyleDefinition holds the complete style definition
 type StyleDefinition struct {
-	Name      string
-	Title     string
-	GeomType  GeometryType
-	Rules     []StyleRule
+	Name     string
+	Title    string
+	GeomType GeometryType
+	Rules    []StyleRule
 }
 
 // ============================================
@@ -318,22 +321,22 @@ const (
 
 // PropertyField represents a single property that can be edited
 type PropertyField struct {
-	Name        string
-	Label       string
-	Type        string // color, number, select, text
-	Value       interface{}
-	Options     []string // For select type
-	Min         float64
-	Max         float64
-	Step        float64
+	Name    string
+	Label   string
+	Type    string // color, number, select, text
+	Value   interface{}
+	Options []string // For select type
+	Min     float64
+	Max     float64
+	Step    float64
 }
 
 // StyleEditorMsg is sent for style editor events
 type StyleEditorMsg struct {
-	Type    string // "preview", "save", "cancel"
-	Style   *StyleDefinition
-	SLD     string
-	Error   error
+	Type  string // "preview", "save", "cancel"
+	Style *StyleDefinition
+	SLD   string
+	Error error
 }
 
 // StylePreviewMsg is sent when preview image is ready
@@ -352,17 +355,17 @@ type StyleEditor struct {
 	layerName    string
 
 	// Style being edited
-	style        StyleDefinition
-	originalSLD  string // Original SLD for cancel/revert
+	style       StyleDefinition
+	originalSLD string // Original SLD for cancel/revert
 
 	// UI state
-	width        int
-	height       int
-	visible      bool
-	activePanel  StyleEditorPanel
-	selectedRule int
+	width         int
+	height        int
+	visible       bool
+	activePanel   StyleEditorPanel
+	selectedRule  int
 	selectedField int
-	editingField bool
+	editingField  bool
 
 	// Preview state
 	previewImage    image.Image
@@ -371,16 +374,16 @@ type StyleEditor struct {
 	previewError    string
 
 	// Input fields for editing
-	activeInput  textinput.Model
+	activeInput textinput.Model
 
 	// Available fields for the layer (for labels)
-	layerFields  []string
+	layerFields []string
 
 	// Components
-	keyMap      StyleEditorKeyMap
-	spinner     spinner.Model
-	colorPicker *ColorPicker // Color picker for editing color fields
-	editingColorField string // Name of the field being edited with color picker
+	keyMap            StyleEditorKeyMap
+	spinner           spinner.Model
+	colorPicker       *ColorPicker // Color picker for editing color fields
+	editingColorField string       // Name of the field being edited with color picker
 
 	// Callbacks
 	onSave   func(string) // Called with generated SLD
@@ -418,19 +421,19 @@ func NewStyleEditor(geoserverURL, username, password, workspace, layerName strin
 	}
 
 	return &StyleEditor{
-		geoserverURL: strings.TrimSuffix(geoserverURL, "/"),
-		username:     username,
-		password:     password,
-		workspace:    workspace,
-		layerName:    layerName,
-		style:        defaultStyle,
-		visible:      true,
-		activePanel:  PanelProperties,
-		selectedRule: 0,
+		geoserverURL:  strings.TrimSuffix(geoserverURL, "/"),
+		username:      username,
+		password:      password,
+		workspace:     workspace,
+		layerName:     layerName,
+		style:         defaultStyle,
+		visible:       true,
+		activePanel:   PanelProperties,
+		selectedRule:  0,
 		selectedField: 0,
-		keyMap:       DefaultStyleEditorKeyMap(),
-		spinner:      s,
-		activeInput:  input,
+		keyMap:        DefaultStyleEditorKeyMap(),
+		spinner:       s,
+		activeInput:   input,
 	}
 }
 
@@ -1538,4 +1541,3 @@ func getFillPatternNames() []string {
 	}
 	return names
 }
-

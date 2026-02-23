@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package config
 
 import (
@@ -26,13 +29,13 @@ type Connection struct {
 
 // SyncConfiguration represents a saved sync setup
 type SyncConfiguration struct {
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	SourceID     string   `json:"source_id"`      // Connection ID of source server
-	DestIDs      []string `json:"destination_ids"` // Connection IDs of destination servers
+	ID           string      `json:"id"`
+	Name         string      `json:"name"`
+	SourceID     string      `json:"source_id"`       // Connection ID of source server
+	DestIDs      []string    `json:"destination_ids"` // Connection IDs of destination servers
 	SyncOptions  SyncOptions `json:"options"`
-	CreatedAt    string   `json:"created_at"`
-	LastSyncedAt string   `json:"last_synced_at,omitempty"`
+	CreatedAt    string      `json:"created_at"`
+	LastSyncedAt string      `json:"last_synced_at,omitempty"`
 }
 
 // DataStoreSyncStrategy defines how datastores should be synced
@@ -49,12 +52,12 @@ const (
 
 // SyncOptions configures what to sync
 type SyncOptions struct {
-	Workspaces      bool `json:"workspaces"`
-	DataStores      bool `json:"datastores"`
-	CoverageStores  bool `json:"coveragestores"`
-	Layers          bool `json:"layers"`
-	Styles          bool `json:"styles"`
-	LayerGroups     bool `json:"layergroups"`
+	Workspaces     bool `json:"workspaces"`
+	DataStores     bool `json:"datastores"`
+	CoverageStores bool `json:"coveragestores"`
+	Layers         bool `json:"layers"`
+	Styles         bool `json:"styles"`
+	LayerGroups    bool `json:"layergroups"`
 	// Filter options
 	WorkspaceFilter []string `json:"workspace_filter,omitempty"` // If set, only sync these workspaces
 	// Datastore sync strategy
@@ -85,12 +88,12 @@ type PGServiceState struct {
 type S3Connection struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
-	Endpoint  string `json:"endpoint"`            // e.g., "localhost:9000" or "s3.amazonaws.com"
+	Endpoint  string `json:"endpoint"` // e.g., "localhost:9000" or "s3.amazonaws.com"
 	AccessKey string `json:"access_key"`
 	SecretKey string `json:"secret_key"`
-	Region    string `json:"region,omitempty"`    // AWS region, optional for MinIO
+	Region    string `json:"region,omitempty"` // AWS region, optional for MinIO
 	UseSSL    bool   `json:"use_ssl"`
-	PathStyle bool   `json:"path_style"`          // true for MinIO, false for AWS S3
+	PathStyle bool   `json:"path_style"` // true for MinIO, false for AWS S3
 	IsActive  bool   `json:"is_active"`
 }
 
@@ -98,8 +101,8 @@ type S3Connection struct {
 type QGISProject struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
-	Path         string `json:"path"`                    // Full path to .qgs or .qgz file
-	Title        string `json:"title,omitempty"`         // Project title from metadata
+	Path         string `json:"path"`            // Full path to .qgs or .qgz file
+	Title        string `json:"title,omitempty"` // Project title from metadata
 	LastModified string `json:"lastModified"`
 	Size         int64  `json:"size"`
 }
@@ -108,10 +111,10 @@ type QGISProject struct {
 type GeoNodeConnection struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
-	URL      string `json:"url"`       // Base URL e.g., "https://geonode.example.com"
+	URL      string `json:"url"` // Base URL e.g., "https://geonode.example.com"
 	Username string `json:"username,omitempty"`
 	Password string `json:"password,omitempty"`
-	Token    string `json:"token,omitempty"`    // API token (alternative to username/password)
+	Token    string `json:"token,omitempty"` // API token (alternative to username/password)
 	IsActive bool   `json:"is_active"`
 }
 
@@ -119,13 +122,13 @@ type GeoNodeConnection struct {
 type IcebergCatalogConnection struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
-	URL        string `json:"url"`                     // REST Catalog URL e.g., "http://localhost:8181"
-	Prefix     string `json:"prefix,omitempty"`        // Optional warehouse prefix
-	S3Endpoint string `json:"s3_endpoint,omitempty"`   // S3 endpoint for data access
-	AccessKey  string `json:"access_key,omitempty"`    // S3 access key
-	SecretKey  string `json:"secret_key,omitempty"`    // S3 secret key
-	Region     string `json:"region,omitempty"`        // AWS region
-	JupyterURL string `json:"jupyter_url,omitempty"`   // Jupyter/Sedona notebook URL for data exploration
+	URL        string `json:"url"`                   // REST Catalog URL e.g., "http://localhost:8181"
+	Prefix     string `json:"prefix,omitempty"`      // Optional warehouse prefix
+	S3Endpoint string `json:"s3_endpoint,omitempty"` // S3 endpoint for data access
+	AccessKey  string `json:"access_key,omitempty"`  // S3 access key
+	SecretKey  string `json:"secret_key,omitempty"`  // S3 secret key
+	Region     string `json:"region,omitempty"`      // AWS region
+	JupyterURL string `json:"jupyter_url,omitempty"` // Jupyter/Sedona notebook URL for data exploration
 	IsActive   bool   `json:"is_active"`
 }
 
@@ -140,18 +143,18 @@ type SavedQuery struct {
 
 // Config holds the application configuration
 type Config struct {
-	Connections      []Connection        `json:"connections"`
-	ActiveConnection string              `json:"active_connection"`
-	LastLocalPath    string              `json:"last_local_path"`
-	Theme            string              `json:"theme"`
-	SyncConfigs      []SyncConfiguration `json:"sync_configs,omitempty"`
-	PingIntervalSecs int                 `json:"ping_interval_secs,omitempty"` // Dashboard refresh interval, default 60
-	PGServiceStates  []PGServiceState    `json:"pg_services,omitempty"`        // PostgreSQL service states
-	SavedQueries     []SavedQuery        `json:"saved_queries,omitempty"`      // Visual query definitions
-	S3Connections        []S3Connection             `json:"s3_connections,omitempty"`        // S3-compatible storage connections
-	QGISProjects         []QGISProject              `json:"qgis_projects,omitempty"`         // QGIS project files
-	GeoNodeConnections   []GeoNodeConnection        `json:"geonode_connections,omitempty"`   // GeoNode instance connections
-	IcebergConnections   []IcebergCatalogConnection `json:"iceberg_connections,omitempty"`   // Iceberg REST Catalog connections
+	Connections        []Connection               `json:"connections"`
+	ActiveConnection   string                     `json:"active_connection"`
+	LastLocalPath      string                     `json:"last_local_path"`
+	Theme              string                     `json:"theme"`
+	SyncConfigs        []SyncConfiguration        `json:"sync_configs,omitempty"`
+	PingIntervalSecs   int                        `json:"ping_interval_secs,omitempty"`  // Dashboard refresh interval, default 60
+	PGServiceStates    []PGServiceState           `json:"pg_services,omitempty"`         // PostgreSQL service states
+	SavedQueries       []SavedQuery               `json:"saved_queries,omitempty"`       // Visual query definitions
+	S3Connections      []S3Connection             `json:"s3_connections,omitempty"`      // S3-compatible storage connections
+	QGISProjects       []QGISProject              `json:"qgis_projects,omitempty"`       // QGIS project files
+	GeoNodeConnections []GeoNodeConnection        `json:"geonode_connections,omitempty"` // GeoNode instance connections
+	IcebergConnections []IcebergCatalogConnection `json:"iceberg_connections,omitempty"` // Iceberg REST Catalog connections
 }
 
 // GetPingInterval returns the ping interval in seconds, with a default of 60

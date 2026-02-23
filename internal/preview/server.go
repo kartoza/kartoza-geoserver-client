@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package preview
 
 import (
@@ -25,9 +28,9 @@ type LayerInfo struct {
 	StoreName    string `json:"store_name"`
 	StoreType    string `json:"store_type"` // "datastore" or "coveragestore"
 	GeoServerURL string `json:"geoserver_url"`
-	Type         string `json:"type"`      // "vector", "raster", or "group"
-	UseCache     bool   `json:"use_cache"` // If true, use WMTS (cached tiles) instead of WMS
-	GridSet      string `json:"grid_set"`  // WMTS grid set (e.g., "EPSG:900913", "EPSG:4326")
+	Type         string `json:"type"`        // "vector", "raster", or "group"
+	UseCache     bool   `json:"use_cache"`   // If true, use WMTS (cached tiles) instead of WMS
+	GridSet      string `json:"grid_set"`    // WMTS grid set (e.g., "EPSG:900913", "EPSG:4326")
 	TileFormat   string `json:"tile_format"` // WMTS tile format (e.g., "image/png")
 	// Credentials for REST API calls (not sent to client)
 	Username string `json:"-"`
@@ -36,12 +39,12 @@ type LayerInfo struct {
 
 // Server provides an embedded HTTP server for layer previews
 type Server struct {
-	server    *http.Server
-	listener  net.Listener
-	layer     *LayerInfo
-	mu        sync.RWMutex
-	running   bool
-	port      int
+	server   *http.Server
+	listener net.Listener
+	layer    *LayerInfo
+	mu       sync.RWMutex
+	running  bool
+	port     int
 }
 
 // NewServer creates a new preview server
@@ -221,16 +224,16 @@ type ExtendedMetadata struct {
 	LayerMetadataLinks []string `json:"layer_metadata_links,omitempty"`
 
 	// Feature type specific (vector)
-	FeatureTypeName      string `json:"feature_type_name,omitempty"`
-	FeatureTypeNativeCRS string `json:"feature_type_native_crs,omitempty"`
-	FeatureTypeMaxFeatures int  `json:"feature_type_max_features,omitempty"`
-	NumDecimals          int    `json:"num_decimals,omitempty"`
+	FeatureTypeName        string `json:"feature_type_name,omitempty"`
+	FeatureTypeNativeCRS   string `json:"feature_type_native_crs,omitempty"`
+	FeatureTypeMaxFeatures int    `json:"feature_type_max_features,omitempty"`
+	NumDecimals            int    `json:"num_decimals,omitempty"`
 
 	// Coverage specific (raster)
-	CoverageName         string   `json:"coverage_name,omitempty"`
-	CoverageNativeFormat string   `json:"coverage_native_format,omitempty"`
-	CoverageDimensions   []string `json:"coverage_dimensions,omitempty"`
-	CoverageInterpolation string  `json:"coverage_interpolation,omitempty"`
+	CoverageName          string   `json:"coverage_name,omitempty"`
+	CoverageNativeFormat  string   `json:"coverage_native_format,omitempty"`
+	CoverageDimensions    []string `json:"coverage_dimensions,omitempty"`
+	CoverageInterpolation string   `json:"coverage_interpolation,omitempty"`
 
 	// Bounding boxes
 	NativeBBox struct {
@@ -331,12 +334,12 @@ func (s *Server) fetchStoreMetadata(client *http.Client, layer *LayerInfo, metad
 	if layer.StoreType == "coveragestore" {
 		var result struct {
 			CoverageStore struct {
-				Name        string `json:"name"`
-				Description string `json:"description"`
-				Enabled     bool   `json:"enabled"`
-				Type        string `json:"type"`
-				URL         string `json:"url"`
-				DateCreated string `json:"dateCreated"`
+				Name         string `json:"name"`
+				Description  string `json:"description"`
+				Enabled      bool   `json:"enabled"`
+				Type         string `json:"type"`
+				URL          string `json:"url"`
+				DateCreated  string `json:"dateCreated"`
 				DateModified string `json:"dateModified"`
 			} `json:"coverageStore"`
 		}
@@ -351,12 +354,12 @@ func (s *Server) fetchStoreMetadata(client *http.Client, layer *LayerInfo, metad
 	} else {
 		var result struct {
 			DataStore struct {
-				Name        string `json:"name"`
-				Description string `json:"description"`
-				Enabled     bool   `json:"enabled"`
-				Type        string `json:"type"`
-				DateCreated string `json:"dateCreated"`
-				DateModified string `json:"dateModified"`
+				Name                 string `json:"name"`
+				Description          string `json:"description"`
+				Enabled              bool   `json:"enabled"`
+				Type                 string `json:"type"`
+				DateCreated          string `json:"dateCreated"`
+				DateModified         string `json:"dateModified"`
 				ConnectionParameters struct {
 					Entry []struct {
 						Key   string `json:"@key"`
@@ -534,15 +537,15 @@ func (s *Server) parseResourceResponse(body []byte, metadata *ExtendedMetadata) 
 	// Try featuretype first
 	var ftResult struct {
 		FeatureType struct {
-			Name          string `json:"name"`
-			NativeName    string `json:"nativeName"`
-			Title         string `json:"title"`
-			Abstract      string `json:"abstract"`
-			NativeCRS     interface{} `json:"nativeCRS"` // Can be string or object
-			SRS           string `json:"srs"`
-			MaxFeatures   int    `json:"maxFeatures"`
-			NumDecimals   int    `json:"numDecimals"`
-			Keywords      struct {
+			Name        string      `json:"name"`
+			NativeName  string      `json:"nativeName"`
+			Title       string      `json:"title"`
+			Abstract    string      `json:"abstract"`
+			NativeCRS   interface{} `json:"nativeCRS"` // Can be string or object
+			SRS         string      `json:"srs"`
+			MaxFeatures int         `json:"maxFeatures"`
+			NumDecimals int         `json:"numDecimals"`
+			Keywords    struct {
 				String []string `json:"string"`
 			} `json:"keywords"`
 			MetadataLinks struct {
@@ -551,10 +554,10 @@ func (s *Server) parseResourceResponse(body []byte, metadata *ExtendedMetadata) 
 				} `json:"metadataLink"`
 			} `json:"metadataLinks"`
 			NativeBoundingBox struct {
-				MinX float64 `json:"minx"`
-				MinY float64 `json:"miny"`
-				MaxX float64 `json:"maxx"`
-				MaxY float64 `json:"maxy"`
+				MinX float64     `json:"minx"`
+				MinY float64     `json:"miny"`
+				MaxX float64     `json:"maxx"`
+				MaxY float64     `json:"maxy"`
 				CRS  interface{} `json:"crs"`
 			} `json:"nativeBoundingBox"`
 			LatLonBoundingBox struct {
@@ -617,14 +620,14 @@ func (s *Server) parseResourceResponse(body []byte, metadata *ExtendedMetadata) 
 	// Try coverage
 	var covResult struct {
 		Coverage struct {
-			Name          string `json:"name"`
-			NativeName    string `json:"nativeName"`
-			Title         string `json:"title"`
-			Abstract      string `json:"abstract"`
-			NativeCRS     interface{} `json:"nativeCRS"`
-			SRS           string `json:"srs"`
-			NativeFormat  string `json:"nativeFormat"`
-			Keywords      struct {
+			Name         string      `json:"name"`
+			NativeName   string      `json:"nativeName"`
+			Title        string      `json:"title"`
+			Abstract     string      `json:"abstract"`
+			NativeCRS    interface{} `json:"nativeCRS"`
+			SRS          string      `json:"srs"`
+			NativeFormat string      `json:"nativeFormat"`
+			Keywords     struct {
 				String []string `json:"string"`
 			} `json:"keywords"`
 			Dimensions struct {
@@ -632,12 +635,12 @@ func (s *Server) parseResourceResponse(body []byte, metadata *ExtendedMetadata) 
 					Name string `json:"name"`
 				} `json:"coverageDimension"`
 			} `json:"dimensions"`
-			Interpolation string `json:"defaultInterpolationMethod"`
+			Interpolation     string `json:"defaultInterpolationMethod"`
 			NativeBoundingBox struct {
-				MinX float64 `json:"minx"`
-				MinY float64 `json:"miny"`
-				MaxX float64 `json:"maxx"`
-				MaxY float64 `json:"maxy"`
+				MinX float64     `json:"minx"`
+				MinY float64     `json:"miny"`
+				MaxX float64     `json:"maxx"`
+				MaxY float64     `json:"maxy"`
 				CRS  interface{} `json:"crs"`
 			} `json:"nativeBoundingBox"`
 			LatLonBoundingBox struct {

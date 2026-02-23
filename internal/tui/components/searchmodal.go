@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -46,18 +49,18 @@ type SearchResultsMsg struct {
 
 // SearchModal is a modal dialog for universal search
 type SearchModal struct {
-	config       *config.Config
-	clients      map[string]*api.Client
-	searchInput  textinput.Model
-	results      []SearchResult
-	selectedIdx  int
-	width        int
-	height       int
-	visible      bool
-	loading      bool
-	lastQuery    string
-	onSelect     func(SearchResult)
-	onCancel     func()
+	config      *config.Config
+	clients     map[string]*api.Client
+	searchInput textinput.Model
+	results     []SearchResult
+	selectedIdx int
+	width       int
+	height      int
+	visible     bool
+	loading     bool
+	lastQuery   string
+	onSelect    func(SearchResult)
+	onCancel    func()
 
 	// Animation
 	spring        harmonica.Spring
@@ -452,7 +455,7 @@ func (m *SearchModal) View() string {
 		return ""
 	}
 
-	modalWidth := m.width*2/3
+	modalWidth := m.width * 2 / 3
 	if modalWidth < 60 {
 		modalWidth = 60
 	}

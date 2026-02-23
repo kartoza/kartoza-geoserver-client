@@ -1,7 +1,11 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -20,12 +24,12 @@ type SQLViewLayerConfig struct {
 	DataStore             string `json:"datastore"` // PostGIS data store to use
 
 	// Layer details
-	LayerName      string `json:"layer_name"`
-	Title          string `json:"title"`
-	Abstract       string `json:"abstract"`
+	LayerName string `json:"layer_name"`
+	Title     string `json:"title"`
+	Abstract  string `json:"abstract"`
 
 	// SQL Query source (one of these should be provided)
-	SQL            string                  `json:"sql,omitempty"`            // Direct SQL
+	SQL             string                 `json:"sql,omitempty"`              // Direct SQL
 	QueryDefinition *query.QueryDefinition `json:"query_definition,omitempty"` // Visual query
 
 	// Geometry configuration
@@ -34,7 +38,7 @@ type SQLViewLayerConfig struct {
 	SRID           int    `json:"srid"`
 
 	// Optional
-	KeyColumn  string               `json:"key_column,omitempty"`
+	KeyColumn  string                 `json:"key_column,omitempty"`
 	Parameters []api.SQLViewParameter `json:"parameters,omitempty"`
 }
 
@@ -69,14 +73,14 @@ func CreateSQLViewLayer(
 		builtSQL, _, err := qb.Build()
 		if err != nil {
 			result.Error = fmt.Sprintf("failed to build SQL from query definition: %v", err)
-			return result, fmt.Errorf(result.Error)
+			return result, errors.New(result.Error)
 		}
 		sql = builtSQL
 	}
 
 	if sql == "" {
 		result.Error = "no SQL query provided"
-		return result, fmt.Errorf(result.Error)
+		return result, errors.New(result.Error)
 	}
 
 	result.SQL = sql
@@ -84,7 +88,7 @@ func CreateSQLViewLayer(
 	// Validate and sanitize the SQL
 	if err := validateSQLForView(sql); err != nil {
 		result.Error = fmt.Sprintf("SQL validation failed: %v", err)
-		return result, fmt.Errorf(result.Error)
+		return result, errors.New(result.Error)
 	}
 
 	// Set defaults
@@ -115,7 +119,7 @@ func CreateSQLViewLayer(
 	// Create the layer
 	if err := gsClient.CreateSQLViewLayer(config.Workspace, config.DataStore, viewConfig); err != nil {
 		result.Error = fmt.Sprintf("failed to create SQL view layer: %v", err)
-		return result, fmt.Errorf(result.Error)
+		return result, errors.New(result.Error)
 	}
 
 	result.Success = true
@@ -145,21 +149,21 @@ func UpdateSQLViewLayer(
 		builtSQL, _, err := qb.Build()
 		if err != nil {
 			result.Error = fmt.Sprintf("failed to build SQL from query definition: %v", err)
-			return result, fmt.Errorf(result.Error)
+			return result, errors.New(result.Error)
 		}
 		sql = builtSQL
 	}
 
 	if sql == "" {
 		result.Error = "no SQL query provided"
-		return result, fmt.Errorf(result.Error)
+		return result, errors.New(result.Error)
 	}
 
 	result.SQL = sql
 
 	if err := validateSQLForView(sql); err != nil {
 		result.Error = fmt.Sprintf("SQL validation failed: %v", err)
-		return result, fmt.Errorf(result.Error)
+		return result, errors.New(result.Error)
 	}
 
 	geomType := config.GeometryType
@@ -187,7 +191,7 @@ func UpdateSQLViewLayer(
 
 	if err := gsClient.UpdateSQLViewLayer(config.Workspace, config.DataStore, viewConfig); err != nil {
 		result.Error = fmt.Sprintf("failed to update SQL view layer: %v", err)
-		return result, fmt.Errorf(result.Error)
+		return result, errors.New(result.Error)
 	}
 
 	result.Success = true

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package llm
 
 import "context"
@@ -31,8 +34,8 @@ type ExecutionPlan struct {
 
 // QueryResult contains the executed query results
 type QueryResult struct {
-	Columns []ColumnInfo      `json:"columns"`
-	Rows    []map[string]any  `json:"rows"`
+	Columns  []ColumnInfo     `json:"columns"`
+	Rows     []map[string]any `json:"rows"`
 	RowCount int              `json:"row_count"`
 	Duration float64          `json:"duration_ms"`
 	SQL      string           `json:"sql"`
@@ -47,9 +50,9 @@ type ColumnInfo struct {
 
 // SchemaContext provides database schema information to the LLM
 type SchemaContext struct {
-	ServiceName string        `json:"service_name"`
-	Database    string        `json:"database"`
-	Schemas     []SchemaInfo  `json:"schemas"`
+	ServiceName string       `json:"service_name"`
+	Database    string       `json:"database"`
+	Schemas     []SchemaInfo `json:"schemas"`
 }
 
 // SchemaInfo describes a database schema
@@ -117,13 +120,13 @@ type Provider interface {
 
 // ProviderConfig contains configuration for an LLM provider
 type ProviderConfig struct {
-	Type        string            `json:"type"`         // "ollama", "openai", "anthropic", "embedded"
-	Endpoint    string            `json:"endpoint"`     // API endpoint URL
-	Model       string            `json:"model"`        // Model name
-	APIKey      string            `json:"api_key"`      // API key (if required)
-	MaxTokens   int               `json:"max_tokens"`   // Maximum tokens in response
-	Temperature float64           `json:"temperature"`  // Sampling temperature
-	Options     map[string]string `json:"options"`      // Additional options
+	Type        string            `json:"type"`        // "ollama", "openai", "anthropic", "embedded"
+	Endpoint    string            `json:"endpoint"`    // API endpoint URL
+	Model       string            `json:"model"`       // Model name
+	APIKey      string            `json:"api_key"`     // API key (if required)
+	MaxTokens   int               `json:"max_tokens"`  // Maximum tokens in response
+	Temperature float64           `json:"temperature"` // Sampling temperature
+	Options     map[string]string `json:"options"`     // Additional options
 }
 
 // Engine is the main AI query engine

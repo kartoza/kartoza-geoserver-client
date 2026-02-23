@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -49,8 +52,8 @@ func (s *Server) handleQueryExecute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		SQL         string                `json:"sql"`         // Raw SQL query (optional)
-		Definition  query.QueryDefinition `json:"definition"`  // Visual query definition (optional)
+		SQL         string                `json:"sql"`        // Raw SQL query (optional)
+		Definition  query.QueryDefinition `json:"definition"` // Visual query definition (optional)
 		ServiceName string                `json:"service_name"`
 		MaxRows     int                   `json:"max_rows"`
 		Offset      int                   `json:"offset"`

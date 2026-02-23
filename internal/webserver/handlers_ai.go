@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -49,14 +52,14 @@ type AIQueryRequest struct {
 
 // AIQueryResponse represents the response from the AI query endpoint
 type AIQueryResponse struct {
-	Success     bool              `json:"success"`
-	SQL         string            `json:"sql,omitempty"`
-	Explanation string            `json:"explanation,omitempty"`
-	Confidence  float64           `json:"confidence,omitempty"`
-	Warnings    []string          `json:"warnings,omitempty"`
-	Result      *llm.QueryResult  `json:"result,omitempty"`
-	Error       string            `json:"error,omitempty"`
-	Duration    float64           `json:"duration_ms,omitempty"`
+	Success     bool             `json:"success"`
+	SQL         string           `json:"sql,omitempty"`
+	Explanation string           `json:"explanation,omitempty"`
+	Confidence  float64          `json:"confidence,omitempty"`
+	Warnings    []string         `json:"warnings,omitempty"`
+	Result      *llm.QueryResult `json:"result,omitempty"`
+	Error       string           `json:"error,omitempty"`
+	Duration    float64          `json:"duration_ms,omitempty"`
 }
 
 // handleAIQuery handles POST /api/ai/query - generate and optionally execute SQL

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -32,12 +35,12 @@ type DuckDBQuery struct {
 	focusIndex int
 
 	// File info
-	filePath    string
-	fileName    string
-	tableInfo   *cloudnative.DuckDBTableInfo
+	filePath  string
+	fileName  string
+	tableInfo *cloudnative.DuckDBTableInfo
 
 	// SQL input
-	sqlInput    textarea.Model
+	sqlInput textarea.Model
 
 	// Results display
 	resultView  viewport.Model

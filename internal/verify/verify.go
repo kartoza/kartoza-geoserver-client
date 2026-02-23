@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package verify
 
 import (
@@ -37,15 +40,15 @@ type Attribute struct {
 
 // VerificationResult contains the comparison results
 type VerificationResult struct {
-	Success          bool
-	FeatureCountOK   bool
-	BBoxOK           bool
-	GeometryTypeOK   bool
-	AttributesOK     bool
-	LocalInfo        *LayerInfo
-	RemoteInfo       *LayerInfo
-	Errors           []string
-	Warnings         []string
+	Success        bool
+	FeatureCountOK bool
+	BBoxOK         bool
+	GeometryTypeOK bool
+	AttributesOK   bool
+	LocalInfo      *LayerInfo
+	RemoteInfo     *LayerInfo
+	Errors         []string
+	Warnings       []string
 }
 
 // GetLocalLayerInfo reads metadata from a local geospatial file using ogrinfo

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -42,7 +45,8 @@ type CoverageStoreCreateRequest struct {
 // handleDataStores handles data store related requests
 // Pattern: /api/datastores/{connId}/{workspace} or /api/datastores/{connId}/{workspace}/{store}
 // Also handles: /api/datastores/{connId}/{workspace}/{store}/available
-//               /api/datastores/{connId}/{workspace}/{store}/publish
+//
+//	/api/datastores/{connId}/{workspace}/{store}/publish
 func (s *Server) handleDataStores(w http.ResponseWriter, r *http.Request) {
 	connID, workspace, store, action := parseStorePathParams(r.URL.Path, "/api/datastores")
 

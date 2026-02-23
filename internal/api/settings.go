@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package api
 
 import (
@@ -170,4 +173,3 @@ func (c *Client) UpdateContact(contact *models.GeoServerContact) error {
 // ============================================================================
 // Download Functions - Export resource configurations as JSON/SLD
 // ============================================================================
-

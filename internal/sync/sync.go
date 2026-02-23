@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 // Package sync provides server synchronization functionality shared between TUI and Web UI
 package sync
 

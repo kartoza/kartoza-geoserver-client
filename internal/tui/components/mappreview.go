@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -38,23 +41,23 @@ const (
 
 // MapPreviewKeyMap defines key bindings for the map preview
 type MapPreviewKeyMap struct {
-	Close           key.Binding
-	ZoomIn          key.Binding
-	ZoomOut         key.Binding
-	PanUp           key.Binding
-	PanDown         key.Binding
-	PanLeft         key.Binding
-	PanRight        key.Binding
-	Refresh         key.Binding
-	NextStyle       key.Binding
-	PrevStyle       key.Binding
-	ToggleLayers    key.Binding
-	CrosshairUp     key.Binding
-	CrosshairDown   key.Binding
-	CrosshairLeft   key.Binding
-	CrosshairRight  key.Binding
-	GetFeatureInfo  key.Binding
-	ToggleOverlay   key.Binding
+	Close          key.Binding
+	ZoomIn         key.Binding
+	ZoomOut        key.Binding
+	PanUp          key.Binding
+	PanDown        key.Binding
+	PanLeft        key.Binding
+	PanRight       key.Binding
+	Refresh        key.Binding
+	NextStyle      key.Binding
+	PrevStyle      key.Binding
+	ToggleLayers   key.Binding
+	CrosshairUp    key.Binding
+	CrosshairDown  key.Binding
+	CrosshairLeft  key.Binding
+	CrosshairRight key.Binding
+	GetFeatureInfo key.Binding
+	ToggleOverlay  key.Binding
 }
 
 // DefaultMapPreviewKeyMap returns the default key bindings
@@ -151,35 +154,35 @@ type MapPreview struct {
 	currentStyle int
 
 	// Layer group support
-	isLayerGroup    bool              // Whether we're viewing a layer group
-	layerGroupMode  string            // SINGLE, NAMED, CONTAINER, EO
-	groupLayers     []LayerToggleItem // Layers in the group with enabled state
-	showLayerPanel  bool              // Whether layer toggle panel is visible
-	layerPanelCursor int             // Cursor position in layer panel
+	isLayerGroup     bool              // Whether we're viewing a layer group
+	layerGroupMode   string            // SINGLE, NAMED, CONTAINER, EO
+	groupLayers      []LayerToggleItem // Layers in the group with enabled state
+	showLayerPanel   bool              // Whether layer toggle panel is visible
+	layerPanelCursor int               // Cursor position in layer panel
 
 	// View state
-	width      int
-	height     int
-	visible    bool
-	loading    bool
-	errorMsg   string
-	statusMsg  string
-	imageData  []byte
+	width         int
+	height        int
+	visible       bool
+	loading       bool
+	errorMsg      string
+	statusMsg     string
+	imageData     []byte
 	renderedImage string
 
 	// Double buffering - keep previous image while loading new one
 	previousImage string
 
 	// Map state
-	centerX    float64 // Center longitude
-	centerY    float64 // Center latitude
-	zoomLevel  float64 // Zoom level (higher = more zoomed in)
-	bbox       [4]float64 // Current bounding box [minX, minY, maxX, maxY]
+	centerX   float64    // Center longitude
+	centerY   float64    // Center latitude
+	zoomLevel float64    // Zoom level (higher = more zoomed in)
+	bbox      [4]float64 // Current bounding box [minX, minY, maxX, maxY]
 
 	// Image rendering
-	protocol   ImageProtocol
-	imgWidth   int
-	imgHeight  int
+	protocol  ImageProtocol
+	imgWidth  int
+	imgHeight int
 
 	// Crosshair state - position in terminal character coordinates (0.0-1.0 normalized)
 	crosshairX      float64 // Normalized X position (0.0 = left, 1.0 = right)
@@ -193,8 +196,8 @@ type MapPreview struct {
 	compositeImage []byte      // PNG data with crosshair drawn in, ready for rendering
 
 	// Legend image cached from GetLegendGraphic
-	legendImage    image.Image // Cached legend image
-	legendFetched  bool        // Whether legend has been fetched
+	legendImage   image.Image // Cached legend image
+	legendFetched bool        // Whether legend has been fetched
 
 	// Components
 	keyMap  MapPreviewKeyMap
@@ -264,8 +267,8 @@ func NewMapPreview(geoserverURL, username, password, workspace, layerName string
 		bbox:         [4]float64{-180, -90, 180, 90}, // World extent
 		imgWidth:     800,
 		imgHeight:    600,
-		crosshairX:   0.5, // Start in center
-		crosshairY:   0.5, // Start in center
+		crosshairX:   0.5,  // Start in center
+		crosshairY:   0.5,  // Start in center
 		showOverlay:  true, // Show overlay by default
 		keyMap:       DefaultMapPreviewKeyMap(),
 		spinner:      s,
@@ -299,7 +302,7 @@ func (m *MapPreview) SetSize(width, height int) {
 	m.height = height
 	// Calculate image size based on terminal size
 	// Leave room for controls and padding
-	m.imgWidth = (width - 20) * 8  // Approximate pixel width
+	m.imgWidth = (width - 20) * 8    // Approximate pixel width
 	m.imgHeight = (height - 10) * 16 // Approximate pixel height
 	if m.imgWidth > 1024 {
 		m.imgWidth = 1024
@@ -741,7 +744,7 @@ func (m *MapPreview) updateCompositeImage() {
 		crossY := int(m.crosshairY * float64(height-1))
 
 		// Crosshair colors
-		lineColor := color.RGBA{255, 68, 68, 255}   // Red
+		lineColor := color.RGBA{255, 68, 68, 255}     // Red
 		centerColor := color.RGBA{255, 255, 255, 255} // White
 
 		// Draw vertical line

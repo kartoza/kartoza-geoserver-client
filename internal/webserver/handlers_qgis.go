@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -274,13 +277,13 @@ func (s *Server) deleteQGISProject(w http.ResponseWriter, r *http.Request, proje
 
 // QGISProjectMetadata contains parsed information from a QGIS project file
 type QGISProjectMetadata struct {
-	Title       string       `json:"title"`
-	CRS         string       `json:"crs"`
-	Extent      *QGISExtent  `json:"extent,omitempty"`
-	Layers      []QGISLayer  `json:"layers"`
-	Version     string       `json:"version"`
-	SaveUser    string       `json:"saveUser,omitempty"`
-	SaveDate    string       `json:"saveDate,omitempty"`
+	Title    string      `json:"title"`
+	CRS      string      `json:"crs"`
+	Extent   *QGISExtent `json:"extent,omitempty"`
+	Layers   []QGISLayer `json:"layers"`
+	Version  string      `json:"version"`
+	SaveUser string      `json:"saveUser,omitempty"`
+	SaveDate string      `json:"saveDate,omitempty"`
 }
 
 // QGISExtent represents the map extent
@@ -293,15 +296,15 @@ type QGISExtent struct {
 
 // QGISLayer represents a layer in the project
 type QGISLayer struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Type       string `json:"type"`       // "raster", "vector", "xyz", "wms", etc.
-	Provider   string `json:"provider"`   // "gdal", "ogr", "wms", etc.
-	Source     string `json:"source"`     // Layer source/path
-	Visible    bool   `json:"visible"`
-	TileURL    string `json:"tileUrl,omitempty"`    // For XYZ/TMS layers
-	WMSURL     string `json:"wmsUrl,omitempty"`     // For WMS layers
-	WMSLayers  string `json:"wmsLayers,omitempty"`  // WMS layer names
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Type      string `json:"type"`     // "raster", "vector", "xyz", "wms", etc.
+	Provider  string `json:"provider"` // "gdal", "ogr", "wms", etc.
+	Source    string `json:"source"`   // Layer source/path
+	Visible   bool   `json:"visible"`
+	TileURL   string `json:"tileUrl,omitempty"`   // For XYZ/TMS layers
+	WMSURL    string `json:"wmsUrl,omitempty"`    // For WMS layers
+	WMSLayers string `json:"wmsLayers,omitempty"` // WMS layer names
 }
 
 // getQGISProjectMetadata parses a QGIS project file and returns metadata

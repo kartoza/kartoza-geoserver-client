@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 // Package geonode provides a client for the GeoNode REST API v2
 package geonode
 
@@ -82,30 +85,30 @@ func NewClient(conn *config.GeoNodeConnection) *Client {
 // Resource represents a GeoNode resource (base type for all resources)
 // Note: Many fields use interface{} because the GeoNode API returns inconsistent types
 type Resource struct {
-	PK           FlexInt     `json:"pk"`
-	UUID         string      `json:"uuid"`
-	Name         string      `json:"name,omitempty"`
-	Title        string      `json:"title"`
-	Abstract     string      `json:"abstract,omitempty"`
-	ResourceType string      `json:"resource_type"` // dataset, map, document, geostory, dashboard
-	Subtype      string      `json:"subtype,omitempty"`
-	Owner        Owner       `json:"owner,omitempty"`
-	Date         string      `json:"date,omitempty"`
-	DateType     string      `json:"date_type,omitempty"`
-	Created      string      `json:"created,omitempty"`
-	LastUpdated  string      `json:"last_updated,omitempty"`
-	Featured     bool        `json:"featured"`
-	Published    bool        `json:"is_published"`
-	Approved     bool        `json:"is_approved"`
-	ThumbnailURL string      `json:"thumbnail_url,omitempty"`
-	DetailURL    string      `json:"detail_url,omitempty"`
-	EmbedURL     string      `json:"embed_url,omitempty"`
-	Keywords     interface{} `json:"keywords,omitempty"`                  // Can be []string or []object
-	Category     interface{} `json:"category,omitempty"`                  // Can be string or object
+	PK                        FlexInt     `json:"pk"`
+	UUID                      string      `json:"uuid"`
+	Name                      string      `json:"name,omitempty"`
+	Title                     string      `json:"title"`
+	Abstract                  string      `json:"abstract,omitempty"`
+	ResourceType              string      `json:"resource_type"` // dataset, map, document, geostory, dashboard
+	Subtype                   string      `json:"subtype,omitempty"`
+	Owner                     Owner       `json:"owner,omitempty"`
+	Date                      string      `json:"date,omitempty"`
+	DateType                  string      `json:"date_type,omitempty"`
+	Created                   string      `json:"created,omitempty"`
+	LastUpdated               string      `json:"last_updated,omitempty"`
+	Featured                  bool        `json:"featured"`
+	Published                 bool        `json:"is_published"`
+	Approved                  bool        `json:"is_approved"`
+	ThumbnailURL              string      `json:"thumbnail_url,omitempty"`
+	DetailURL                 string      `json:"detail_url,omitempty"`
+	EmbedURL                  string      `json:"embed_url,omitempty"`
+	Keywords                  interface{} `json:"keywords,omitempty"`                    // Can be []string or []object
+	Category                  interface{} `json:"category,omitempty"`                    // Can be string or object
 	SpatialRepresentationType interface{} `json:"spatial_representation_type,omitempty"` // Can be string or object
-	SRID         string      `json:"srid,omitempty"`
-	BBox         interface{} `json:"bbox,omitempty"`       // Complex polygon type
-	LLBBox       interface{} `json:"ll_bbox_polygon,omitempty"` // Complex polygon type
+	SRID                      string      `json:"srid,omitempty"`
+	BBox                      interface{} `json:"bbox,omitempty"`            // Complex polygon type
+	LLBBox                    interface{} `json:"ll_bbox_polygon,omitempty"` // Complex polygon type
 }
 
 // Owner represents a resource owner
@@ -119,11 +122,11 @@ type Owner struct {
 // Dataset represents a GeoNode dataset (layer)
 type Dataset struct {
 	Resource
-	Alternate       string `json:"alternate,omitempty"`
-	DefaultStyle    *Style `json:"default_style,omitempty"`
-	Workspace       string `json:"workspace,omitempty"`
-	StoreName       string `json:"store,omitempty"`
-	StoreType       string `json:"storeType,omitempty"`
+	Alternate    string `json:"alternate,omitempty"`
+	DefaultStyle *Style `json:"default_style,omitempty"`
+	Workspace    string `json:"workspace,omitempty"`
+	StoreName    string `json:"store,omitempty"`
+	StoreType    string `json:"storeType,omitempty"`
 }
 
 // Style represents a layer style
@@ -183,18 +186,18 @@ type Dashboard struct {
 
 // PaginatedResponse represents a paginated API response
 type PaginatedResponse struct {
-	Total      int             `json:"total"`
-	Page       int             `json:"page"`
-	PageSize   int             `json:"page_size"`
-	Resources  json.RawMessage `json:"resources"`
+	Total     int             `json:"total"`
+	Page      int             `json:"page"`
+	PageSize  int             `json:"page_size"`
+	Resources json.RawMessage `json:"resources"`
 }
 
 // ResourcesResponse represents the /api/v2/resources response
 type ResourcesResponse struct {
-	Total      int        `json:"total"`
-	Page       int        `json:"page"`
-	PageSize   int        `json:"page_size"`
-	Resources  []Resource `json:"resources"`
+	Total     int        `json:"total"`
+	Page      int        `json:"page"`
+	PageSize  int        `json:"page_size"`
+	Resources []Resource `json:"resources"`
 }
 
 // DatasetsResponse represents the /api/v2/datasets response
@@ -576,43 +579,43 @@ func (c *Client) GetWMSLayerName(dataset *Dataset) string {
 
 // UploadResponse represents the response from GeoNode upload API
 type UploadResponse struct {
-	Success   bool   `json:"success"`
-	Status    string `json:"status,omitempty"`
-	ID        int    `json:"id,omitempty"`
-	Code      string `json:"code,omitempty"`
-	URL       string `json:"url,omitempty"`
-	BBox      []float64 `json:"bbox,omitempty"`
-	CRS       string `json:"crs,omitempty"`
-	State     string `json:"state,omitempty"`
-	Progress  float64 `json:"progress,omitempty"`
-	Message   string `json:"message,omitempty"`
-	Error     string `json:"error,omitempty"`
-	CreateDate string `json:"create_date,omitempty"`
+	Success    bool      `json:"success"`
+	Status     string    `json:"status,omitempty"`
+	ID         int       `json:"id,omitempty"`
+	Code       string    `json:"code,omitempty"`
+	URL        string    `json:"url,omitempty"`
+	BBox       []float64 `json:"bbox,omitempty"`
+	CRS        string    `json:"crs,omitempty"`
+	State      string    `json:"state,omitempty"`
+	Progress   float64   `json:"progress,omitempty"`
+	Message    string    `json:"message,omitempty"`
+	Error      string    `json:"error,omitempty"`
+	CreateDate string    `json:"create_date,omitempty"`
 }
 
 // UploadExecutionResponse represents execution info from imports endpoint
 type UploadExecutionResponse struct {
-	ID           int    `json:"id"`
-	ExecID       string `json:"exec_id"`
-	Name         string `json:"name,omitempty"`
-	Status       string `json:"status"`
-	State        string `json:"state"`
-	Progress     int    `json:"progress"`
-	CreateDate   string `json:"create_date,omitempty"`
-	StartDate    string `json:"start_date,omitempty"`
-	EndDate      string `json:"end_date,omitempty"`
+	ID           int         `json:"id"`
+	ExecID       string      `json:"exec_id"`
+	Name         string      `json:"name,omitempty"`
+	Status       string      `json:"status"`
+	State        string      `json:"state"`
+	Progress     int         `json:"progress"`
+	CreateDate   string      `json:"create_date,omitempty"`
+	StartDate    string      `json:"start_date,omitempty"`
+	EndDate      string      `json:"end_date,omitempty"`
 	OutputParams interface{} `json:"output_params,omitempty"`
-	Source       string `json:"source,omitempty"`
-	Action       string `json:"action,omitempty"`
+	Source       string      `json:"source,omitempty"`
+	Action       string      `json:"action,omitempty"`
 }
 
 // UploadOptions contains optional parameters for uploads
 type UploadOptions struct {
-	Title       string
-	Abstract    string
-	Keywords    []string
-	Charset     string
-	Async       bool // If true, returns immediately and allows status polling
+	Title    string
+	Abstract string
+	Keywords []string
+	Charset  string
+	Async    bool // If true, returns immediately and allows status polling
 }
 
 // UploadDataset uploads a file (GPKG, Shapefile, GeoTIFF) to GeoNode

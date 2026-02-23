@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -30,9 +33,9 @@ type ConnectionRequest struct {
 
 // TestConnectionResponse represents the response from testing a connection
 type TestConnectionResponse struct {
-	Success bool               `json:"success"`
-	Message string             `json:"message"`
-	Info    *api.ServerInfo    `json:"info,omitempty"`
+	Success bool            `json:"success"`
+	Message string          `json:"message"`
+	Info    *api.ServerInfo `json:"info,omitempty"`
 }
 
 // handleConnections handles GET /api/connections and POST /api/connections

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package cloudnative
 
 import (
@@ -14,14 +17,14 @@ import (
 
 // DuckDBQueryResult represents the result of a DuckDB query
 type DuckDBQueryResult struct {
-	Columns      []string                 `json:"columns"`
-	ColumnTypes  []string                 `json:"columnTypes"`
-	Rows         []map[string]interface{} `json:"rows"`
-	RowCount     int                      `json:"rowCount"`
-	TotalCount   int64                    `json:"totalCount,omitempty"`
-	HasMore      bool                     `json:"hasMore"`
-	GeometryColumn string                 `json:"geometryColumn,omitempty"`
-	SQL          string                   `json:"sql,omitempty"`
+	Columns        []string                 `json:"columns"`
+	ColumnTypes    []string                 `json:"columnTypes"`
+	Rows           []map[string]interface{} `json:"rows"`
+	RowCount       int                      `json:"rowCount"`
+	TotalCount     int64                    `json:"totalCount,omitempty"`
+	HasMore        bool                     `json:"hasMore"`
+	GeometryColumn string                   `json:"geometryColumn,omitempty"`
+	SQL            string                   `json:"sql,omitempty"`
 }
 
 // DuckDBQueryOptions configures a DuckDB query

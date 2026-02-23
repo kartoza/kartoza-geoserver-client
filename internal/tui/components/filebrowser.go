@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -344,7 +347,7 @@ func (fb *FileBrowser) View() string {
 		status += fmt.Sprintf(" | %d selected", selected)
 	}
 	b.WriteString("\n")
-	b.WriteString(styles.StatusBarStyle.Width(fb.width-4).Render(status))
+	b.WriteString(styles.StatusBarStyle.Width(fb.width - 4).Render(status))
 
 	// Build panel
 	panelStyle := styles.PanelStyle

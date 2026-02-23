@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package api
 
 import (
@@ -560,10 +563,10 @@ func (c *Client) GetLayerMetadata(workspace, layerName string) (*models.LayerMet
 				Keywords   struct {
 					String []string `json:"string"`
 				} `json:"keywords"`
-				NativeCRS string `json:"nativeCRS"`
-				SRS       string `json:"srs"`
-				Enabled   bool   `json:"enabled"`
-				Advertised bool  `json:"advertised"`
+				NativeCRS         string `json:"nativeCRS"`
+				SRS               string `json:"srs"`
+				Enabled           bool   `json:"enabled"`
+				Advertised        bool   `json:"advertised"`
 				NativeBoundingBox struct {
 					MinX float64 `json:"minx"`
 					MinY float64 `json:"miny"`
@@ -578,8 +581,8 @@ func (c *Client) GetLayerMetadata(workspace, layerName string) (*models.LayerMet
 					MaxY float64 `json:"maxy"`
 					CRS  string  `json:"crs"`
 				} `json:"latLonBoundingBox"`
-				MaxFeatures  int  `json:"maxFeatures"`
-				NumDecimals  int  `json:"numDecimals"`
+				MaxFeatures   int `json:"maxFeatures"`
+				NumDecimals   int `json:"numDecimals"`
 				MetadataLinks struct {
 					MetadataLink []struct {
 						Type         string `json:"type"`
@@ -634,10 +637,10 @@ func (c *Client) GetLayerMetadata(workspace, layerName string) (*models.LayerMet
 				Keywords   struct {
 					String []string `json:"string"`
 				} `json:"keywords"`
-				NativeCRS string `json:"nativeCRS"`
-				SRS       string `json:"srs"`
-				Enabled   bool   `json:"enabled"`
-				Advertised bool  `json:"advertised"`
+				NativeCRS         string `json:"nativeCRS"`
+				SRS               string `json:"srs"`
+				Enabled           bool   `json:"enabled"`
+				Advertised        bool   `json:"advertised"`
 				NativeBoundingBox struct {
 					MinX float64 `json:"minx"`
 					MinY float64 `json:"miny"`

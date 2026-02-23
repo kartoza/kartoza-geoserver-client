@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -22,10 +25,10 @@ type BridgeCreateRequest struct {
 
 // BridgeResponse represents a bridge creation response
 type BridgeResponse struct {
-	Success   bool                    `json:"success"`
-	Message   string                  `json:"message"`
-	Link      *integration.LinkedStore `json:"link,omitempty"`
-	Error     string                  `json:"error,omitempty"`
+	Success bool                     `json:"success"`
+	Message string                   `json:"message"`
+	Link    *integration.LinkedStore `json:"link,omitempty"`
+	Error   string                   `json:"error,omitempty"`
 }
 
 // handleBridge handles /api/bridge routes

@@ -65,6 +65,10 @@ import type {
   QFieldCloudCollaborator,
   QFieldCloudCollaboratorCreate,
   QFieldCloudDelta,
+  MerginMapsConnection,
+  MerginMapsConnectionCreate,
+  MerginMapsTestResult,
+  MerginMapsProjectsResponse,
 } from '../types'
 
 // ============================================================================
@@ -1332,4 +1336,62 @@ export async function removeQFieldCloudCollaborator(connectionId: string, projec
 export async function listQFieldCloudDeltas(connectionId: string, projectId: string): Promise<QFieldCloudDelta[]> {
   const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/deltas`)
   return handleResponse<QFieldCloudDelta[]>(response)
+}
+
+// ============================================================================
+// Mergin Maps API
+// ============================================================================
+
+export async function getMerginMapsConnections(): Promise<MerginMapsConnection[]> {
+  const response = await fetch(`${API_BASE}/mergin/connections`)
+  return handleResponse<MerginMapsConnection[]>(response)
+}
+
+export async function getMerginMapsConnection(id: string): Promise<MerginMapsConnection> {
+  const response = await fetch(`${API_BASE}/mergin/connections/${id}`)
+  return handleResponse<MerginMapsConnection>(response)
+}
+
+export async function createMerginMapsConnection(conn: MerginMapsConnectionCreate): Promise<MerginMapsConnection> {
+  const response = await fetch(`${API_BASE}/mergin/connections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<MerginMapsConnection>(response)
+}
+
+export async function updateMerginMapsConnection(id: string, conn: Partial<MerginMapsConnectionCreate>): Promise<MerginMapsConnection> {
+  const response = await fetch(`${API_BASE}/mergin/connections/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<MerginMapsConnection>(response)
+}
+
+export async function deleteMerginMapsConnection(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/mergin/connections/${id}`, { method: 'DELETE' })
+  return handleResponse<void>(response)
+}
+
+export async function testMerginMapsConnection(id: string): Promise<MerginMapsTestResult> {
+  const response = await fetch(`${API_BASE}/mergin/connections/${id}/test`, { method: 'GET' })
+  return handleResponse<MerginMapsTestResult>(response)
+}
+
+export async function testMerginMapsConnectionDirect(conn: MerginMapsConnectionCreate): Promise<MerginMapsTestResult> {
+  const response = await fetch(`${API_BASE}/mergin/connections/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<MerginMapsTestResult>(response)
+}
+
+export async function getMerginMapsProjects(connectionId: string, namespace?: string): Promise<MerginMapsProjectsResponse> {
+  let url = `${API_BASE}/mergin/connections/${connectionId}/projects`
+  if (namespace) url += `?namespace=${encodeURIComponent(namespace)}`
+  const response = await fetch(url)
+  return handleResponse<MerginMapsProjectsResponse>(response)
 }

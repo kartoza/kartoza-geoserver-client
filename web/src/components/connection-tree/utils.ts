@@ -91,6 +91,12 @@ export function getNodeIconComponent(type: NodeType | 'featuretype' | 'coverage'
       return FiFolder
     case 'icebergtable':
       return FiBox
+    case 'merginmaps':
+      return FiMap
+    case 'merginmapsconnection':
+      return FiServer
+    case 'merginmapsproject':
+      return FiFolder
     case 'workspace':
       return FiFolder
     case 'datastores':
@@ -184,6 +190,12 @@ export function getNodeColor(type: NodeType | 'featuretype' | 'coverage'): strin
       return 'cyan.300'
     case 'icebergtable':
       return 'cyan.600'
+    case 'merginmaps':
+      return 'green.500'
+    case 'merginmapsconnection':
+      return 'green.400'
+    case 'merginmapsproject':
+      return 'green.300'
     case 'workspace':
       return 'accent.400'
     case 'datastores':

@@ -46,6 +46,10 @@ const (
 	NodeTypeQFieldCloudCollaborators // "Collaborators" container inside a project
 	NodeTypeQFieldCloudCollaborator  // Single collaborator
 	NodeTypeQFieldCloudDeltas        // "Deltas" container inside a project
+	// Mergin Maps node types
+	NodeTypeMerginMapsRoot       // "Mergin Maps" container
+	NodeTypeMerginMapsConnection // A Mergin Maps server connection
+	NodeTypeMerginMapsProject    // A Mergin Maps project
 )
 
 // String returns the string representation of a NodeType
@@ -133,6 +137,12 @@ func (n NodeType) String() string {
 		return "qfieldcloudcollaborator"
 	case NodeTypeQFieldCloudDeltas:
 		return "qfieldclouddeltas"
+	case NodeTypeMerginMapsRoot:
+		return "merginmaps"
+	case NodeTypeMerginMapsConnection:
+		return "merginmapsconnection"
+	case NodeTypeMerginMapsProject:
+		return "merginmapsproject"
 	default:
 		return "unknown"
 	}
@@ -224,6 +234,12 @@ func (n NodeType) Icon() string {
 		return "\uf007" // fa-user
 	case NodeTypeQFieldCloudDeltas:
 		return "\uf021" // fa-refresh
+	case NodeTypeMerginMapsRoot:
+		return "\uf279" // fa-map (represents mapping/survey platform)
+	case NodeTypeMerginMapsConnection:
+		return "\uf233" // fa-server
+	case NodeTypeMerginMapsProject:
+		return "\uf07b" // fa-folder
 	default:
 		return "\uf128" // fa-question
 	}
@@ -263,6 +279,10 @@ type TreeNode struct {
 	QFieldCloudFilename     string // File name within a project
 	QFieldCloudJobID        string // Job ID
 	QFieldCloudUsername     string // Collaborator username
+	// Mergin Maps-specific fields
+	MerginMapsConnectionID string // Mergin Maps connection ID this node belongs to
+	MerginMapsNamespace    string // Project namespace (username or organisation)
+	MerginMapsProjectName  string // Project name within the namespace
 }
 
 // NewTreeNode creates a new tree node

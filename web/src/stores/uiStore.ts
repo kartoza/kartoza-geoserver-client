@@ -39,6 +39,7 @@ export type DialogType =
   | 'icebergtabledata'
   | 'icebergquery'
   | 'qfieldcloud'
+  | 'merginmaps'
   | null
 
 export type DialogMode = 'create' | 'edit' | 'delete' | 'view'

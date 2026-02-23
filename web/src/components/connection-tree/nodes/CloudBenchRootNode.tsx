@@ -11,6 +11,7 @@ import { QGISProjectsRootNode } from './QGISProjectsRootNode'
 import { GeoNodeRootNode } from './GeoNodeRootNode'
 import { IcebergRootNode } from './IcebergRootNode'
 import { QFieldCloudRootNode } from './QFieldCloudRootNode'
+import { MerginMapsRootNode } from './MerginMapsRootNode'
 
 interface CloudBenchRootNodeProps {
   connections: { id: string; name: string; url: string }[]
@@ -70,6 +71,8 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
           <GeoNodeRootNode />
           {/* QFieldCloud Section */}
           <QFieldCloudRootNode />
+          {/* Mergin Maps Section */}
+          <MerginMapsRootNode />
         </Box>
       )}
     </Box>

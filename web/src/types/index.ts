@@ -285,6 +285,9 @@ export type NodeType =
   | 'qfieldcloudcollaborators' // QFieldCloud collaborators container
   | 'qfieldcloudcollaborator'  // Single collaborator
   | 'qfieldclouddeltas'        // QFieldCloud deltas container
+  | 'merginmaps'          // "Mergin Maps" container
+  | 'merginmapsconnection' // Mergin Maps server connection
+  | 'merginmapsproject'   // Mergin Maps project
   | 'workspace'
   | 'datastores'
   | 'coveragestores'
@@ -350,6 +353,10 @@ export interface TreeNode {
   qfieldcloudFilename?: string
   qfieldcloudJobId?: string
   qfieldcloudUsername?: string
+  // Mergin Maps-specific fields
+  merginMapsConnectionId?: string
+  merginMapsNamespace?: string
+  merginMapsProjectName?: string
 }
 
 // GeoWebCache (GWC) types
@@ -949,6 +956,7 @@ export interface IcebergSnapshot {
   parentId?: number
 }
 
+
 // ============================================================================
 // QFieldCloud Types
 // ============================================================================
@@ -1045,4 +1053,47 @@ export interface QFieldCloudDelta {
   output?: string
   created_at: string
   updated_at: string
+}
+
+// ============================================================================
+// Mergin Maps Types
+// ============================================================================
+
+export interface MerginMapsConnection {
+  id: string
+  name: string
+  url: string
+  username?: string
+  has_token: boolean
+  is_active: boolean
+}
+
+export interface MerginMapsConnectionCreate {
+  name: string
+  url?: string
+  username?: string
+  password?: string
+  token?: string
+}
+
+export interface MerginMapsTestResult {
+  success: boolean
+  error?: string
+}
+
+export interface MerginMapsProject {
+  id?: string
+  namespace: string
+  name: string
+  version?: string
+  created?: string
+  updated?: string
+  disk_usage?: number
+  tags?: string[]
+  public?: boolean
+}
+
+export interface MerginMapsProjectsResponse {
+  projects: MerginMapsProject[]
+  count: number
 }

@@ -21,7 +21,7 @@ import {
   Flex,
   Badge,
 } from '@chakra-ui/react'
-import { FiSearch, FiX, FiFolder, FiDatabase, FiImage, FiLayers, FiEdit3, FiBook, FiEye, FiColumns, FiCode, FiTable, FiCloud, FiHardDrive, FiFile, FiMap } from 'react-icons/fi'
+import { FiSearch, FiX, FiFolder, FiDatabase, FiImage, FiLayers, FiEdit3, FiBook, FiEye, FiColumns, FiCode, FiTable, FiCloud, FiHardDrive, FiFile, FiMap, FiServer } from 'react-icons/fi'
 import { SiPostgresql } from 'react-icons/si'
 import { TbWorld } from 'react-icons/tb'
 import { useQuery } from '@tanstack/react-query'
@@ -60,6 +60,9 @@ const typeIcons: Record<string, React.ElementType> = {
   geonodedataset: FiLayers,
   geonodemap: FiMap,
   geonodedocument: FiFile,
+  // Mergin Maps types
+  merginmapsconnection: FiServer,
+  merginmapsproject: FiFolder,
 }
 
 const typeColors: Record<string, string> = {
@@ -87,6 +90,9 @@ const typeColors: Record<string, string> = {
   geonodedataset: 'teal',
   geonodemap: 'teal',
   geonodedocument: 'teal',
+  // Mergin Maps types
+  merginmapsconnection: 'green',
+  merginmapsproject: 'green',
 }
 
 export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {

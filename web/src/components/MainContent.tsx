@@ -27,6 +27,7 @@ import {
   S3StoragePanel,
   GeoNodeResourcePanel,
   QFieldCloudPanel,
+  MerginMapsProjectPanel,
 } from './panels'
 import {
   DataStoresDashboard,
@@ -376,6 +377,8 @@ export default function MainContent() {
     case 'qfieldcloudcollaborators':
     case 'qfieldclouddeltas':
       return <QFieldCloudPanel node={selectedNode} />
+    case 'merginmapsproject':
+      return <MerginMapsProjectPanel node={selectedNode} />
     default:
       return <Dashboard />
   }

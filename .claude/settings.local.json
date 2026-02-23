@@ -40,7 +40,8 @@
       "Bash(find:*)",
       "Bash(git rebase:*)",
       "Bash(GIT_EDITOR=true git rebase:*)",
-      "Bash(./kartoza-cloudbench version:*)"
+      "Bash(./kartoza-cloudbench version:*)",
+      "Bash(gh label create:*)"
     ],
     "deny": [],
     "ask": []

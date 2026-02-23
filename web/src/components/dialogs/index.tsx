@@ -23,6 +23,7 @@ import IcebergTableSchemaDialog from './IcebergTableSchemaDialog'
 import IcebergTableDataDialog from './IcebergTableDataDialog'
 import IcebergQueryDialog from './IcebergQueryDialog'
 import QFieldCloudConnectionDialog from './QFieldCloudConnectionDialog'
+import MerginMapsConnectionDialog from './MerginMapsConnectionDialog'
 import { SettingsDialog } from './SettingsDialog'
 import { SyncDialog } from './SyncDialog'
 import { StyleDialog } from './StyleDialog'
@@ -59,6 +60,7 @@ export default function Dialogs() {
       <IcebergTableDataDialog />
       <IcebergQueryDialog />
       <QFieldCloudConnectionDialog />
+      <MerginMapsConnectionDialog />
     </>
   )
 }

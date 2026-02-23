@@ -36,7 +36,7 @@ import {
 } from 'react-icons/fi'
 import { TbWorld } from 'react-icons/tb'
 import type { TreeNode } from '../../types'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { useUIStore } from '../../stores/uiStore'
 
 interface GeoNodeResourcePanelProps {

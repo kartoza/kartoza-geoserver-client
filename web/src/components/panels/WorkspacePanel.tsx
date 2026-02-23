@@ -19,7 +19,7 @@ import {
 } from '@chakra-ui/react'
 import { FiFolder, FiDatabase, FiImage, FiLayers, FiUpload, FiPlus } from 'react-icons/fi'
 import { useQuery } from '@tanstack/react-query'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { useUIStore } from '../../stores/uiStore'
 
 interface WorkspacePanelProps {

@@ -42,7 +42,7 @@ import {
 } from 'react-icons/fi'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 
 interface FileUpload {
   file: File

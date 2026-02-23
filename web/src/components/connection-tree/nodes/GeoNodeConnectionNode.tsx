@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTreeStore } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
 import type { TreeNode, GeoNodeConnection } from '../../../types'
-import * as api from '../../../api/client'
+import * as api from '../../../api'
 import { TreeNodeRow } from '../TreeNodeRow'
 import { GeoNodeResourceCategoryNode } from './GeoNodeResourceCategoryNode'
 

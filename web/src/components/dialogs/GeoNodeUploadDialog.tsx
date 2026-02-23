@@ -28,7 +28,7 @@ import { FiUpload, FiFile, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
 import { TbWorld } from 'react-icons/tb'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 
 // Helper to format file size
 function formatFileSize(bytes: number): string {

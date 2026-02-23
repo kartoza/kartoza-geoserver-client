@@ -25,7 +25,7 @@ import {
 import { FiInfo, FiRefreshCw, FiX, FiDroplet, FiBox, FiGlobe, FiMap, FiChevronDown } from 'react-icons/fi'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import * as api from '../api/client'
+import * as api from '../api'
 import { useUIStore } from '../stores/uiStore'
 
 interface MapPreviewProps {

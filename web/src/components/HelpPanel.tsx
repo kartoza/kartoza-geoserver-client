@@ -35,7 +35,7 @@ import { SiPostgresql } from 'react-icons/si'
 import { useQuery } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import * as api from '../api/client'
+import * as api from '../api'
 
 interface HelpPanelProps {
   isOpen: boolean

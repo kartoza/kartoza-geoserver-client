@@ -44,7 +44,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FiDatabase, FiPlay, FiTrash2, FiStopCircle, FiRefreshCw } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import { useTreeStore } from '../../stores/treeStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import type { GWCSeedRequest, GWCSeedTask } from '../../types'
 
 export default function CacheDialog() {

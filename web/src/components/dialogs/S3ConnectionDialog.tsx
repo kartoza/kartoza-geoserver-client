@@ -29,7 +29,7 @@ import { FiEye, FiEyeOff, FiHardDrive, FiCheck } from 'react-icons/fi'
 import { SiAmazons3 } from 'react-icons/si'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { springs } from '../../utils/animations'
 
 export default function S3ConnectionDialog() {

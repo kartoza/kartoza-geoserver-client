@@ -1,6 +1,6 @@
 import { Box, Text, useToast, useColorModeValue } from '@chakra-ui/react'
 import { useUIStore } from '../../../stores/uiStore'
-import * as api from '../../../api/client'
+import * as api from '../../../api'
 import { DatasetRow } from '../DatasetRow'
 import type { CoverageStoreContentsNodeProps } from '../types'
 

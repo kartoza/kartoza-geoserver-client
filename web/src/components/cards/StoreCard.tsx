@@ -9,7 +9,7 @@ import {
   Button,
 } from '@chakra-ui/react'
 import { FiEye } from 'react-icons/fi'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { useUIStore } from '../../stores/uiStore'
 
 interface StoreCardProps {

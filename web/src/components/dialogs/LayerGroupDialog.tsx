@@ -28,7 +28,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FiGrid, FiLayers } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import { useTreeStore } from '../../stores/treeStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 
 export default function LayerGroupDialog() {
   const activeDialog = useUIStore((state) => state.activeDialog)

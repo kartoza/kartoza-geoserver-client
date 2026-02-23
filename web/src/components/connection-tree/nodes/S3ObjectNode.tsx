@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTreeStore, generateNodeId } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
 import type { TreeNode } from '../../../types'
-import * as api from '../../../api/client'
+import * as api from '../../../api'
 import { TreeNodeRow } from '../TreeNodeRow'
 import type { S3ObjectNodeProps } from '../types'
 

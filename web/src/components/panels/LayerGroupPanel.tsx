@@ -17,7 +17,7 @@ import {
 } from '@chakra-ui/react'
 import { FiGrid, FiMap, FiDatabase, FiEdit3 } from 'react-icons/fi'
 import { useQuery } from '@tanstack/react-query'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { useUIStore } from '../../stores/uiStore'
 
 interface LayerGroupPanelProps {

@@ -3,7 +3,7 @@ import { Box, Flex, Text, Button, useToast, useColorModeValue } from '@chakra-ui
 import { useQueryClient } from '@tanstack/react-query'
 import { FiUpload } from 'react-icons/fi'
 import { useUIStore } from '../../../stores/uiStore'
-import * as api from '../../../api/client'
+import * as api from '../../../api'
 import { DatasetRow } from '../DatasetRow'
 import type { DataStoreContentsNodeProps } from '../types'
 

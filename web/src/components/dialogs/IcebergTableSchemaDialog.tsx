@@ -25,7 +25,7 @@ import {
 import { FiBox, FiCheck, FiX } from 'react-icons/fi'
 import { useQuery } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 
 export default function IcebergTableSchemaDialog() {
   const activeDialog = useUIStore((state) => state.activeDialog)

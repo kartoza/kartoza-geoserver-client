@@ -34,7 +34,7 @@ import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { parquetReadObjects } from 'hyparquet'
 import { compressors } from 'hyparquet-compressors'
-import * as api from '../api/client'
+import * as api from '../api'
 import type { S3PreviewMetadata, S3AttributeTableResponse } from '../types'
 import type { FeatureCollection, Feature, Geometry } from 'geojson'
 

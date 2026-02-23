@@ -44,7 +44,7 @@ import {
   FiUpload,
 } from 'react-icons/fi'
 import { SiPostgresql } from 'react-icons/si'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { useUIStore } from '../../stores/uiStore'
 import ServerLocationMap from '../common/ServerLocationMap'
 

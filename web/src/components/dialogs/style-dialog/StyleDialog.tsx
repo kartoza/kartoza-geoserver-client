@@ -54,7 +54,7 @@ import {
   FiImage,
 } from 'react-icons/fi'
 import { useUIStore } from '../../../stores/uiStore'
-import * as api from '../../../api/client'
+import * as api from '../../../api'
 
 // Import from refactored modules
 import type { ClassificationMethod, StyleRule } from './types'

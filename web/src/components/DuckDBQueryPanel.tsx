@@ -42,7 +42,7 @@ import {
   FiCopy,
   FiSearch,
 } from 'react-icons/fi'
-import * as api from '../api/client'
+import * as api from '../api'
 import type { DuckDBTableInfo } from '../types'
 import { SQLEditor } from './SQLEditor'
 import maplibregl from 'maplibre-gl'

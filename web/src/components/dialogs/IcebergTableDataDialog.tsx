@@ -29,7 +29,7 @@ import {
 import { FiDatabase, FiChevronLeft, FiChevronRight, FiRefreshCw } from 'react-icons/fi'
 import { useQuery } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 
 interface TableDataResponse {
   columns: string[]

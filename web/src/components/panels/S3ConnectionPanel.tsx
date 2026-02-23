@@ -31,7 +31,7 @@ import {
 } from 'react-icons/fi'
 import { SiAmazons3 } from 'react-icons/si'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { useUIStore } from '../../stores/uiStore'
 
 interface S3StatCardProps {

@@ -48,7 +48,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FiLayers, FiEye, FiSearch, FiInfo, FiGlobe, FiLink, FiPlus, FiTrash2, FiDroplet, FiStar, FiEdit3, FiRefreshCw } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import { useTreeStore } from '../../stores/treeStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import type { LayerMetadataUpdate, MetadataLink } from '../../types'
 
 export default function LayerDialog() {

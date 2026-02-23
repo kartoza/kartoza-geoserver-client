@@ -25,7 +25,7 @@ import {
 import { FiFolder, FiPlus } from 'react-icons/fi'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { springs } from '../../utils/animations'
 
 export default function IcebergNamespaceDialog() {

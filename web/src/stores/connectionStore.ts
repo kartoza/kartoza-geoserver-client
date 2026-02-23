@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Connection } from '../types'
-import * as api from '../api/client'
-import type { PGService } from '../api/client'
+import * as api from '../api'
+import type { PGService } from '../api'
 
 interface ConnectionState {
   connections: Connection[]

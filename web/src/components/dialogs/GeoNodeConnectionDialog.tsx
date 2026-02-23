@@ -33,7 +33,7 @@ import { FiEye, FiEyeOff, FiCheck, FiServer } from 'react-icons/fi'
 import { TbWorld } from 'react-icons/tb'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { springs } from '../../utils/animations'
 
 export default function GeoNodeConnectionDialog() {

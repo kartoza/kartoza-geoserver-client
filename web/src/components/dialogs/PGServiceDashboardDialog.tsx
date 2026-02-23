@@ -47,7 +47,7 @@ import {
 } from 'react-icons/fi'
 import { SiPostgresql } from 'react-icons/si'
 import { useUIStore } from '../../stores/uiStore'
-import { getPGServiceStats, type PGServerStats } from '../../api/client'
+import { getPGServiceStats, type PGServerStats } from '../../api'
 
 // Pulse animation for the map dot
 const pulse = keyframes`

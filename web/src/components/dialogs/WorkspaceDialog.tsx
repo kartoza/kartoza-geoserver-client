@@ -25,7 +25,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
 import { useTreeStore } from '../../stores/treeStore'
 import { useConnectionStore } from '../../stores/connectionStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import type { WorkspaceConfig } from '../../types'
 
 const defaultConfig: WorkspaceConfig = {

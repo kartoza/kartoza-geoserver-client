@@ -23,7 +23,7 @@ import { FiMap, FiUpload, FiFile, FiX } from 'react-icons/fi'
 import { SiQgis } from 'react-icons/si'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 
 export default function QGISProjectDialog() {
   const activeDialog = useUIStore((state) => state.activeDialog)

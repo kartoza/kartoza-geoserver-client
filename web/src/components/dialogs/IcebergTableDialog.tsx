@@ -35,7 +35,7 @@ import {
 import { FiDatabase, FiPlus, FiTrash2 } from 'react-icons/fi'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { springs } from '../../utils/animations'
 
 // Iceberg supported primitive types

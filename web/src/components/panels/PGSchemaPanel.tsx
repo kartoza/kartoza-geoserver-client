@@ -31,7 +31,7 @@ import {
   FiAlertCircle,
   FiUpload,
 } from 'react-icons/fi'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { useUIStore } from '../../stores/uiStore'
 
 interface PGStatCardProps {

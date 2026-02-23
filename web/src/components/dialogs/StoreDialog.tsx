@@ -26,7 +26,7 @@ import { useQuery } from '@tanstack/react-query'
 import { FiDatabase, FiImage, FiFolder, FiInfo } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import { useTreeStore } from '../../stores/treeStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import type { CoverageStore } from '../../types'
 
 export default function StoreDialog() {

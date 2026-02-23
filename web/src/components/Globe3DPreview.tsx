@@ -30,7 +30,7 @@ import { FiGlobe, FiMap, FiBox, FiEye, FiEyeOff, FiRefreshCw, FiX, FiLayers, FiC
 import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { useUIStore } from '../stores/uiStore'
-import * as api from '../api/client'
+import * as api from '../api'
 
 // Disable Cesium Ion (we don't use it)
 Cesium.Ion.defaultAccessToken = ''

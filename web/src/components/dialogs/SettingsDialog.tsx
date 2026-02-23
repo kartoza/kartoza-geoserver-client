@@ -39,7 +39,7 @@ import {
   FiBriefcase,
   FiHome,
 } from 'react-icons/fi'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import type { GeoServerContact } from '../../types'
 
 interface SettingsDialogProps {

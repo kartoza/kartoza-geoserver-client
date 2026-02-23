@@ -40,7 +40,7 @@ import {
   FiSettings,
 } from 'react-icons/fi'
 import { SiPostgresql } from 'react-icons/si'
-import * as api from '../api/client'
+import * as api from '../api'
 import type { ServerStatus } from '../types'
 import { useUIStore } from '../stores/uiStore'
 import { useTreeStore } from '../stores/treeStore'

@@ -28,7 +28,7 @@ import {
 import { FiEye, FiEyeOff, FiServer, FiCheck, FiDatabase } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import { useConnectionStore } from '../../stores/connectionStore'
-import { createPGService, testPGService, testConnectionDirect, type PGServiceCreate } from '../../api/client'
+import { createPGService, testPGService, testConnectionDirect, type PGServiceCreate } from '../../api'
 import { springs } from '../../utils/animations'
 
 type ConnectionType = 'geoserver' | 'postgresql'

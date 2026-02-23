@@ -35,8 +35,8 @@ import {
 import { SiQgis } from 'react-icons/si'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import * as api from '../api/client'
-import type { QGISProjectMetadata, QGISLayer } from '../api/client'
+import * as api from '../api'
+import type { QGISProjectMetadata, QGISLayer } from '../api'
 
 interface QGISMapLibrePreviewProps {
   projectId: string

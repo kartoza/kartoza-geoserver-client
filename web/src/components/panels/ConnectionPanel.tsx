@@ -21,7 +21,7 @@ import {
 } from '@chakra-ui/react'
 import { FiServer, FiSettings, FiPlus, FiUpload } from 'react-icons/fi'
 import { useQuery } from '@tanstack/react-query'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { useConnectionStore } from '../../stores/connectionStore'
 import { useUIStore } from '../../stores/uiStore'
 import { SettingsDialog } from '../dialogs/SettingsDialog'

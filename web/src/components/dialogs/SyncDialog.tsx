@@ -57,7 +57,7 @@ import {
   FiDownload,
   FiX,
 } from 'react-icons/fi'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import type { Connection, SyncConfiguration, SyncTask, SyncOptions, StartSyncRequest } from '../../types'
 import { useUIStore } from '../../stores/uiStore'
 import { useConnectionStore } from '../../stores/connectionStore'

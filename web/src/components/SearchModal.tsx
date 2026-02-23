@@ -25,7 +25,7 @@ import { FiSearch, FiX, FiFolder, FiDatabase, FiImage, FiLayers, FiEdit3, FiBook
 import { SiPostgresql } from 'react-icons/si'
 import { TbWorld } from 'react-icons/tb'
 import { useQuery } from '@tanstack/react-query'
-import * as api from '../api/client'
+import * as api from '../api'
 import { useTreeStore } from '../stores/treeStore'
 import type { NodeType } from '../types'
 

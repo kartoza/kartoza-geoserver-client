@@ -17,7 +17,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { FiAlertTriangle } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
 import { useConnectionStore } from '../../stores/connectionStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 
 export default function ConfirmDialog() {
   const activeDialog = useUIStore((state) => state.activeDialog)

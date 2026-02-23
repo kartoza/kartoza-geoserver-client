@@ -19,7 +19,7 @@ import {
 } from '@chakra-ui/react'
 import { FiLayers, FiUpload } from 'react-icons/fi'
 import { useQuery } from '@tanstack/react-query'
-import * as api from '../../api/client'
+import * as api from '../../api'
 import { useUIStore } from '../../stores/uiStore'
 import LayerCard from '../cards/LayerCard'
 

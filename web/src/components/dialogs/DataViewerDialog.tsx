@@ -31,7 +31,7 @@ import {
 } from '@chakra-ui/react'
 import { FiChevronLeft, FiChevronRight, FiRefreshCw, FiDownload } from 'react-icons/fi'
 import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 
 export default function DataViewerDialog() {
   const activeDialog = useUIStore((state) => state.activeDialog)

@@ -28,7 +28,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
 import { useTreeStore } from '../../stores/treeStore'
 import { useConnectionStore } from '../../stores/connectionStore'
-import * as api from '../../api/client'
+import * as api from '../../api'
 
 interface FileUpload {
   file: File

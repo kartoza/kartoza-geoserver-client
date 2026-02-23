@@ -32,7 +32,7 @@ import { TbSnowflake } from 'react-icons/tb'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useQuery } from '@tanstack/react-query'
-import * as api from '../api/client'
+import * as api from '../api'
 import { useUIStore } from '../stores/uiStore'
 
 interface IcebergTablePreviewProps {

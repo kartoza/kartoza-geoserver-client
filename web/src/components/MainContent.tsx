@@ -26,6 +26,7 @@ import {
   S3ConnectionPanel,
   S3StoragePanel,
   GeoNodeResourcePanel,
+  QFieldCloudPanel,
 } from './panels'
 import {
   DataStoresDashboard,
@@ -366,6 +367,15 @@ export default function MainContent() {
     case 'geonodegeostory':
     case 'geonodedashboard':
       return <GeoNodeResourcePanel node={selectedNode} />
+    case 'qfieldcloud':
+    case 'qfieldcloudconnection':
+    case 'qfieldcloudprojects':
+    case 'qfieldcloudproject':
+    case 'qfieldcloudfiles':
+    case 'qfieldcloudjobs':
+    case 'qfieldcloudcollaborators':
+    case 'qfieldclouddeltas':
+      return <QFieldCloudPanel node={selectedNode} />
     default:
       return <Dashboard />
   }

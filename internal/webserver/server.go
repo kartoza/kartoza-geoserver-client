@@ -16,6 +16,7 @@ import (
 	"github.com/kartoza/kartoza-cloudbench/internal/geonode"
 	"github.com/kartoza/kartoza-cloudbench/internal/iceberg"
 	"github.com/kartoza/kartoza-cloudbench/internal/preview"
+	"github.com/kartoza/kartoza-cloudbench/internal/qfieldcloud"
 	"github.com/kartoza/kartoza-cloudbench/internal/s3client"
 )
 
@@ -24,29 +25,32 @@ var staticFiles embed.FS
 
 // Server represents the web server
 type Server struct {
-	config           *config.Config
-	clients          map[string]*api.Client        // GeoServer Connection ID -> Client
-	s3Clients        map[string]*s3client.Client   // S3 Connection ID -> Client
-	geonodeClients   map[string]*geonode.Client    // GeoNode Connection ID -> Client
-	icebergClients   map[string]*iceberg.Client    // Iceberg Catalog Connection ID -> Client
-	clientsMu        sync.RWMutex
-	s3ClientsMu      sync.RWMutex
-	geonodeClientsMu sync.RWMutex
-	icebergClientsMu sync.RWMutex
-	previewServer    *preview.Server
-	conversionMgr    *cloudnative.Manager
-	addr             string
+	config                *config.Config
+	clients               map[string]*api.Client        // GeoServer Connection ID -> Client
+	s3Clients             map[string]*s3client.Client   // S3 Connection ID -> Client
+	geonodeClients        map[string]*geonode.Client    // GeoNode Connection ID -> Client
+	qfieldcloudClients    map[string]*qfieldcloud.Client // QFieldCloud Connection ID -> Client
+	icebergClients        map[string]*iceberg.Client    // Iceberg Catalog Connection ID -> Client
+	clientsMu             sync.RWMutex
+	s3ClientsMu           sync.RWMutex
+	geonodeClientsMu      sync.RWMutex
+	qfieldcloudClientsMu  sync.RWMutex
+	icebergClientsMu      sync.RWMutex
+	previewServer         *preview.Server
+	conversionMgr         *cloudnative.Manager
+	addr                  string
 }
 
 // New creates a new web server
 func New(cfg *config.Config) *Server {
 	s := &Server{
-		config:         cfg,
-		clients:        make(map[string]*api.Client),
-		s3Clients:      make(map[string]*s3client.Client),
-		geonodeClients: make(map[string]*geonode.Client),
-		icebergClients: make(map[string]*iceberg.Client),
-		conversionMgr:  cloudnative.NewManager(),
+		config:              cfg,
+		clients:             make(map[string]*api.Client),
+		s3Clients:           make(map[string]*s3client.Client),
+		geonodeClients:      make(map[string]*geonode.Client),
+		qfieldcloudClients:  make(map[string]*qfieldcloud.Client),
+		icebergClients:      make(map[string]*iceberg.Client),
+		conversionMgr:       cloudnative.NewManager(),
 	}
 
 	// Initialize clients for existing GeoServer connections
@@ -66,6 +70,12 @@ func New(cfg *config.Config) *Server {
 	for _, conn := range cfg.GeoNodeConnections {
 		client := geonode.NewClient(&conn)
 		s.geonodeClients[conn.ID] = client
+	}
+
+	// Initialize clients for existing QFieldCloud connections
+	for _, conn := range cfg.QFieldCloudConnections {
+		client := qfieldcloud.NewClient(&conn)
+		s.qfieldcloudClients[conn.ID] = client
 	}
 
 	// Initialize clients for existing Iceberg catalog connections
@@ -231,6 +241,11 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/geonode/connections", s.handleGeoNodeConnections)
 	mux.HandleFunc("/api/geonode/connections/test", s.handleGeoNodeTestConnection)
 	mux.HandleFunc("/api/geonode/connections/", s.handleGeoNodeConnectionByID)
+
+	// API routes - QFieldCloud
+	mux.HandleFunc("/api/qfieldcloud/connections", s.handleQFieldCloudConnections)
+	mux.HandleFunc("/api/qfieldcloud/connections/test", s.handleQFieldCloudTestConnectionDirect)
+	mux.HandleFunc("/api/qfieldcloud/connections/", s.handleQFieldCloudConnectionByID)
 
 	// API routes - Iceberg (Apache Iceberg REST Catalog)
 	mux.HandleFunc("/api/iceberg/connections", s.handleIcebergConnections)

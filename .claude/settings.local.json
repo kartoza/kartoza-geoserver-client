@@ -37,7 +37,8 @@
       "Bash(python3:*)",
       "WebFetch(domain:hub.docker.com)",
       "Bash(xargs:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": [],
     "ask": []

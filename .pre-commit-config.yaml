@@ -1,0 +1,126 @@
+# Pre-commit hook configuration for kartoza-cloudbench
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+# Files/paths to exclude globally from all hooks
+exclude: |
+  (?x)^(
+    vendor/.*|
+    web/public/assets/.*
+  )$
+
+repos:
+  # ---------------------------------------------------------------------------
+  # General file quality checks
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # ---------------------------------------------------------------------------
+  # Go linting via golangci-lint
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v2.1.6
+    hooks:
+      - id: golangci-lint
+        args: ['--config=.golangci.yml']
+
+  # ---------------------------------------------------------------------------
+  # Local hooks: Go toolchain
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      # Format Go source files and fail the commit if any changes are needed
+      - id: gofmt
+        name: Go Format
+        entry: gofmt
+        args: ['-l', '-w']
+        language: system
+        types: [go]
+        exclude: ^vendor/
+
+      # Verify the entire module compiles without errors
+      - id: go-build
+        name: Go Build
+        entry: go build ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      # Static analysis via go vet
+      - id: go-vet
+        name: Go Vet
+        entry: go vet ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      # Run the test suite
+      # Note: integration tests require a running GeoServer instance on :8600.
+      # Set SKIP=go-test to bypass when no test infrastructure is available.
+      - id: go-test
+        name: Go Tests
+        entry: go test ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+
+  # ---------------------------------------------------------------------------
+  # Local hooks: TypeScript / JavaScript (web/ frontend)
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint (TypeScript/JavaScript)
+        entry: npm run --prefix web lint
+        language: system
+        types_or: [ts, tsx, javascript, jsx]
+        pass_filenames: false
+
+  # ---------------------------------------------------------------------------
+  # License compliance: per-file copyright headers
+  #
+  # addlicense is automatically installed by pre-commit (language: golang).
+  # It adds a minimal MIT copyright header to any Go source file that is
+  # missing one.  If a header is added the commit is blocked so the author
+  # can review, re-stage, and commit again.
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: addlicense
+        name: License Headers (Go)
+        entry: addlicense
+        args: ['-l', 'mit', '-c', 'Kartoza', '-s=only']
+        language: golang
+        types: [go]
+        exclude: ^vendor/
+        additional_dependencies: ['github.com/google/addlicense@v1.1.1']
+
+  # ---------------------------------------------------------------------------
+  # License compliance: dependency license audit
+  #
+  # Runs in the "manual" stage so it does not block every commit but can be
+  # executed on demand or in CI:
+  #   pre-commit run go-licenses --hook-stage manual
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: go-licenses
+        name: Go Dependency License Audit
+        entry: go-licenses
+        args: ['check', './...', '--allowed_licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0,Unlicense,CC0-1.0,LGPL-2.1']
+        language: golang
+        pass_filenames: false
+        stages: [manual]
+        additional_dependencies: ['github.com/google/go-licenses@v1.6.0']

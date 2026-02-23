@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package ogr2ogr
 
 import (
@@ -40,17 +43,17 @@ type RasterImportResult struct {
 
 // RasterInfo contains information about a raster file
 type RasterInfo struct {
-	Width         int
-	Height        int
-	Bands         int
-	DataType      string
-	SRID          int
-	PixelSizeX    float64
-	PixelSizeY    float64
-	NoDataValue   *float64
-	Extent        *Extent
-	Driver        string
-	Compression   string
+	Width       int
+	Height      int
+	Bands       int
+	DataType    string
+	SRID        int
+	PixelSizeX  float64
+	PixelSizeY  float64
+	NoDataValue *float64
+	Extent      *Extent
+	Driver      string
+	Compression string
 }
 
 // CheckRaster2PgsqlAvailable checks if raster2pgsql is available

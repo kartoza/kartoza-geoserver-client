@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -44,15 +47,15 @@ type StoreWizardAnimationMsg struct {
 
 // StoreWizard is a multi-step wizard for creating stores
 type StoreWizard struct {
-	id           string
-	mode         StoreWizardMode
-	step         StoreWizardStep
-	workspace    string
-	width        int
-	height       int
-	visible      bool
-	onConfirm    func(StoreWizardResult)
-	onCancel     func()
+	id        string
+	mode      StoreWizardMode
+	step      StoreWizardStep
+	workspace string
+	width     int
+	height    int
+	visible   bool
+	onConfirm func(StoreWizardResult)
+	onCancel  func()
 
 	// Type selection
 	dataStoreTypes     []models.DataStoreType
@@ -81,19 +84,19 @@ type StoreWizard struct {
 // NewDataStoreWizard creates a new wizard for creating data stores
 func NewDataStoreWizard(workspace string) *StoreWizard {
 	return &StoreWizard{
-		id:                 "datastore-wizard",
-		mode:               WizardModeDataStore,
-		step:               StepSelectType,
-		workspace:          workspace,
-		visible:            true,
-		dataStoreTypes:     models.GetAllDataStoreTypes(),
-		selectedTypeIndex:  0,
-		spring:             harmonica.NewSpring(harmonica.FPS(60), 6.0, 0.5),
-		animScale:          0.0,
-		animVelocity:       0.0,
-		animOpacity:        0.0,
-		targetScale:        1.0,
-		animating:          true,
+		id:                "datastore-wizard",
+		mode:              WizardModeDataStore,
+		step:              StepSelectType,
+		workspace:         workspace,
+		visible:           true,
+		dataStoreTypes:    models.GetAllDataStoreTypes(),
+		selectedTypeIndex: 0,
+		spring:            harmonica.NewSpring(harmonica.FPS(60), 6.0, 0.5),
+		animScale:         0.0,
+		animVelocity:      0.0,
+		animOpacity:       0.0,
+		targetScale:       1.0,
+		animating:         true,
 	}
 }
 

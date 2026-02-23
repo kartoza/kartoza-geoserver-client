@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -46,19 +49,19 @@ func (s *Server) handleSQLView(w http.ResponseWriter, r *http.Request) {
 // handleCreateSQLView creates a new SQL View layer
 func (s *Server) handleCreateSQLView(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		ConnectionID    string                  `json:"connection_id"`
-		Workspace       string                  `json:"workspace"`
-		DataStore       string                  `json:"datastore"`
-		LayerName       string                  `json:"layer_name"`
-		Title           string                  `json:"title"`
-		Abstract        string                  `json:"abstract"`
-		SQL             string                  `json:"sql,omitempty"`
+		ConnectionID    string                 `json:"connection_id"`
+		Workspace       string                 `json:"workspace"`
+		DataStore       string                 `json:"datastore"`
+		LayerName       string                 `json:"layer_name"`
+		Title           string                 `json:"title"`
+		Abstract        string                 `json:"abstract"`
+		SQL             string                 `json:"sql,omitempty"`
 		QueryDefinition *query.QueryDefinition `json:"query_definition,omitempty"`
-		GeometryColumn  string                  `json:"geometry_column"`
-		GeometryType    string                  `json:"geometry_type"`
-		SRID            int                     `json:"srid"`
-		KeyColumn       string                  `json:"key_column,omitempty"`
-		Parameters      []api.SQLViewParameter  `json:"parameters,omitempty"`
+		GeometryColumn  string                 `json:"geometry_column"`
+		GeometryType    string                 `json:"geometry_type"`
+		SRID            int                    `json:"srid"`
+		KeyColumn       string                 `json:"key_column,omitempty"`
+		Parameters      []api.SQLViewParameter `json:"parameters,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -116,16 +119,16 @@ func (s *Server) handleCreateSQLView(w http.ResponseWriter, r *http.Request) {
 // handleUpdateSQLView updates an existing SQL View layer
 func (s *Server) handleUpdateSQLView(w http.ResponseWriter, r *http.Request, connID, workspace, layerName string) {
 	var req struct {
-		DataStore       string                  `json:"datastore"`
-		Title           string                  `json:"title"`
-		Abstract        string                  `json:"abstract"`
-		SQL             string                  `json:"sql,omitempty"`
+		DataStore       string                 `json:"datastore"`
+		Title           string                 `json:"title"`
+		Abstract        string                 `json:"abstract"`
+		SQL             string                 `json:"sql,omitempty"`
 		QueryDefinition *query.QueryDefinition `json:"query_definition,omitempty"`
-		GeometryColumn  string                  `json:"geometry_column"`
-		GeometryType    string                  `json:"geometry_type"`
-		SRID            int                     `json:"srid"`
-		KeyColumn       string                  `json:"key_column,omitempty"`
-		Parameters      []api.SQLViewParameter  `json:"parameters,omitempty"`
+		GeometryColumn  string                 `json:"geometry_column"`
+		GeometryType    string                 `json:"geometry_type"`
+		SRID            int                    `json:"srid"`
+		KeyColumn       string                 `json:"key_column,omitempty"`
+		Parameters      []api.SQLViewParameter `json:"parameters,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

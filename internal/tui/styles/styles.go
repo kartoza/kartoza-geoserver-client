@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package styles
 
 import (
@@ -33,11 +36,11 @@ var (
 	TextBright  = lipgloss.Color("#FFFFFF") // Bright text
 
 	// Special colors using Kartoza palette
-	Selected    = KartozaBlueLight         // Selected item
-	Directory   = KartozaBlue              // Directory color
-	Executable  = lipgloss.Color("#4CAF50") // Success green
-	GeoFile     = KartozaOrangeLight       // Geospatial files
-	StyleFile   = lipgloss.Color("#9f7aea") // Style files (SLD/CSS)
+	Selected   = KartozaBlueLight          // Selected item
+	Directory  = KartozaBlue               // Directory color
+	Executable = lipgloss.Color("#4CAF50") // Success green
+	GeoFile    = KartozaOrangeLight        // Geospatial files
+	StyleFile  = lipgloss.Color("#9f7aea") // Style files (SLD/CSS)
 
 	// Status colors
 	Success = lipgloss.Color("#4CAF50")
@@ -50,253 +53,253 @@ var (
 var (
 	// Base styles
 	BaseStyle = lipgloss.NewStyle().
-		Background(Background).
-		Foreground(Text)
+			Background(Background).
+			Foreground(Text)
 
 	// Title bar - Kartoza branded
 	TitleStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(TextBright).
-		Background(KartozaBlueDark).
-		Padding(0, 1)
+			Bold(true).
+			Foreground(TextBright).
+			Background(KartozaBlueDark).
+			Padding(0, 1)
 
 	SubtitleStyle = lipgloss.NewStyle().
-		Foreground(Muted).
-		Italic(true)
+			Foreground(Muted).
+			Italic(true)
 
 	// Muted text style
 	MutedStyle = lipgloss.NewStyle().
-		Foreground(Muted)
+			Foreground(Muted)
 
 	// Panel styles
 	PanelStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Border).
-		Padding(0, 1)
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(Border).
+			Padding(0, 1)
 
 	ActivePanelStyle = PanelStyle.
-		BorderForeground(Primary)
+				BorderForeground(Primary)
 
 	PanelHeaderStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(KartozaBlue).
-		Padding(0, 1).
-		MarginBottom(1)
+				Bold(true).
+				Foreground(KartozaBlue).
+				Padding(0, 1).
+				MarginBottom(1)
 
 	// List item styles
 	ItemStyle = lipgloss.NewStyle().
-		Foreground(Text).
-		Padding(0, 1)
+			Foreground(Text).
+			Padding(0, 1)
 
 	SelectedItemStyle = lipgloss.NewStyle().
-		Foreground(TextBright).
-		Background(SurfaceHigh).
-		Bold(true).
-		Padding(0, 1)
+				Foreground(TextBright).
+				Background(SurfaceHigh).
+				Bold(true).
+				Padding(0, 1)
 
 	ActiveItemStyle = lipgloss.NewStyle().
-		Foreground(TextBright).
-		Background(KartozaBlue).
-		Bold(true).
-		Padding(0, 1)
+			Foreground(TextBright).
+			Background(KartozaBlue).
+			Bold(true).
+			Padding(0, 1)
 
 	// Directory style
 	DirectoryStyle = lipgloss.NewStyle().
-		Foreground(Directory).
-		Bold(true)
+			Foreground(Directory).
+			Bold(true)
 
 	// File type styles
 	GeoFileStyle = lipgloss.NewStyle().
-		Foreground(GeoFile)
+			Foreground(GeoFile)
 
 	StyleFileStyle = lipgloss.NewStyle().
-		Foreground(StyleFile)
+			Foreground(StyleFile)
 
 	// Status bar
 	StatusBarStyle = lipgloss.NewStyle().
-		Foreground(Text).
-		Background(Surface).
-		Padding(0, 1)
+			Foreground(Text).
+			Background(Surface).
+			Padding(0, 1)
 
 	StatusKeyStyle = lipgloss.NewStyle().
-		Foreground(TextBright).
-		Background(KartozaBlueDark).
-		Padding(0, 1)
+			Foreground(TextBright).
+			Background(KartozaBlueDark).
+			Padding(0, 1)
 
 	StatusValueStyle = lipgloss.NewStyle().
-		Foreground(Text).
-		Background(Surface).
-		Padding(0, 1)
+				Foreground(Text).
+				Background(Surface).
+				Padding(0, 1)
 
 	// Help bar
 	HelpBarStyle = lipgloss.NewStyle().
-		Foreground(Muted).
-		Background(Surface).
-		Padding(0, 1)
+			Foreground(Muted).
+			Background(Surface).
+			Padding(0, 1)
 
 	HelpKeyStyle = lipgloss.NewStyle().
-		Foreground(Selected).
-		Bold(true)
+			Foreground(Selected).
+			Bold(true)
 
 	HelpTextStyle = lipgloss.NewStyle().
-		Foreground(Muted)
+			Foreground(Muted)
 
 	// Error styles
 	ErrorStyle = lipgloss.NewStyle().
-		Foreground(Danger).
-		Bold(true)
+			Foreground(Danger).
+			Bold(true)
 
 	ErrorMsgStyle = lipgloss.NewStyle().
-		Foreground(Danger).
-		Background(Surface).
-		Padding(1, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Danger)
+			Foreground(Danger).
+			Background(Surface).
+			Padding(1, 2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(Danger)
 
 	// Success styles
 	SuccessStyle = lipgloss.NewStyle().
-		Foreground(Secondary).
-		Bold(true)
+			Foreground(Secondary).
+			Bold(true)
 
 	// Loading styles
 	LoadingStyle = lipgloss.NewStyle().
-		Foreground(Accent).
-		Italic(true)
+			Foreground(Accent).
+			Italic(true)
 
 	// Dialog styles - using rounded borders for consistency
 	DialogStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(KartozaBlue).
-		Background(Surface).
-		Padding(1, 2)
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(KartozaBlue).
+			Background(Surface).
+			Padding(1, 2)
 
 	DialogTitleStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(KartozaBlue).
-		MarginBottom(1)
+				Bold(true).
+				Foreground(KartozaBlue).
+				MarginBottom(1)
 
 	// Input styles - using rounded borders
 	InputStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Border).
-		Padding(0, 1)
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(Border).
+			Padding(0, 1)
 
 	FocusedInputStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(KartozaBlue).
-		Padding(0, 1)
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(KartozaBlue).
+				Padding(0, 1)
 
 	// Button styles - using rounded borders
 	ButtonStyle = lipgloss.NewStyle().
-		Foreground(Text).
-		Background(Surface).
-		Padding(0, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Border)
+			Foreground(Text).
+			Background(Surface).
+			Padding(0, 2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(Border)
 
 	FocusedButtonStyle = lipgloss.NewStyle().
-		Foreground(TextBright).
-		Background(KartozaBlue).
-		Padding(0, 2).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(KartozaBlue)
+				Foreground(TextBright).
+				Background(KartozaBlue).
+				Padding(0, 2).
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(KartozaBlue)
 
 	// Tree styles
 	TreeBranchStyle = lipgloss.NewStyle().
-		Foreground(Muted)
+			Foreground(Muted)
 
 	ExpandedNodeStyle = lipgloss.NewStyle().
-		Foreground(Secondary)
+				Foreground(Secondary)
 
 	CollapsedNodeStyle = lipgloss.NewStyle().
-		Foreground(Muted)
+				Foreground(Muted)
 
 	// Connection status
 	ConnectedStyle = lipgloss.NewStyle().
-		Foreground(Secondary).
-		Bold(true)
+			Foreground(Secondary).
+			Bold(true)
 
 	DisconnectedStyle = lipgloss.NewStyle().
-		Foreground(Danger)
+				Foreground(Danger)
 
 	// Progress styles - Kartoza branded
 	ProgressBarStyle = lipgloss.NewStyle().
-		Foreground(KartozaBlue)
+				Foreground(KartozaBlue)
 
 	ProgressTextStyle = lipgloss.NewStyle().
-		Foreground(Text).
-		Italic(true)
+				Foreground(Text).
+				Italic(true)
 
 	// Count badge style for tree view item counts
 	CountBadgeStyle = lipgloss.NewStyle().
-		Foreground(Muted).
-		Italic(true)
+			Foreground(Muted).
+			Italic(true)
 
 	// Dialog box style with background overlay effect - using rounded borders
 	DialogBoxStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(KartozaBlue).
-		Background(Surface).
-		Padding(1, 2)
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(KartozaBlue).
+			Background(Surface).
+			Padding(1, 2)
 
 	// Dialog label style
 	DialogLabelStyle = lipgloss.NewStyle().
-		Foreground(Text).
-		Bold(true)
+				Foreground(Text).
+				Bold(true)
 
 	// Dialog selected label style
 	DialogSelectedLabelStyle = lipgloss.NewStyle().
-		Foreground(Selected).
-		Bold(true)
+					Foreground(Selected).
+					Bold(true)
 
 	// Dialog option style
 	DialogOptionStyle = lipgloss.NewStyle().
-		Foreground(Text)
+				Foreground(Text)
 
 	// Dialog selected option style
 	DialogSelectedOptionStyle = lipgloss.NewStyle().
-		Foreground(TextBright).
-		Background(SurfaceHigh).
-		Bold(true)
+					Foreground(TextBright).
+					Background(SurfaceHigh).
+					Bold(true)
 
 	// Dialog description style
 	DialogDescStyle = lipgloss.NewStyle().
-		Foreground(Muted).
-		Italic(true)
+			Foreground(Muted).
+			Italic(true)
 
 	// Dialog help style
 	DialogHelpStyle = lipgloss.NewStyle().
-		Foreground(Muted).
-		Align(lipgloss.Center)
+			Foreground(Muted).
+			Align(lipgloss.Center)
 
 	// Accent text style
 	AccentStyle = lipgloss.NewStyle().
-		Foreground(Accent).
-		Bold(true)
+			Foreground(Accent).
+			Bold(true)
 
 	// Input field styles for forms - using rounded borders
 	InputSelectedStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Selected).
-		Padding(0, 1)
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(Selected).
+				Padding(0, 1)
 
 	InputFocusedStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(KartozaBlue).
-		Padding(0, 1)
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(KartozaBlue).
+				Padding(0, 1)
 
 	// Textarea styles - using rounded borders
 	TextAreaStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Border)
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(Border)
 
 	TextAreaSelectedStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Selected)
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(Selected)
 
 	TextAreaFocusedStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(KartozaBlue)
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(KartozaBlue)
 )
 
 // Helper functions for building complex layouts

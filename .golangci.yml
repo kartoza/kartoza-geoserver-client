@@ -1,0 +1,78 @@
+# golangci-lint configuration for kartoza-cloudbench
+# Docs: https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+linters:
+  # Disable all linters by default and enable only the ones we want.
+  default: none
+  enable:
+    # Core correctness
+    - errcheck        # Report unchecked errors
+    - govet           # Examines Go source code and reports suspicious constructs
+    - staticcheck     # Comprehensive static analysis (supersedes gosimple, unused, etc.)
+
+    # Style / formatting
+    - gofmt           # Check that code is formatted with gofmt
+    - goimports       # Check that imports are properly grouped and formatted
+    - misspell        # Fix spelling mistakes in comments and strings
+
+    # Complexity / maintainability
+    - gocritic        # Opinionated linter providing many useful checks
+    - cyclop          # Check cyclomatic complexity
+    - funlen          # Limit function length
+
+    # Security
+    - gosec           # Security checks
+
+    # Bugs
+    - bodyclose       # Checks that HTTP response bodies are closed
+    - noctx           # Finds HTTP requests without context.Context
+
+linters-settings:
+  cyclop:
+    # Maximum allowed cyclomatic complexity; raise if too many existing violations.
+    max-complexity: 15
+
+  funlen:
+    # Maximum allowed function length (lines / statements)
+    lines: 100
+    statements: 50
+
+  gofmt:
+    # Use gofmt with simplification flag (-s)
+    simplify: true
+
+  goimports:
+    # Prefix for local imports (used to separate stdlib, external, and internal)
+    local-prefixes: github.com/kartoza/kartoza-cloudbench
+
+  gosec:
+    excludes:
+      # G304 is "potential file inclusion via variable" - common false positive in our CLI
+      - G304
+      # G107 "url provided to HTTP request as taint input" - intentional in our API client
+      - G107
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+    disabled-checks:
+      - hugeParam   # Not relevant for our data sizes
+
+issues:
+  # Directories and files to exclude from linting
+  exclude-dirs:
+    - vendor
+  exclude-files:
+    - '.*_test\.go'   # Relax some rules in test files
+
+  # Per-linter per-path exclusions
+  exclude-rules:
+    # Allow fmt.Errorf with non-constant format strings in integration package
+    # (pre-existing code; progressively fix rather than all at once)
+    - path: internal/integration/
+      linters:
+        - govet
+      text: 'non-constant format string in call to fmt.Errorf'

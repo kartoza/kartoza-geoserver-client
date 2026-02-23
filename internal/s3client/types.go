@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package s3client
 
 import "time"
@@ -29,10 +32,10 @@ type ProgressCallback func(bytesTransferred int64, totalBytes int64)
 
 // ConnectionTestResult contains the result of a connection test
 type ConnectionTestResult struct {
-	Success      bool   `json:"success"`
-	Message      string `json:"message"`
-	BucketCount  int    `json:"bucket_count,omitempty"`
-	ServerInfo   string `json:"server_info,omitempty"`
+	Success     bool   `json:"success"`
+	Message     string `json:"message"`
+	BucketCount int    `json:"bucket_count,omitempty"`
+	ServerInfo  string `json:"server_info,omitempty"`
 }
 
 // CloudNativeFormat represents a cloud-native geospatial format

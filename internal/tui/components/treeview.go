@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -612,7 +615,7 @@ func (tv *TreeView) View() string {
 		status = " "
 	}
 	b.WriteString("\n")
-	b.WriteString(styles.StatusBarStyle.Width(tv.width-4).Render(status))
+	b.WriteString(styles.StatusBarStyle.Width(tv.width - 4).Render(status))
 
 	// Build panel
 	panelStyle := styles.PanelStyle
@@ -789,8 +792,8 @@ func (tv *TreeView) Clear() {
 
 // TreeState holds the state of the tree for restoration
 type TreeState struct {
-	CursorPath     string   // Path of the currently selected node
-	ExpandedPaths  []string // Paths of all expanded nodes
+	CursorPath    string   // Path of the currently selected node
+	ExpandedPaths []string // Paths of all expanded nodes
 }
 
 // SaveState saves the current tree state (cursor position and expanded nodes)
@@ -853,8 +856,8 @@ func (tv *TreeView) RestoreState(state TreeState) {
 		for i, fn := range tv.flatNodes {
 			nodePath := fn.Node.Path()
 			if len(nodePath) <= len(state.CursorPath) &&
-			   state.CursorPath[:len(nodePath)] == nodePath &&
-			   len(nodePath) > bestMatchLen {
+				state.CursorPath[:len(nodePath)] == nodePath &&
+				len(nodePath) > bestMatchLen {
 				bestMatch = i
 				bestMatchLen = len(nodePath)
 			}

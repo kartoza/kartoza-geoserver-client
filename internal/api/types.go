@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package api
 
 // ServerInfo contains information about the GeoServer instance
@@ -11,20 +14,20 @@ type ServerInfo struct {
 
 // ServerStatus contains runtime status information
 type ServerStatus struct {
-	Online          bool    `json:"online"`
-	ResponseTimeMs  int64   `json:"responseTimeMs"`
-	MemoryUsed      int64   `json:"memoryUsed"`      // bytes
-	MemoryFree      int64   `json:"memoryFree"`      // bytes
-	MemoryTotal     int64   `json:"memoryTotal"`     // bytes
-	MemoryUsedPct   float64 `json:"memoryUsedPct"`   // percentage
-	CPULoad         float64 `json:"cpuLoad"`         // percentage (if available)
-	WorkspaceCount  int     `json:"workspaceCount"`
-	LayerCount      int     `json:"layerCount"`
-	DataStoreCount  int     `json:"dataStoreCount"`
-	CoverageCount   int     `json:"coverageCount"`
-	StyleCount      int     `json:"styleCount"`
-	Error           string  `json:"error,omitempty"`
-	GeoServerVersion string `json:"geoserverVersion,omitempty"`
+	Online           bool    `json:"online"`
+	ResponseTimeMs   int64   `json:"responseTimeMs"`
+	MemoryUsed       int64   `json:"memoryUsed"`    // bytes
+	MemoryFree       int64   `json:"memoryFree"`    // bytes
+	MemoryTotal      int64   `json:"memoryTotal"`   // bytes
+	MemoryUsedPct    float64 `json:"memoryUsedPct"` // percentage
+	CPULoad          float64 `json:"cpuLoad"`       // percentage (if available)
+	WorkspaceCount   int     `json:"workspaceCount"`
+	LayerCount       int     `json:"layerCount"`
+	DataStoreCount   int     `json:"dataStoreCount"`
+	CoverageCount    int     `json:"coverageCount"`
+	StyleCount       int     `json:"styleCount"`
+	Error            string  `json:"error,omitempty"`
+	GeoServerVersion string  `json:"geoserverVersion,omitempty"`
 }
 
 // SQLViewParameter defines a parameter for a SQL View query

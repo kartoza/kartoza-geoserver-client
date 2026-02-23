@@ -186,8 +186,8 @@ export default function StoreDialog() {
                 borderLeftColor="blue.400"
               >
                 <Text fontSize="sm" color="blue.700">
-                  <strong>Note:</strong> Store configuration (connection parameters, file paths, etc.) 
-                  can be modified through the GeoServer admin interface. This view shows the current 
+                  <strong>Note:</strong> Store configuration (connection parameters, file paths, etc.)
+                  can be modified through the GeoServer admin interface. This view shows the current
                   store metadata.
                 </Text>
               </Box>

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package tui
 
 import (
@@ -107,17 +110,43 @@ func DefaultAppKeyMap() AppKeyMap {
 
 // Messages
 type (
-	workspacesLoadedMsg     struct{ workspaces []models.Workspace }
-	dataStoresLoadedMsg     struct{ node *models.TreeNode; stores []models.DataStore }
-	coverageStoresLoadedMsg struct{ node *models.TreeNode; stores []models.CoverageStore }
-	stylesLoadedMsg         struct{ node *models.TreeNode; styles []models.Style }
-	layerGroupsLoadedMsg    struct{ node *models.TreeNode; groups []models.LayerGroup }
-	layersLoadedMsg         struct{ node *models.TreeNode; layers []models.Layer }
-	connectionTestMsg       struct{ success bool; err error; version string }
-	uploadCompleteMsg       struct{ success bool; err error }
-	errMsg                  struct{ err error }
+	workspacesLoadedMsg struct{ workspaces []models.Workspace }
+	dataStoresLoadedMsg struct {
+		node   *models.TreeNode
+		stores []models.DataStore
+	}
+	coverageStoresLoadedMsg struct {
+		node   *models.TreeNode
+		stores []models.CoverageStore
+	}
+	stylesLoadedMsg struct {
+		node   *models.TreeNode
+		styles []models.Style
+	}
+	layerGroupsLoadedMsg struct {
+		node   *models.TreeNode
+		groups []models.LayerGroup
+	}
+	layersLoadedMsg struct {
+		node   *models.TreeNode
+		layers []models.Layer
+	}
+	connectionTestMsg struct {
+		success bool
+		err     error
+		version string
+	}
+	uploadCompleteMsg struct {
+		success bool
+		err     error
+	}
+	errMsg struct{ err error }
 	// CRUD operation messages
-	crudCompleteMsg struct{ success bool; err error; operation string }
+	crudCompleteMsg struct {
+		success   bool
+		err       error
+		operation string
+	}
 	// Settings loaded message
 	settingsLoadedMsg struct {
 		contact      *models.GeoServerContact

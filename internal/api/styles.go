@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package api
 
 import (
@@ -466,4 +469,3 @@ func (c *Client) DownloadStyle(workspace, name string) ([]byte, string, error) {
 	data, err := io.ReadAll(resp2.Body)
 	return data, ext, err
 }
-

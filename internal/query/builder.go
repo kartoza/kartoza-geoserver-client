@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package query
 
 import (
@@ -21,29 +24,29 @@ type QueryBuilder struct {
 
 // Column represents a selected column
 type Column struct {
-	Name       string     `json:"name"`
-	Alias      string     `json:"alias,omitempty"`
-	Table      string     `json:"table,omitempty"`
-	Aggregate  Aggregate  `json:"aggregate,omitempty"`
-	Expression string     `json:"expression,omitempty"` // For computed columns
+	Name       string    `json:"name"`
+	Alias      string    `json:"alias,omitempty"`
+	Table      string    `json:"table,omitempty"`
+	Aggregate  Aggregate `json:"aggregate,omitempty"`
+	Expression string    `json:"expression,omitempty"` // For computed columns
 }
 
 // Aggregate represents an aggregate function
 type Aggregate string
 
 const (
-	AggNone    Aggregate = ""
-	AggCount   Aggregate = "COUNT"
-	AggSum     Aggregate = "SUM"
-	AggAvg     Aggregate = "AVG"
-	AggMin     Aggregate = "MIN"
-	AggMax     Aggregate = "MAX"
-	AggArrayAgg Aggregate = "ARRAY_AGG"
+	AggNone      Aggregate = ""
+	AggCount     Aggregate = "COUNT"
+	AggSum       Aggregate = "SUM"
+	AggAvg       Aggregate = "AVG"
+	AggMin       Aggregate = "MIN"
+	AggMax       Aggregate = "MAX"
+	AggArrayAgg  Aggregate = "ARRAY_AGG"
 	AggStringAgg Aggregate = "STRING_AGG"
 	// PostGIS aggregates
-	AggSTUnion    Aggregate = "ST_Union"
-	AggSTCollect  Aggregate = "ST_Collect"
-	AggSTExtent   Aggregate = "ST_Extent"
+	AggSTUnion   Aggregate = "ST_Union"
+	AggSTCollect Aggregate = "ST_Collect"
+	AggSTExtent  Aggregate = "ST_Extent"
 )
 
 // Join represents a table join
@@ -82,28 +85,28 @@ type Condition struct {
 type Operator string
 
 const (
-	OpEqual          Operator = "="
-	OpNotEqual       Operator = "!="
-	OpLess           Operator = "<"
-	OpLessEqual      Operator = "<="
-	OpGreater        Operator = ">"
-	OpGreaterEqual   Operator = ">="
-	OpLike           Operator = "LIKE"
-	OpILike          Operator = "ILIKE"
-	OpIn             Operator = "IN"
-	OpNotIn          Operator = "NOT IN"
-	OpIsNull         Operator = "IS NULL"
-	OpIsNotNull      Operator = "IS NOT NULL"
-	OpBetween        Operator = "BETWEEN"
+	OpEqual        Operator = "="
+	OpNotEqual     Operator = "!="
+	OpLess         Operator = "<"
+	OpLessEqual    Operator = "<="
+	OpGreater      Operator = ">"
+	OpGreaterEqual Operator = ">="
+	OpLike         Operator = "LIKE"
+	OpILike        Operator = "ILIKE"
+	OpIn           Operator = "IN"
+	OpNotIn        Operator = "NOT IN"
+	OpIsNull       Operator = "IS NULL"
+	OpIsNotNull    Operator = "IS NOT NULL"
+	OpBetween      Operator = "BETWEEN"
 	// PostGIS operators
-	OpSTIntersects   Operator = "ST_Intersects"
-	OpSTContains     Operator = "ST_Contains"
-	OpSTWithin       Operator = "ST_Within"
-	OpSTDWithin      Operator = "ST_DWithin"
-	OpSTEquals       Operator = "ST_Equals"
-	OpSTTouches      Operator = "ST_Touches"
-	OpSTOverlaps     Operator = "ST_Overlaps"
-	OpSTCrosses      Operator = "ST_Crosses"
+	OpSTIntersects Operator = "ST_Intersects"
+	OpSTContains   Operator = "ST_Contains"
+	OpSTWithin     Operator = "ST_Within"
+	OpSTDWithin    Operator = "ST_DWithin"
+	OpSTEquals     Operator = "ST_Equals"
+	OpSTTouches    Operator = "ST_Touches"
+	OpSTOverlaps   Operator = "ST_Overlaps"
+	OpSTCrosses    Operator = "ST_Crosses"
 )
 
 // Logic represents logical operators

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -25,10 +28,10 @@ var staticFiles embed.FS
 // Server represents the web server
 type Server struct {
 	config           *config.Config
-	clients          map[string]*api.Client        // GeoServer Connection ID -> Client
-	s3Clients        map[string]*s3client.Client   // S3 Connection ID -> Client
-	geonodeClients   map[string]*geonode.Client    // GeoNode Connection ID -> Client
-	icebergClients   map[string]*iceberg.Client    // Iceberg Catalog Connection ID -> Client
+	clients          map[string]*api.Client      // GeoServer Connection ID -> Client
+	s3Clients        map[string]*s3client.Client // S3 Connection ID -> Client
+	geonodeClients   map[string]*geonode.Client  // GeoNode Connection ID -> Client
+	icebergClients   map[string]*iceberg.Client  // Iceberg Catalog Connection ID -> Client
 	clientsMu        sync.RWMutex
 	s3ClientsMu      sync.RWMutex
 	geonodeClientsMu sync.RWMutex
@@ -376,10 +379,11 @@ func (s *Server) removeClient(connID string) {
 
 // parsePathParams extracts connection ID, workspace, and resource name from URL path
 // Expected patterns:
-//   /api/workspaces/{connId}
-//   /api/workspaces/{connId}/{workspace}
-//   /api/datastores/{connId}/{workspace}
-//   /api/datastores/{connId}/{workspace}/{storeName}
+//
+//	/api/workspaces/{connId}
+//	/api/workspaces/{connId}/{workspace}
+//	/api/datastores/{connId}/{workspace}
+//	/api/datastores/{connId}/{workspace}/{storeName}
 func parsePathParams(path, prefix string) (connID, workspace, resource string) {
 	// Remove prefix
 	path = strings.TrimPrefix(path, prefix)

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -102,23 +105,23 @@ const defaultCSS = `/* GeoServer CSS Style */
 
 // StyleWizard is a wizard for creating and editing styles
 type StyleWizard struct {
-	id           string
-	mode         StyleWizardMode
-	step         StyleWizardStep
-	workspace    string
-	width        int
-	height       int
-	visible      bool
-	onConfirm    func(StyleWizardResult)
-	onCancel     func()
+	id        string
+	mode      StyleWizardMode
+	step      StyleWizardStep
+	workspace string
+	width     int
+	height    int
+	visible   bool
+	onConfirm func(StyleWizardResult)
+	onCancel  func()
 
 	// Style properties
-	styleName       string
-	originalName    string // For edit mode
-	format          StyleFormat
-	content         string
-	formatOptions   []StyleFormat
-	selectedFormat  int
+	styleName      string
+	originalName   string // For edit mode
+	format         StyleFormat
+	content        string
+	formatOptions  []StyleFormat
+	selectedFormat int
 
 	// Input fields
 	nameInput    textinput.Model
@@ -149,23 +152,23 @@ func NewStyleWizard(workspace string) *StyleWizard {
 	contentArea.Placeholder = "Style content will appear here..."
 
 	return &StyleWizard{
-		id:            "style-wizard",
-		mode:          StyleWizardModeCreate,
-		step:          StyleStepSelectFormat,
-		workspace:     workspace,
-		visible:       true,
-		formatOptions: []StyleFormat{StyleFormatSLD, StyleFormatCSS},
+		id:             "style-wizard",
+		mode:           StyleWizardModeCreate,
+		step:           StyleStepSelectFormat,
+		workspace:      workspace,
+		visible:        true,
+		formatOptions:  []StyleFormat{StyleFormatSLD, StyleFormatCSS},
 		selectedFormat: 0,
-		format:        StyleFormatSLD,
-		content:       defaultSLD,
-		nameInput:     nameInput,
-		contentArea:   contentArea,
-		spring:        harmonica.NewSpring(harmonica.FPS(60), 6.0, 0.5),
-		animScale:     0.0,
-		animVelocity:  0.0,
-		animOpacity:   0.0,
-		targetScale:   1.0,
-		animating:     true,
+		format:         StyleFormatSLD,
+		content:        defaultSLD,
+		nameInput:      nameInput,
+		contentArea:    contentArea,
+		spring:         harmonica.NewSpring(harmonica.FPS(60), 6.0, 0.5),
+		animScale:      0.0,
+		animVelocity:   0.0,
+		animOpacity:    0.0,
+		targetScale:    1.0,
+		animating:      true,
 	}
 }
 

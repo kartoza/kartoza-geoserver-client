@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 // Package cache provides local caching for GeoServer resources
 package cache
 
@@ -30,16 +33,16 @@ const (
 
 // CacheEntry represents metadata about a cached resource
 type CacheEntry struct {
-	ResourceType  ResourceType `json:"resource_type"`
-	Workspace     string       `json:"workspace"`
-	StoreName     string       `json:"store_name,omitempty"`
-	ResourceName  string       `json:"resource_name"`
-	SourceServer  string       `json:"source_server"`
-	CachedAt      time.Time    `json:"cached_at"`
-	Checksum      string       `json:"checksum"`
-	MetadataFile  string       `json:"metadata_file"`
-	DataFile      string       `json:"data_file,omitempty"`
-	StyleFormat   string       `json:"style_format,omitempty"`
+	ResourceType ResourceType `json:"resource_type"`
+	Workspace    string       `json:"workspace"`
+	StoreName    string       `json:"store_name,omitempty"`
+	ResourceName string       `json:"resource_name"`
+	SourceServer string       `json:"source_server"`
+	CachedAt     time.Time    `json:"cached_at"`
+	Checksum     string       `json:"checksum"`
+	MetadataFile string       `json:"metadata_file"`
+	DataFile     string       `json:"data_file,omitempty"`
+	StyleFormat  string       `json:"style_format,omitempty"`
 }
 
 // Manager manages the local cache directory

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -64,9 +67,9 @@ type IcebergTableResponse struct {
 
 // IcebergSchemaResponse represents a table schema in API responses
 type IcebergSchemaResponse struct {
-	SchemaID int                         `json:"schemaId"`
-	Type     string                      `json:"type"`
-	Fields   []IcebergFieldResponse      `json:"fields"`
+	SchemaID int                    `json:"schemaId"`
+	Type     string                 `json:"type"`
+	Fields   []IcebergFieldResponse `json:"fields"`
 }
 
 // IcebergFieldResponse represents a field in a schema
@@ -560,8 +563,8 @@ type CreateTableRequestBody struct {
 
 // CreateTableSchemaRequest represents the schema in a create table request
 type CreateTableSchemaRequest struct {
-	Type   string                       `json:"type"`
-	Fields []CreateTableFieldRequest    `json:"fields"`
+	Type   string                    `json:"type"`
+	Fields []CreateTableFieldRequest `json:"fields"`
 }
 
 // CreateTableFieldRequest represents a field in a create table request

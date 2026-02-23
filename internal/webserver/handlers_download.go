@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -11,14 +14,15 @@ import (
 
 // handleDownload handles resource download requests
 // Routes:
-//   GET /api/download/{connId}/workspace/{workspace}
-//   GET /api/download/{connId}/datastore/{workspace}/{store}
-//   GET /api/download/{connId}/coveragestore/{workspace}/{store}
-//   GET /api/download/{connId}/layer/{workspace}/{layer}
-//   GET /api/download/{connId}/style/{workspace}/{style}
-//   GET /api/download/{connId}/layergroup/{workspace}/{group}
-//   GET /api/download/{connId}/shapefile/{workspace}/{layer} - download layer as shapefile
-//   GET /api/download/{connId}/geotiff/{workspace}/{coverage} - download coverage as GeoTIFF
+//
+//	GET /api/download/{connId}/workspace/{workspace}
+//	GET /api/download/{connId}/datastore/{workspace}/{store}
+//	GET /api/download/{connId}/coveragestore/{workspace}/{store}
+//	GET /api/download/{connId}/layer/{workspace}/{layer}
+//	GET /api/download/{connId}/style/{workspace}/{style}
+//	GET /api/download/{connId}/layergroup/{workspace}/{group}
+//	GET /api/download/{connId}/shapefile/{workspace}/{layer} - download layer as shapefile
+//	GET /api/download/{connId}/geotiff/{workspace}/{coverage} - download coverage as GeoTIFF
 func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)

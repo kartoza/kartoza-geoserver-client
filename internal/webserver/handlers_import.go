@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -36,15 +39,15 @@ var (
 
 // ImportRequest represents a request to import data
 type ImportRequest struct {
-	SourceFile    string `json:"source_file"`     // Path to uploaded file or local file
-	TargetService string `json:"target_service"`  // PostgreSQL service name
-	TargetSchema  string `json:"target_schema"`   // Target schema (default: public)
-	TableName     string `json:"table_name"`      // Target table name (auto-detect if empty)
-	SRID          int    `json:"srid"`            // Source SRID (0 = auto-detect)
-	TargetSRID    int    `json:"target_srid"`     // Target SRID (0 = keep source)
-	Overwrite     bool   `json:"overwrite"`       // Overwrite existing table
-	Append        bool   `json:"append"`          // Append to existing table
-	SourceLayer   string `json:"source_layer"`    // Specific layer for multi-layer sources
+	SourceFile    string `json:"source_file"`    // Path to uploaded file or local file
+	TargetService string `json:"target_service"` // PostgreSQL service name
+	TargetSchema  string `json:"target_schema"`  // Target schema (default: public)
+	TableName     string `json:"table_name"`     // Target table name (auto-detect if empty)
+	SRID          int    `json:"srid"`           // Source SRID (0 = auto-detect)
+	TargetSRID    int    `json:"target_srid"`    // Target SRID (0 = keep source)
+	Overwrite     bool   `json:"overwrite"`      // Overwrite existing table
+	Append        bool   `json:"append"`         // Append to existing table
+	SourceLayer   string `json:"source_layer"`   // Specific layer for multi-layer sources
 }
 
 // handlePGImport handles POST /api/pg/import - start an import job

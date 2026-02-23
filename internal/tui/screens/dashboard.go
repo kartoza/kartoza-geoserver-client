@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package screens
 
 import (
@@ -93,17 +96,17 @@ type DashboardAutoRefreshMsg struct{}
 
 // DashboardScreen shows server status overview
 type DashboardScreen struct {
-	config         *config.Config
-	keys           DashboardKeyMap
-	width          int
-	height         int
-	selectedIdx    int
-	statuses       []ServerStatus
-	pingHistory    map[string]*ServerPingHistory // Connection ID -> ping history
-	loading        bool
-	lastRefresh    time.Time
-	spinner        spinner.Model
-	mu             sync.RWMutex
+	config      *config.Config
+	keys        DashboardKeyMap
+	width       int
+	height      int
+	selectedIdx int
+	statuses    []ServerStatus
+	pingHistory map[string]*ServerPingHistory // Connection ID -> ping history
+	loading     bool
+	lastRefresh time.Time
+	spinner     spinner.Model
+	mu          sync.RWMutex
 }
 
 // NewDashboardScreen creates a new dashboard screen

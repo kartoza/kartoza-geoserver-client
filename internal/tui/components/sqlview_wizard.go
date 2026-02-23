@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -40,13 +43,13 @@ type SQLViewWizard struct {
 	selectedConnID string
 
 	// Workspace selection
-	workspaces    []stringItem
-	workspaceList list.Model
+	workspaces        []stringItem
+	workspaceList     list.Model
 	selectedWorkspace string
 
 	// DataStore selection
-	datastores    []stringItem
-	datastoreList list.Model
+	datastores        []stringItem
+	datastoreList     list.Model
 	selectedDatastore string
 
 	// Layer config

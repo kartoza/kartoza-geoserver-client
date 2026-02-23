@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package cloudnative
 
 import (
@@ -84,7 +87,7 @@ type ProgressCallback func(progress int, message string)
 // ConversionOptions contains options for format conversion
 type ConversionOptions struct {
 	// COG options
-	COGBlockSize   int    `json:"cog_block_size,omitempty"`   // Default: 512
+	COGBlockSize   int    `json:"cog_block_size,omitempty"`  // Default: 512
 	COGCompression string `json:"cog_compression,omitempty"` // Default: "LZW"
 	COGOverviews   bool   `json:"cog_overviews,omitempty"`   // Default: true
 

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -78,13 +81,13 @@ type BoundingBox struct {
 
 // InfoDialog displays detailed information about a resource
 type InfoDialog struct {
-	id          string
-	title       string
-	icon        string
-	details     []InfoItem
-	width       int
-	height      int
-	visible     bool
+	id      string
+	title   string
+	icon    string
+	details []InfoItem
+	width   int
+	height  int
+	visible bool
 
 	// Extended metadata from GeoServer REST API
 	extendedMetadata *ExtendedNodeMetadata
@@ -470,11 +473,11 @@ func fetchStoreMetadataForNode(client *http.Client, geoserverURL, username, pass
 	} else {
 		var result struct {
 			DataStore struct {
-				Description  string `json:"description"`
-				Enabled      bool   `json:"enabled"`
-				Type         string `json:"type"`
-				DateCreated  string `json:"dateCreated"`
-				DateModified string `json:"dateModified"`
+				Description          string `json:"description"`
+				Enabled              bool   `json:"enabled"`
+				Type                 string `json:"type"`
+				DateCreated          string `json:"dateCreated"`
+				DateModified         string `json:"dateModified"`
 				ConnectionParameters struct {
 					Entry []struct {
 						Key   string `json:"@key"`

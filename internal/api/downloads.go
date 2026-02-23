@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package api
 
 import (
@@ -92,4 +95,3 @@ func (c *Client) DownloadCoverageAsGeoTIFF(workspace, coverageName string) ([]by
 
 	return data, nil
 }
-

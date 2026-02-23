@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -38,12 +41,12 @@ type QueryDesigner struct {
 	serviceName string
 
 	// Schema/table selection
-	schemas       []string
-	tables        []string
+	schemas        []string
+	tables         []string
 	selectedSchema string
 	selectedTable  string
-	schemaList    list.Model
-	tableList     list.Model
+	schemaList     list.Model
+	tableList      list.Model
 
 	// Column selection
 	availableColumns []columnInfo
@@ -154,22 +157,22 @@ func NewQueryDesigner(serviceName string, width, height int) *QueryDesigner {
 	condVal.Width = 20
 
 	return &QueryDesigner{
-		width:          width,
-		height:         height,
-		mode:           QueryDesignerModeTable,
-		serviceName:    serviceName,
-		schemas:        []string{"public"},
-		selectedSchema: "public",
-		schemaList:     schemaList,
-		tableList:      tableList,
-		columnList:     columnList,
-		resultView:     vp,
-		condColumn:     condCol,
-		condValue:      condVal,
-		condOperator:   "=",
-		limit:          100,
-		conditions:     []query.Condition{},
-		orderBy:        []query.OrderBy{},
+		width:           width,
+		height:          height,
+		mode:            QueryDesignerModeTable,
+		serviceName:     serviceName,
+		schemas:         []string{"public"},
+		selectedSchema:  "public",
+		schemaList:      schemaList,
+		tableList:       tableList,
+		columnList:      columnList,
+		resultView:      vp,
+		condColumn:      condCol,
+		condValue:       condVal,
+		condOperator:    "=",
+		limit:           100,
+		conditions:      []query.Condition{},
+		orderBy:         []query.OrderBy{},
 		selectedColumns: []query.Column{},
 	}
 }

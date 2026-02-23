@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 // Package terria provides TerriaJS catalog generation and integration
 package terria
 
@@ -50,9 +53,9 @@ type BaseMaps struct {
 
 // BaseMapItem represents a base map item
 type BaseMapItem struct {
-	Item    CatalogMember `json:"item"`
-	Image   string        `json:"image,omitempty"`
-	ContrastColor string  `json:"contrastColor,omitempty"`
+	Item          CatalogMember `json:"item"`
+	Image         string        `json:"image,omitempty"`
+	ContrastColor string        `json:"contrastColor,omitempty"`
 }
 
 // CatalogMember is an interface for all catalog member types
@@ -86,22 +89,22 @@ func (g *CatalogGroup) MarshalJSON() ([]byte, error) {
 
 // WMSCatalogItem represents a WMS layer in the catalog
 type WMSCatalogItem struct {
-	Type                 string   `json:"type"`
-	Name                 string   `json:"name"`
-	ID                   string   `json:"id,omitempty"`
-	Description          string   `json:"description,omitempty"`
-	URL                  string   `json:"url"`
-	Layers               string   `json:"layers"`
-	Styles               string   `json:"styles,omitempty"`
+	Type                 string     `json:"type"`
+	Name                 string     `json:"name"`
+	ID                   string     `json:"id,omitempty"`
+	Description          string     `json:"description,omitempty"`
+	URL                  string     `json:"url"`
+	Layers               string     `json:"layers"`
+	Styles               string     `json:"styles,omitempty"`
 	Parameters           *WMSParams `json:"parameters,omitempty"`
-	GetFeatureInfoFormat string   `json:"getFeatureInfoFormat,omitempty"`
-	MinScaleDenominator  float64  `json:"minScaleDenominator,omitempty"`
-	MaxScaleDenominator  float64  `json:"maxScaleDenominator,omitempty"`
-	IsGeoServer          bool     `json:"isGeoServer,omitempty"`
-	Opacity              float64  `json:"opacity,omitempty"`
-	InitialMessage       *Message `json:"initialMessage,omitempty"`
-	Info                 []Info   `json:"info,omitempty"`
-	Rectangle            *Rect    `json:"rectangle,omitempty"`
+	GetFeatureInfoFormat string     `json:"getFeatureInfoFormat,omitempty"`
+	MinScaleDenominator  float64    `json:"minScaleDenominator,omitempty"`
+	MaxScaleDenominator  float64    `json:"maxScaleDenominator,omitempty"`
+	IsGeoServer          bool       `json:"isGeoServer,omitempty"`
+	Opacity              float64    `json:"opacity,omitempty"`
+	InitialMessage       *Message   `json:"initialMessage,omitempty"`
+	Info                 []Info     `json:"info,omitempty"`
+	Rectangle            *Rect      `json:"rectangle,omitempty"`
 }
 
 func (w *WMSCatalogItem) GetType() string { return w.Type }
@@ -161,16 +164,16 @@ type Rect struct {
 
 // StartData represents the data for a Terria start URL parameter
 type StartData struct {
-	Version     string     `json:"version"`
+	Version     string       `json:"version"`
 	InitSources []InitSource `json:"initSources"`
 }
 
 // InitSource can be a string (URL) or an inline init file
 type InitSource struct {
-	URL      string    `json:"url,omitempty"`
-	Catalog  []CatalogMember `json:"catalog,omitempty"`
-	HomeCamera *Camera  `json:"homeCamera,omitempty"`
-	Workbench []string `json:"workbench,omitempty"`
+	URL        string          `json:"url,omitempty"`
+	Catalog    []CatalogMember `json:"catalog,omitempty"`
+	HomeCamera *Camera         `json:"homeCamera,omitempty"`
+	Workbench  []string        `json:"workbench,omitempty"`
 }
 
 // marshalMembers converts CatalogMember slice to raw JSON

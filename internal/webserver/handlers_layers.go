@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -329,28 +332,28 @@ func (s *Server) publishCoverage(w http.ResponseWriter, r *http.Request, client 
 
 // LayerMetadataResponse represents comprehensive layer metadata in API responses
 type LayerMetadataResponse struct {
-	Name              string            `json:"name"`
-	NativeName        string            `json:"nativeName,omitempty"`
-	Workspace         string            `json:"workspace"`
-	Store             string            `json:"store"`
-	StoreType         string            `json:"storeType"`
-	Title             string            `json:"title,omitempty"`
-	Abstract          string            `json:"abstract,omitempty"`
-	Keywords          []string          `json:"keywords,omitempty"`
-	NativeCRS         string            `json:"nativeCRS,omitempty"`
-	SRS               string            `json:"srs,omitempty"`
-	Enabled           bool              `json:"enabled"`
-	Advertised        bool              `json:"advertised"`
-	Queryable         bool              `json:"queryable"`
-	NativeBoundingBox *BoundingBoxResponse `json:"nativeBoundingBox,omitempty"`
-	LatLonBoundingBox *BoundingBoxResponse `json:"latLonBoundingBox,omitempty"`
-	AttributionTitle  string            `json:"attributionTitle,omitempty"`
-	AttributionHref   string            `json:"attributionHref,omitempty"`
-	AttributionLogo   string            `json:"attributionLogo,omitempty"`
+	Name              string                 `json:"name"`
+	NativeName        string                 `json:"nativeName,omitempty"`
+	Workspace         string                 `json:"workspace"`
+	Store             string                 `json:"store"`
+	StoreType         string                 `json:"storeType"`
+	Title             string                 `json:"title,omitempty"`
+	Abstract          string                 `json:"abstract,omitempty"`
+	Keywords          []string               `json:"keywords,omitempty"`
+	NativeCRS         string                 `json:"nativeCRS,omitempty"`
+	SRS               string                 `json:"srs,omitempty"`
+	Enabled           bool                   `json:"enabled"`
+	Advertised        bool                   `json:"advertised"`
+	Queryable         bool                   `json:"queryable"`
+	NativeBoundingBox *BoundingBoxResponse   `json:"nativeBoundingBox,omitempty"`
+	LatLonBoundingBox *BoundingBoxResponse   `json:"latLonBoundingBox,omitempty"`
+	AttributionTitle  string                 `json:"attributionTitle,omitempty"`
+	AttributionHref   string                 `json:"attributionHref,omitempty"`
+	AttributionLogo   string                 `json:"attributionLogo,omitempty"`
 	MetadataLinks     []MetadataLinkResponse `json:"metadataLinks,omitempty"`
-	DefaultStyle      string            `json:"defaultStyle,omitempty"`
-	MaxFeatures       int               `json:"maxFeatures,omitempty"`
-	NumDecimals       int               `json:"numDecimals,omitempty"`
+	DefaultStyle      string                 `json:"defaultStyle,omitempty"`
+	MaxFeatures       int                    `json:"maxFeatures,omitempty"`
+	NumDecimals       int                    `json:"numDecimals,omitempty"`
 }
 
 // BoundingBoxResponse represents a geographic bounding box
@@ -371,15 +374,15 @@ type MetadataLinkResponse struct {
 
 // LayerMetadataUpdateRequest represents a layer metadata update request
 type LayerMetadataUpdateRequest struct {
-	Title            string   `json:"title,omitempty"`
-	Abstract         string   `json:"abstract,omitempty"`
-	Keywords         []string `json:"keywords,omitempty"`
-	SRS              string   `json:"srs,omitempty"`
-	Enabled          *bool    `json:"enabled,omitempty"`
-	Advertised       *bool    `json:"advertised,omitempty"`
-	Queryable        *bool    `json:"queryable,omitempty"`
-	AttributionTitle string   `json:"attributionTitle,omitempty"`
-	AttributionHref  string   `json:"attributionHref,omitempty"`
+	Title            string                 `json:"title,omitempty"`
+	Abstract         string                 `json:"abstract,omitempty"`
+	Keywords         []string               `json:"keywords,omitempty"`
+	SRS              string                 `json:"srs,omitempty"`
+	Enabled          *bool                  `json:"enabled,omitempty"`
+	Advertised       *bool                  `json:"advertised,omitempty"`
+	Queryable        *bool                  `json:"queryable,omitempty"`
+	AttributionTitle string                 `json:"attributionTitle,omitempty"`
+	AttributionHref  string                 `json:"attributionHref,omitempty"`
 	MetadataLinks    []MetadataLinkResponse `json:"metadataLinks,omitempty"`
 }
 

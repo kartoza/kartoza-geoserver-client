@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -13,16 +16,16 @@ import (
 
 // SearchResult represents a single search result
 type SearchResult struct {
-	Type         string   `json:"type"`         // workspace, datastore, coveragestore, layer, style, layergroup, pgservice, pgschema, pgtable, pgview, pgcolumn, pgfunction, s3connection, s3bucket, s3object, qgisproject, geonodeconnection, geonodedataset, geonodemap, geonodedocument
+	Type         string   `json:"type"` // workspace, datastore, coveragestore, layer, style, layergroup, pgservice, pgschema, pgtable, pgview, pgcolumn, pgfunction, s3connection, s3bucket, s3object, qgisproject, geonodeconnection, geonodedataset, geonodemap, geonodedocument
 	Name         string   `json:"name"`
 	Workspace    string   `json:"workspace,omitempty"`
 	StoreName    string   `json:"storeName,omitempty"`
 	StoreType    string   `json:"storeType,omitempty"`
 	ConnectionID string   `json:"connectionId"`
 	ServerName   string   `json:"serverName"`
-	Tags         []string `json:"tags"`         // Additional tags/badges
+	Tags         []string `json:"tags"` // Additional tags/badges
 	Description  string   `json:"description,omitempty"`
-	Icon         string   `json:"icon"`         // Nerd font icon codepoint
+	Icon         string   `json:"icon"` // Nerd font icon codepoint
 	// PostgreSQL-specific fields
 	ServiceName string `json:"serviceName,omitempty"` // PostgreSQL service name
 	SchemaName  string `json:"schemaName,omitempty"`  // PostgreSQL schema name

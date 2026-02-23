@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -134,18 +137,18 @@ func NewConfirmDialog(title, message string) *Dialog {
 func NewSelectDialog(title, message string, options []SelectOption) *Dialog {
 	return &Dialog{
 		id:             title,
-		dialogType:    DialogTypeSelect,
-		title:         title,
-		message:       message,
-		options:       options,
+		dialogType:     DialogTypeSelect,
+		title:          title,
+		message:        message,
+		options:        options,
 		selectedOption: 0,
-		visible:       true,
-		spring:        harmonica.NewSpring(harmonica.FPS(60), 6.0, 0.5),
-		animScale:     0.0,
-		animOpacity:   0.0,
-		targetScale:   1.0,
-		targetOpacity: 1.0,
-		animating:     true,
+		visible:        true,
+		spring:         harmonica.NewSpring(harmonica.FPS(60), 6.0, 0.5),
+		animScale:      0.0,
+		animOpacity:    0.0,
+		targetScale:    1.0,
+		targetOpacity:  1.0,
+		animating:      true,
 	}
 }
 

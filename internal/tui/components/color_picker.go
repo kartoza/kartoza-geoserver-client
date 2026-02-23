@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -130,8 +133,8 @@ type ColorPicker struct {
 	width        int
 	height       int
 	mode         ColorPickerMode
-	selectedIdx  int  // For presets
-	rgbComponent int  // 0=R, 1=G, 2=B
+	selectedIdx  int // For presets
+	rgbComponent int // 0=R, 1=G, 2=B
 	r, g, b      uint8
 	hexInput     textinput.Model
 	editingHex   bool

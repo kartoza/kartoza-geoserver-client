@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package llm
 
 import (
@@ -66,10 +69,10 @@ func (p *OllamaProvider) IsAvailable() bool {
 
 // ollamaRequest is the request structure for Ollama API
 type ollamaRequest struct {
-	Model    string                 `json:"model"`
-	Prompt   string                 `json:"prompt"`
-	Stream   bool                   `json:"stream"`
-	Options  map[string]interface{} `json:"options,omitempty"`
+	Model   string                 `json:"model"`
+	Prompt  string                 `json:"prompt"`
+	Stream  bool                   `json:"stream"`
+	Options map[string]interface{} `json:"options,omitempty"`
 }
 
 // ollamaResponse is the response structure from Ollama API
@@ -88,9 +91,9 @@ func (p *OllamaProvider) GenerateSQL(ctx context.Context, req QueryRequest, sche
 		Prompt: prompt,
 		Stream: false,
 		Options: map[string]interface{}{
-			"temperature":   p.config.Temperature,
-			"num_predict":   p.config.MaxTokens,
-			"stop":          []string{"```", "\n\n\n"},
+			"temperature": p.config.Temperature,
+			"num_predict": p.config.MaxTokens,
+			"stop":        []string{"```", "\n\n\n"},
 		},
 	}
 

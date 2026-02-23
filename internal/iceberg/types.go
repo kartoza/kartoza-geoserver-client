@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package iceberg
 
 // ConnectionTestResult represents the result of testing an Iceberg connection
@@ -61,38 +64,38 @@ type TablesResponse struct {
 type TableMetadata struct {
 	MetadataLocation string `json:"metadata-location"`
 	Metadata         struct {
-		FormatVersion   int               `json:"format-version"`
-		TableUUID       string            `json:"table-uuid"`
-		Location        string            `json:"location"`
-		LastSequenceNum int64             `json:"last-sequence-number"`
-		LastUpdatedMS   int64             `json:"last-updated-ms"`
-		LastColumnID    int               `json:"last-column-id"`
-		CurrentSchemaID int               `json:"current-schema-id"`
-		Schemas         []Schema          `json:"schemas"`
-		PartitionSpecs  []PartitionSpec   `json:"partition-specs"`
-		SortOrders      []SortOrder       `json:"sort-orders"`
-		Properties      map[string]string `json:"properties"`
-		Snapshots       []Snapshot        `json:"snapshots"`
+		FormatVersion   int                `json:"format-version"`
+		TableUUID       string             `json:"table-uuid"`
+		Location        string             `json:"location"`
+		LastSequenceNum int64              `json:"last-sequence-number"`
+		LastUpdatedMS   int64              `json:"last-updated-ms"`
+		LastColumnID    int                `json:"last-column-id"`
+		CurrentSchemaID int                `json:"current-schema-id"`
+		Schemas         []Schema           `json:"schemas"`
+		PartitionSpecs  []PartitionSpec    `json:"partition-specs"`
+		SortOrders      []SortOrder        `json:"sort-orders"`
+		Properties      map[string]string  `json:"properties"`
+		Snapshots       []Snapshot         `json:"snapshots"`
 		SnapshotLog     []SnapshotLogEntry `json:"snapshot-log"`
-		CurrentSnapshot *int64            `json:"current-snapshot-id"`
+		CurrentSnapshot *int64             `json:"current-snapshot-id"`
 	} `json:"metadata"`
 }
 
 // Schema represents an Iceberg table schema
 type Schema struct {
-	SchemaID   int     `json:"schema-id"`
-	Type       string  `json:"type"`
-	Fields     []Field `json:"fields"`
-	IdentifierFieldIDs []int `json:"identifier-field-ids,omitempty"`
+	SchemaID           int     `json:"schema-id"`
+	Type               string  `json:"type"`
+	Fields             []Field `json:"fields"`
+	IdentifierFieldIDs []int   `json:"identifier-field-ids,omitempty"`
 }
 
 // Field represents a field in a schema
 type Field struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
+	ID       int         `json:"id"`
+	Name     string      `json:"name"`
 	Type     interface{} `json:"type"` // Can be string or nested struct
-	Required bool   `json:"required"`
-	Doc      string `json:"doc,omitempty"`
+	Required bool        `json:"required"`
+	Doc      string      `json:"doc,omitempty"`
 }
 
 // PartitionSpec represents a partition specification
@@ -117,10 +120,10 @@ type SortOrder struct {
 
 // SortField represents a field in a sort order
 type SortField struct {
-	SourceID     int    `json:"source-id"`
-	Transform    string `json:"transform"`
-	Direction    string `json:"direction"`
-	NullOrder    string `json:"null-order"`
+	SourceID  int    `json:"source-id"`
+	Transform string `json:"transform"`
+	Direction string `json:"direction"`
+	NullOrder string `json:"null-order"`
 }
 
 // Snapshot represents a table snapshot
@@ -159,12 +162,12 @@ type RenameTableRequest struct {
 
 // TableStats represents statistics about a table
 type TableStats struct {
-	RowCount        int64  `json:"rowCount"`
-	FileCount       int    `json:"fileCount"`
-	TotalSizeBytes  int64  `json:"totalSizeBytes"`
+	RowCount          int64 `json:"rowCount"`
+	FileCount         int   `json:"fileCount"`
+	TotalSizeBytes    int64 `json:"totalSizeBytes"`
 	DataFileSizeBytes int64 `json:"dataFileSizeBytes"`
-	LastUpdated     int64  `json:"lastUpdated"`
-	SnapshotCount   int    `json:"snapshotCount"`
+	LastUpdated       int64 `json:"lastUpdated"`
+	SnapshotCount     int   `json:"snapshotCount"`
 }
 
 // GeometryColumnInfo represents information about a geometry column
@@ -178,9 +181,9 @@ type GeometryColumnInfo struct {
 // SpatialTableInfo extends table metadata with spatial information
 type SpatialTableInfo struct {
 	TableIdentifier
-	Schema           Schema               `json:"schema"`
-	GeometryColumns  []GeometryColumnInfo `json:"geometryColumns,omitempty"`
-	RowCount         int64                `json:"rowCount,omitempty"`
-	IsSpatial        bool                 `json:"isSpatial"`
-	LastUpdated      int64                `json:"lastUpdated,omitempty"`
+	Schema          Schema               `json:"schema"`
+	GeometryColumns []GeometryColumnInfo `json:"geometryColumns,omitempty"`
+	RowCount        int64                `json:"rowCount,omitempty"`
+	IsSpatial       bool                 `json:"isSpatial"`
+	LastUpdated     int64                `json:"lastUpdated,omitempty"`
 }

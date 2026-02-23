@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package components
 
 import (
@@ -79,12 +82,12 @@ type LayerStyleAssignment struct {
 
 // LayerGroupWizardResult represents the wizard result
 type LayerGroupWizardResult struct {
-	Confirmed    bool
-	Name         string
-	Title        string
-	Mode         string
-	Layers       []string                // Selected layer names in workspace:layer format
-	LayerStyles  []LayerStyleAssignment  // Layer style assignments
+	Confirmed   bool
+	Name        string
+	Title       string
+	Mode        string
+	Layers      []string               // Selected layer names in workspace:layer format
+	LayerStyles []LayerStyleAssignment // Layer style assignments
 }
 
 // LayerGroupWizardAnimationMsg is sent to update animation state
@@ -94,15 +97,15 @@ type LayerGroupWizardAnimationMsg struct {
 
 // LayerGroupWizard is a wizard for creating and editing layer groups
 type LayerGroupWizard struct {
-	id           string
-	mode         LayerGroupWizardMode
-	step         LayerGroupWizardStep
-	workspace    string
-	width        int
-	height       int
-	visible      bool
-	onConfirm    func(LayerGroupWizardResult)
-	onCancel     func()
+	id        string
+	mode      LayerGroupWizardMode
+	step      LayerGroupWizardStep
+	workspace string
+	width     int
+	height    int
+	visible   bool
+	onConfirm func(LayerGroupWizardResult)
+	onCancel  func()
 
 	// Layer group properties
 	groupName       string
@@ -114,16 +117,16 @@ type LayerGroupWizard struct {
 
 	// Available layers
 	availableLayers []models.Layer
-	selectedLayers  map[string]bool              // layer name -> selected
+	selectedLayers  map[string]bool                  // layer name -> selected
 	layerStyles     map[string]*LayerStyleAssignment // layer name -> style assignment
 	layerListOffset int
 	layerCursor     int
-	editingStyle    bool  // Whether we're in style selection mode for current layer
+	editingStyle    bool // Whether we're in style selection mode for current layer
 
 	// Input fields
-	nameInput   textinput.Model
-	titleInput  textinput.Model
-	focusIndex  int
+	nameInput    textinput.Model
+	titleInput   textinput.Model
+	focusIndex   int
 	editingField bool
 
 	// Animation
@@ -149,24 +152,24 @@ func NewLayerGroupWizard(workspace string) *LayerGroupWizard {
 	titleInput.Width = 40
 
 	return &LayerGroupWizard{
-		id:             "layergroup-wizard",
-		mode:           LayerGroupWizardModeCreate,
-		step:           LayerGroupStepBasicInfo,
-		workspace:      workspace,
-		visible:        true,
-		modeOptions:    []LayerGroupMode{LayerGroupModeSingle, LayerGroupModeNamed, LayerGroupModeContainer, LayerGroupModeEO},
+		id:              "layergroup-wizard",
+		mode:            LayerGroupWizardModeCreate,
+		step:            LayerGroupStepBasicInfo,
+		workspace:       workspace,
+		visible:         true,
+		modeOptions:     []LayerGroupMode{LayerGroupModeSingle, LayerGroupModeNamed, LayerGroupModeContainer, LayerGroupModeEO},
 		selectedModeIdx: 0,
-		groupMode:      LayerGroupModeSingle,
-		selectedLayers: make(map[string]bool),
-		layerStyles:    make(map[string]*LayerStyleAssignment),
-		nameInput:      nameInput,
-		titleInput:     titleInput,
-		spring:         harmonica.NewSpring(harmonica.FPS(60), 6.0, 0.5),
-		animScale:      0.0,
-		animVelocity:   0.0,
-		animOpacity:    0.0,
-		targetScale:    1.0,
-		animating:      true,
+		groupMode:       LayerGroupModeSingle,
+		selectedLayers:  make(map[string]bool),
+		layerStyles:     make(map[string]*LayerStyleAssignment),
+		nameInput:       nameInput,
+		titleInput:      titleInput,
+		spring:          harmonica.NewSpring(harmonica.FPS(60), 6.0, 0.5),
+		animScale:       0.0,
+		animVelocity:    0.0,
+		animOpacity:     0.0,
+		targetScale:     1.0,
+		animating:       true,
 	}
 }
 
@@ -652,7 +655,7 @@ func (w *LayerGroupWizard) View() string {
 	case LayerGroupStepSelectMode:
 		content = w.renderModeSelection(dialogWidth - 6)
 	case LayerGroupStepSelectLayers:
-		content = w.renderLayerSelection(dialogWidth - 6, dialogHeight - 12)
+		content = w.renderLayerSelection(dialogWidth-6, dialogHeight-12)
 	case LayerGroupStepReview:
 		content = w.renderReview(dialogWidth - 6)
 	}

@@ -1,3 +1,6 @@
+// Copyright 2026 Kartoza
+// SPDX-License-Identifier: MIT
+
 package webserver
 
 import (
@@ -22,8 +25,8 @@ type SyncConfigRequest struct {
 
 // StartSyncRequest represents a request to start syncing
 type StartSyncRequest struct {
-	ConfigID string              `json:"configId,omitempty"`        // Use saved config
-	SourceID string              `json:"sourceId,omitempty"`        // Or specify inline
+	ConfigID string              `json:"configId,omitempty"` // Use saved config
+	SourceID string              `json:"sourceId,omitempty"` // Or specify inline
 	DestIDs  []string            `json:"destinationIds,omitempty"`
 	Options  *config.SyncOptions `json:"options,omitempty"`
 }

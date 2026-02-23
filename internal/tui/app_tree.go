@@ -39,6 +39,12 @@ func (a *App) buildConnectionsTree() {
 	a.loadS3ConnectionsToTree(s3Node)
 	root.AddChild(s3Node)
 
+	// Create QFieldCloud section
+	qfcNode := models.NewTreeNode("QFieldCloud", models.NodeTypeQFieldCloudRoot)
+	qfcNode.Expanded = true
+	a.loadQFieldCloudConnectionsToTree(qfcNode)
+	root.AddChild(qfcNode)
+
 	a.treeView.SetRoot(root)
 }
 
@@ -74,6 +80,20 @@ func (a *App) loadPGServicesToTree(postgresNode *models.TreeNode) {
 		}
 
 		postgresNode.AddChild(svcNode)
+	}
+}
+
+// loadQFieldCloudConnectionsToTree loads QFieldCloud connections from config into the tree
+func (a *App) loadQFieldCloudConnectionsToTree(qfcNode *models.TreeNode) {
+	for _, conn := range a.config.QFieldCloudConnections {
+		connNode := models.NewTreeNode(conn.Name, models.NodeTypeQFieldCloudConnection)
+		connNode.QFieldCloudConnectionID = conn.ID
+		connNode.Expanded = false // Start collapsed
+		// Add sub-category nodes
+		projectsNode := models.NewTreeNode("Projects", models.NodeTypeQFieldCloudProjects)
+		projectsNode.QFieldCloudConnectionID = conn.ID
+		connNode.AddChild(projectsNode)
+		qfcNode.AddChild(connNode)
 	}
 }
 

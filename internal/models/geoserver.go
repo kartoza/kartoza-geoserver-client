@@ -34,6 +34,18 @@ const (
 	NodeTypeStyle
 	NodeTypeLayerGroups
 	NodeTypeLayerGroup
+	// QFieldCloud node types
+	NodeTypeQFieldCloudRoot          // "QFieldCloud" container
+	NodeTypeQFieldCloudConnection    // A QFieldCloud connection
+	NodeTypeQFieldCloudProjects      // "Projects" container inside a connection
+	NodeTypeQFieldCloudProject       // Single QFieldCloud project
+	NodeTypeQFieldCloudFiles         // "Files" container inside a project
+	NodeTypeQFieldCloudFile          // Single project file
+	NodeTypeQFieldCloudJobs          // "Jobs" container inside a project
+	NodeTypeQFieldCloudJob           // Single job
+	NodeTypeQFieldCloudCollaborators // "Collaborators" container inside a project
+	NodeTypeQFieldCloudCollaborator  // Single collaborator
+	NodeTypeQFieldCloudDeltas        // "Deltas" container inside a project
 )
 
 // String returns the string representation of a NodeType
@@ -99,6 +111,28 @@ func (n NodeType) String() string {
 		return "layergroups"
 	case NodeTypeLayerGroup:
 		return "layergroup"
+	case NodeTypeQFieldCloudRoot:
+		return "qfieldcloud"
+	case NodeTypeQFieldCloudConnection:
+		return "qfieldcloudconnection"
+	case NodeTypeQFieldCloudProjects:
+		return "qfieldcloudprojects"
+	case NodeTypeQFieldCloudProject:
+		return "qfieldcloudproject"
+	case NodeTypeQFieldCloudFiles:
+		return "qfieldcloudfiles"
+	case NodeTypeQFieldCloudFile:
+		return "qfieldcloudfile"
+	case NodeTypeQFieldCloudJobs:
+		return "qfieldcloudjobs"
+	case NodeTypeQFieldCloudJob:
+		return "qfieldcloudjob"
+	case NodeTypeQFieldCloudCollaborators:
+		return "qfieldcloudcollaborators"
+	case NodeTypeQFieldCloudCollaborator:
+		return "qfieldcloudcollaborator"
+	case NodeTypeQFieldCloudDeltas:
+		return "qfieldclouddeltas"
 	default:
 		return "unknown"
 	}
@@ -168,6 +202,28 @@ func (n NodeType) Icon() string {
 		return "\uf5db" // fa-books
 	case NodeTypeLayerGroup:
 		return "\uf02d" // fa-book
+	case NodeTypeQFieldCloudRoot:
+		return "\uf0c2" // fa-cloud
+	case NodeTypeQFieldCloudConnection:
+		return "\uf0c2" // fa-cloud
+	case NodeTypeQFieldCloudProjects:
+		return "\uf07b" // fa-folder
+	case NodeTypeQFieldCloudProject:
+		return "\uf5a0" // fa-map-marked-alt
+	case NodeTypeQFieldCloudFiles:
+		return "\uf07c" // fa-folder-open
+	case NodeTypeQFieldCloudFile:
+		return "\uf15b" // fa-file
+	case NodeTypeQFieldCloudJobs:
+		return "\uf0ae" // fa-tasks
+	case NodeTypeQFieldCloudJob:
+		return "\uf144" // fa-play-circle
+	case NodeTypeQFieldCloudCollaborators:
+		return "\uf0c0" // fa-users
+	case NodeTypeQFieldCloudCollaborator:
+		return "\uf007" // fa-user
+	case NodeTypeQFieldCloudDeltas:
+		return "\uf021" // fa-refresh
 	default:
 		return "\uf128" // fa-question
 	}
@@ -201,6 +257,12 @@ type TreeNode struct {
 	S3Key          string // S3 object key (path)
 	S3Size         int64  // Object size in bytes
 	S3ContentType  string // Content type of the object
+	// QFieldCloud-specific fields
+	QFieldCloudConnectionID string // QFieldCloud connection ID
+	QFieldCloudProjectID    string // QFieldCloud project ID
+	QFieldCloudFilename     string // File name within a project
+	QFieldCloudJobID        string // Job ID
+	QFieldCloudUsername     string // Collaborator username
 }
 
 // NewTreeNode creates a new tree node

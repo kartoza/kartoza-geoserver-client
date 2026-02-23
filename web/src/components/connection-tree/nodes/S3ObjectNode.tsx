@@ -57,6 +57,7 @@ export function S3ObjectNode({ connectionId, bucket, object }: S3ObjectNodeProps
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const openDialog = useUIStore((state) => state.openDialog)
   const setS3Preview = useUIStore((state) => state.setS3Preview)
+  const setDuckDBQuery = useUIStore((state) => state.setDuckDBQuery)
   const toast = useToast()
   const queryClient = useQueryClient()
 
@@ -151,15 +152,12 @@ export function S3ObjectNode({ connectionId, bucket, object }: S3ObjectNodeProps
 
   const handleQuery = (e: React.MouseEvent) => {
     e.stopPropagation()
-    // Open DuckDB query dialog with file info
-    openDialog('duckdbquery', {
-      mode: 'view',
-      data: {
-        s3ConnectionId: connectionId,
-        s3BucketName: bucket,
-        s3ObjectKey: object.key,
-        displayName: displayName,
-      },
+    // Show DuckDB query panel in right panel (like map preview)
+    setDuckDBQuery({
+      connectionId,
+      bucketName: bucket,
+      objectKey: object.key,
+      displayName: displayName,
     })
   }
 

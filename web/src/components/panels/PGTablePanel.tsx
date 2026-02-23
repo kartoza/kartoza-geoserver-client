@@ -48,7 +48,7 @@ export default function PGTablePanel({ serviceName, schemaName, tableName, isVie
   const [error, setError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [totalLoaded, setTotalLoaded] = useState(0)
-  const openDialog = useUIStore((state) => state.openDialog)
+  const setPGQuery = useUIStore((state) => state.setPGQuery)
   const tableContainerRef = useRef<HTMLDivElement>(null)
 
   const PAGE_SIZE = 100
@@ -307,14 +307,11 @@ export default function PGTablePanel({ serviceName, schemaName, tableName, isVie
                 size="sm"
                 _hover={{ bg: 'whiteAlpha.200' }}
                 leftIcon={<FiCode />}
-                onClick={() => openDialog('query', {
-                  mode: 'view',
-                  data: {
-                    serviceName,
-                    schemaName,
-                    tableName,
-                    initialSQL: `SELECT * FROM "${schemaName}"."${tableName}" LIMIT 100`,
-                  },
+                onClick={() => setPGQuery({
+                  serviceName,
+                  schemaName,
+                  tableName,
+                  initialSQL: `SELECT * FROM "${schemaName}"."${tableName}" LIMIT 100`,
                 })}
               >
                 SQL Query

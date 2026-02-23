@@ -105,6 +105,7 @@ export default function PGServicePanel({ serviceName }: PGServicePanelProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const openDialog = useUIStore((state) => state.openDialog)
+  const setPGQuery = useUIStore((state) => state.setPGQuery)
 
   const cardBg = useColorModeValue('white', 'gray.800')
 
@@ -201,9 +202,8 @@ export default function PGServicePanel({ serviceName }: PGServicePanelProps) {
                 color="white"
                 _hover={{ bg: 'whiteAlpha.300' }}
                 leftIcon={<FiCode />}
-                onClick={() => openDialog('query', {
-                  mode: 'create',
-                  data: { serviceName },
+                onClick={() => setPGQuery({
+                  serviceName,
                 })}
               >
                 SQL Query

@@ -26,7 +26,8 @@ import {
   Icon,
   Divider,
 } from '@chakra-ui/react'
-import { FiInfo, FiRefreshCw, FiX, FiMap, FiDatabase, FiPlay, FiCheck, FiClock } from 'react-icons/fi'
+import { FiInfo, FiRefreshCw, FiX, FiMap, FiDatabase, FiPlay, FiCheck, FiClock, FiExternalLink } from 'react-icons/fi'
+import { SiJupyter } from 'react-icons/si'
 import { TbSnowflake } from 'react-icons/tb'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -61,6 +62,12 @@ export default function IcebergTablePreview({
   const cardBg = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const metaBg = useColorModeValue('gray.50', 'gray.700')
+
+  // Fetch connection details to get Jupyter URL
+  const { data: connectionData } = useQuery({
+    queryKey: ['icebergconnection', connectionId],
+    queryFn: () => api.getIcebergConnection(connectionId),
+  })
 
   // Fetch table metadata
   const { data: tableData, isLoading: tableLoading, error: tableError, refetch: refetchTable } = useQuery({
@@ -124,6 +131,12 @@ export default function IcebergTablePreview({
         tableName,
       },
     })
+  }
+
+  const handleOpenJupyter = () => {
+    if (connectionData?.jupyterUrl) {
+      window.open(connectionData.jupyterUrl, '_blank')
+    }
   }
 
   const handleRefresh = () => {
@@ -219,6 +232,19 @@ export default function IcebergTablePreview({
                 onClick={() => setShowMetadata(!showMetadata)}
               />
             </Tooltip>
+            {connectionData?.jupyterUrl && (
+              <Tooltip label="Open Jupyter Notebook">
+                <IconButton
+                  aria-label="Open Jupyter"
+                  icon={<Icon as={SiJupyter} />}
+                  size="sm"
+                  variant="ghost"
+                  color="white"
+                  _hover={{ bg: 'whiteAlpha.200' }}
+                  onClick={handleOpenJupyter}
+                />
+              </Tooltip>
+            )}
             <Tooltip label="Refresh">
               <IconButton
                 aria-label="Refresh"
@@ -311,14 +337,27 @@ export default function IcebergTablePreview({
                   ))}
                 </HStack>
               )}
-              <Button
-                colorScheme="cyan"
-                leftIcon={<FiPlay />}
-                onClick={handleOpenQuery}
-                size="md"
-              >
-                Open SQL Query
-              </Button>
+              <HStack spacing={3}>
+                <Button
+                  colorScheme="cyan"
+                  leftIcon={<FiPlay />}
+                  onClick={handleOpenQuery}
+                  size="md"
+                >
+                  Open SQL Query
+                </Button>
+                {connectionData?.jupyterUrl && (
+                  <Button
+                    colorScheme="orange"
+                    leftIcon={<Icon as={SiJupyter} />}
+                    onClick={handleOpenJupyter}
+                    size="md"
+                    rightIcon={<FiExternalLink />}
+                  >
+                    Open Jupyter
+                  </Button>
+                )}
+              </HStack>
             </VStack>
           </Box>
         </Box>

@@ -34,7 +34,8 @@
       "WebFetch(domain:www.npmjs.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:docs.geonode.org)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebFetch(domain:hub.docker.com)"
     ],
     "deny": [],
     "ask": []

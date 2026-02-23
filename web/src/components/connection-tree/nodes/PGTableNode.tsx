@@ -14,6 +14,7 @@ export function PGTableNode({ serviceName, schemaName, table }: PGTableNodeProps
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const openDialog = useUIStore((state) => state.openDialog)
+  const setPGQuery = useUIStore((state) => state.setPGQuery)
 
   const node: TreeNode = {
     id: nodeId,
@@ -46,14 +47,11 @@ export function PGTableNode({ serviceName, schemaName, table }: PGTableNodeProps
 
   const handleQuery = (e: React.MouseEvent) => {
     e.stopPropagation()
-    openDialog('query', {
-      mode: 'view',
-      data: {
-        serviceName,
-        schemaName,
-        tableName: table.name,
-        initialSQL: `SELECT * FROM "${schemaName}"."${table.name}" LIMIT 100`,
-      },
+    setPGQuery({
+      serviceName,
+      schemaName,
+      tableName: table.name,
+      initialSQL: `SELECT * FROM "${schemaName}"."${table.name}" LIMIT 100`,
     })
   }
 

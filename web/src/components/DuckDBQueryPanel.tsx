@@ -1,8 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
   Text,
   Box,
   Table,
@@ -31,6 +28,7 @@ import {
   TabList,
   Tab,
   useToast,
+  Card,
 } from '@chakra-ui/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -44,48 +42,31 @@ import {
   FiCopy,
   FiSearch,
 } from 'react-icons/fi'
-import { useUIStore } from '../../stores/uiStore'
-import * as api from '../../api/client'
-import type { DuckDBTableInfo } from '../../types'
-import { SQLEditor } from '../SQLEditor'
-import { springs } from '../../utils/animations'
+import * as api from '../api/client'
+import type { DuckDBTableInfo } from '../types'
+import { SQLEditor } from './SQLEditor'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
+// Schema info for autocompletion
+interface ColumnInfo {
+  name: string;
+  type: string;
+  nullable?: boolean;
+}
+
+interface TableInfoSchema {
+  name: string;
+  columns: ColumnInfo[];
+  schema?: string;
+}
+
+interface SchemaInfo {
+  name: string;
+  tables: TableInfoSchema[];
+}
+
 const MotionBox = motion(Box)
-
-export default function DuckDBQueryDialog() {
-  const activeDialog = useUIStore((state) => state.activeDialog)
-  const dialogData = useUIStore((state) => state.dialogData)
-  const closeDialog = useUIStore((state) => state.closeDialog)
-
-  const isOpen = activeDialog === 'duckdbquery'
-
-  if (!isOpen) {
-    return null
-  }
-
-  return (
-    <Modal isOpen={isOpen} onClose={closeDialog} size="full" scrollBehavior="inside">
-      <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
-      <ModalContent maxH="95vh" maxW="95vw" m={4} borderRadius="2xl" overflow="hidden">
-        <DuckDBQueryContent dialogData={dialogData} onClose={closeDialog} />
-      </ModalContent>
-    </Modal>
-  )
-}
-
-interface DuckDBQueryContentProps {
-  dialogData: {
-    data?: {
-      s3ConnectionId?: string
-      s3BucketName?: string
-      s3ObjectKey?: string
-      displayName?: string
-    }
-  } | null
-  onClose: () => void
-}
 
 // Result type matching PostGIS pattern
 interface DuckDBResult {
@@ -96,7 +77,21 @@ interface DuckDBResult {
   duration_ms: number
 }
 
-function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
+interface DuckDBQueryPanelProps {
+  connectionId: string
+  bucketName: string
+  objectKey: string
+  displayName: string
+  onClose: () => void
+}
+
+export default function DuckDBQueryPanel({
+  connectionId,
+  bucketName,
+  objectKey,
+  displayName,
+  onClose,
+}: DuckDBQueryPanelProps) {
   const [tableInfo, setTableInfo] = useState<DuckDBTableInfo | null>(null)
   const [result, setResult] = useState<DuckDBResult | null>(null)
   const [geojsonData, setGeojsonData] = useState<GeoJSON.FeatureCollection | null>(null)
@@ -123,15 +118,28 @@ function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
   const mapRef = useRef<maplibregl.Map | null>(null)
 
   // Colors
-  const bgColor = useColorModeValue('white', 'gray.800')
+  const cardBg = useColorModeValue('white', 'gray.800')
   const headerBg = useColorModeValue('gray.50', 'gray.700')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const hoverBg = useColorModeValue('blue.50', 'blue.900')
 
-  const connectionId = dialogData?.data?.s3ConnectionId ?? ''
-  const bucketName = dialogData?.data?.s3BucketName ?? ''
-  const objectKey = dialogData?.data?.s3ObjectKey ?? ''
-  const displayName = dialogData?.data?.displayName ?? objectKey.split('/').pop() ?? ''
+  // Build schema info for SQLEditor autocompletion
+  const schemaInfo: SchemaInfo[] = useMemo(() => {
+    if (!tableInfo) return []
+
+    const dataTable: TableInfoSchema = {
+      name: 'data',
+      columns: tableInfo.columns.map(col => ({
+        name: col.name,
+        type: col.type,
+      })),
+    }
+
+    return [{
+      name: 'parquet',
+      tables: [dataTable],
+    }]
+  }, [tableInfo])
 
   // Splitter handlers
   useEffect(() => {
@@ -149,8 +157,8 @@ function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
-      const newPosition = ((e.clientX - rect.left) / rect.width) * 100
-      const clamped = Math.max(25, Math.min(75, newPosition))
+      const newPosition = ((e.clientY - rect.top) / rect.height) * 100
+      const clamped = Math.max(20, Math.min(80, newPosition))
       setSplitPosition(clamped)
     }
 
@@ -474,74 +482,65 @@ function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
   // Loading state
   if (loading) {
     return (
-      <Flex h="100%" align="center" justify="center" p={8}>
-        <VStack spacing={4}>
-          <Spinner size="xl" color="blue.500" thickness="4px" />
-          <Text color="gray.500">Loading {displayName}...</Text>
-        </VStack>
-      </Flex>
+      <Card bg={cardBg} overflow="hidden" h="100%" display="flex" flexDirection="column">
+        <Flex h="100%" align="center" justify="center" p={8}>
+          <VStack spacing={4}>
+            <Spinner size="xl" color="blue.500" thickness="4px" />
+            <Text color="gray.500">Loading {displayName}...</Text>
+          </VStack>
+        </Flex>
+      </Card>
     )
   }
 
   return (
-    <MotionBox
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={springs.default}
-      bg={bgColor}
-      h="100%"
-      display="flex"
-      flexDirection="column"
-    >
+    <Card bg={cardBg} overflow="hidden" h="100%" display="flex" flexDirection="column">
       {/* Header */}
-      <Flex
+      <Box
+        bg="linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)"
+        color="white"
         px={4}
         py={3}
-        bg={headerBg}
-        borderBottom="1px solid"
-        borderColor={borderColor}
-        align="center"
-        justify="space-between"
       >
-        <HStack spacing={3}>
-          <Icon as={FiDatabase} color="blue.500" boxSize={5} />
-          <Text fontWeight="600" fontSize="lg">DuckDB Query</Text>
-          <Badge colorScheme="blue" borderRadius="full">{displayName}</Badge>
-          {tableInfo && (
-            <>
-              <Badge colorScheme="green" borderRadius="full">
-                {tableInfo.rowCount.toLocaleString()} rows
-              </Badge>
-              <Badge colorScheme="gray" borderRadius="full">
-                {tableInfo.columns.length} columns
-              </Badge>
-              {tableInfo.geometryColumn && (
-                <Badge colorScheme="purple" borderRadius="full">
-                  Spatial: {tableInfo.geometryColumn}
+        <HStack justify="space-between">
+          <HStack spacing={3}>
+            <Icon as={FiDatabase} boxSize={5} />
+            <Text fontWeight="600" fontSize="lg">DuckDB Query</Text>
+            <Badge colorScheme="blue" borderRadius="full">{displayName}</Badge>
+            {tableInfo && (
+              <>
+                <Badge colorScheme="green" borderRadius="full">
+                  {tableInfo.rowCount.toLocaleString()} rows
                 </Badge>
-              )}
-            </>
-          )}
+                <Badge colorScheme="gray" borderRadius="full">
+                  {tableInfo.columns.length} columns
+                </Badge>
+                {tableInfo.geometryColumn && (
+                  <Badge colorScheme="purple" borderRadius="full">
+                    Spatial: {tableInfo.geometryColumn}
+                  </Badge>
+                )}
+              </>
+            )}
+          </HStack>
+          <IconButton
+            aria-label="Close"
+            icon={<FiX />}
+            variant="ghost"
+            color="white"
+            _hover={{ bg: 'whiteAlpha.200' }}
+            onClick={onClose}
+          />
         </HStack>
-        <IconButton
-          aria-label="Close"
-          icon={<FiX />}
-          variant="ghost"
-          onClick={onClose}
-        />
-      </Flex>
+      </Box>
 
-      {/* Content Area with Resizable Splitter */}
-      <Flex ref={containerRef} flex={1} overflow="hidden" position="relative">
-        {/* Left Panel - SQL Editor */}
-        <Flex
-          w={`${splitPosition}%`}
-          flexDirection="column"
-          overflow="hidden"
-        >
+      {/* Content Area with Vertical Resizable Splitter */}
+      <Flex ref={containerRef} flex={1} overflow="hidden" position="relative" flexDirection="column">
+        {/* Top Panel - SQL Editor */}
+        <Box h={`${splitPosition}%`} overflow="hidden" display="flex" flexDirection="column">
           {/* Sample Queries */}
           {tableInfo?.sampleQueries && tableInfo.sampleQueries.length > 0 && (
-            <Box px={4} py={2} borderBottom="1px solid" borderColor={borderColor}>
+            <Box px={4} py={2} borderBottom="1px solid" borderColor={borderColor} bg={headerBg}>
               <HStack spacing={2} flexWrap="wrap">
                 <Text fontSize="xs" color="gray.500" fontWeight="medium">Samples:</Text>
                 {tableInfo.sampleQueries.slice(0, 3).map((query, i) => (
@@ -568,62 +567,45 @@ function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
                 <Text fontWeight="600" fontSize="sm" color="gray.600">
                   Write your SQL query (use 'data' as table name)
                 </Text>
-                <IconButton
-                  aria-label="Copy"
-                  icon={<FiCopy />}
-                  size="sm"
-                  variant="ghost"
-                  onClick={copySQL}
-                />
+                <HStack>
+                  <IconButton
+                    aria-label="Copy"
+                    icon={<FiCopy />}
+                    size="sm"
+                    variant="ghost"
+                    onClick={copySQL}
+                  />
+                  <Button
+                    colorScheme="blue"
+                    size="sm"
+                    leftIcon={<FiPlay />}
+                    onClick={() => executeQuery(false)}
+                    isLoading={executing}
+                    loadingText="Running..."
+                    isDisabled={!sql.trim()}
+                  >
+                    Run
+                  </Button>
+                </HStack>
               </HStack>
-              <Box flex={1} minH="200px">
+              <Box flex={1} minH="100px">
                 <SQLEditor
                   value={sql}
                   onChange={setSql}
                   height="100%"
                   placeholder="SELECT * FROM data WHERE ..."
+                  dialect="duckdb"
+                  schemas={schemaInfo}
                 />
               </Box>
             </VStack>
           </Box>
+        </Box>
 
-          {/* Execute Button - Fixed at bottom */}
-          <Box
-            px={4}
-            py={3}
-            borderTop="1px solid"
-            borderColor={borderColor}
-            bg={bgColor}
-          >
-            <Flex justify="space-between" align="center">
-              <Button
-                colorScheme="blue"
-                leftIcon={<FiPlay />}
-                onClick={() => executeQuery(false)}
-                isLoading={executing}
-                loadingText="Executing..."
-                isDisabled={!sql.trim()}
-              >
-                Execute Query
-              </Button>
-              {result && (
-                <HStack spacing={2}>
-                  <Badge colorScheme="green">
-                    {result.rows.length}{result.has_more ? '+' : ''} rows
-                  </Badge>
-                  <Badge colorScheme="gray">
-                    {result.duration_ms.toFixed(0)}ms
-                  </Badge>
-                </HStack>
-              )}
-            </Flex>
-          </Box>
-        </Flex>
-
-        {/* Resizable Splitter */}
+        {/* Resizable Splitter - Horizontal */}
         <Box
-          w="4px"
-          cursor="col-resize"
+          h="4px"
+          cursor="row-resize"
           bg={isDragging ? 'blue.400' : borderColor}
           _hover={{ bg: 'blue.400' }}
           transition="background 0.2s"
@@ -631,9 +613,9 @@ function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
           flexShrink={0}
         />
 
-        {/* Right Panel - Results */}
+        {/* Bottom Panel - Results */}
         <Box
-          w={`calc(${100 - splitPosition}% - 4px)`}
+          h={`calc(${100 - splitPosition}% - 4px)`}
           display="flex"
           flexDirection="column"
           overflow="hidden"
@@ -641,7 +623,7 @@ function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
           {/* Results Header with View Tabs */}
           <Flex
             px={4}
-            py={3}
+            py={2}
             bg={headerBg}
             borderBottom="1px solid"
             borderColor={borderColor}
@@ -667,6 +649,11 @@ function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
                 <Badge colorScheme="blue" borderRadius="full" ml={2}>
                   {result.rows.length}
                   {result.total_count ? ` / ${result.total_count}` : ''} rows
+                </Badge>
+              )}
+              {result && (
+                <Badge colorScheme="gray" borderRadius="full">
+                  {result.duration_ms.toFixed(0)}ms
                 </Badge>
               )}
             </HStack>
@@ -831,6 +818,6 @@ function DuckDBQueryContent({ dialogData, onClose }: DuckDBQueryContentProps) {
           )}
         </Box>
       </Flex>
-    </MotionBox>
+    </Card>
   )
 }

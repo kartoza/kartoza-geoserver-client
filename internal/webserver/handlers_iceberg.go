@@ -509,6 +509,8 @@ func (s *Server) handleIcebergTables(w http.ResponseWriter, r *http.Request, cli
 		switch r.Method {
 		case http.MethodGet:
 			s.listIcebergTables(w, r, client, ctx, namespace)
+		case http.MethodPost:
+			s.createIcebergTable(w, r, client, ctx, namespace)
 		case http.MethodOptions:
 			s.handleCORS(w)
 		default:
@@ -546,6 +548,87 @@ func (s *Server) handleIcebergTables(w http.ResponseWriter, r *http.Request, cli
 	default:
 		s.jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// CreateTableRequestBody represents the request body for creating a table
+type CreateTableRequestBody struct {
+	Name       string                   `json:"name"`
+	Location   string                   `json:"location,omitempty"`
+	Schema     CreateTableSchemaRequest `json:"schema"`
+	Properties map[string]string        `json:"properties,omitempty"`
+}
+
+// CreateTableSchemaRequest represents the schema in a create table request
+type CreateTableSchemaRequest struct {
+	Type   string                       `json:"type"`
+	Fields []CreateTableFieldRequest    `json:"fields"`
+}
+
+// CreateTableFieldRequest represents a field in a create table request
+type CreateTableFieldRequest struct {
+	ID       int         `json:"id"`
+	Name     string      `json:"name"`
+	Type     interface{} `json:"type"`
+	Required bool        `json:"required"`
+	Doc      string      `json:"doc,omitempty"`
+}
+
+// createIcebergTable creates a new table in a namespace
+func (s *Server) createIcebergTable(w http.ResponseWriter, r *http.Request, client *iceberg.Client, ctx context.Context, namespace string) {
+	var req CreateTableRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		s.jsonError(w, "Table name is required", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.Schema.Fields) == 0 {
+		s.jsonError(w, "At least one field is required", http.StatusBadRequest)
+		return
+	}
+
+	// Convert request schema to Iceberg schema
+	fields := make([]iceberg.Field, len(req.Schema.Fields))
+	for i, f := range req.Schema.Fields {
+		fields[i] = iceberg.Field{
+			ID:       f.ID,
+			Name:     f.Name,
+			Type:     f.Type,
+			Required: f.Required,
+			Doc:      f.Doc,
+		}
+	}
+
+	schema := iceberg.Schema{
+		Type:     "struct",
+		SchemaID: 0,
+		Fields:   fields,
+	}
+
+	createReq := iceberg.CreateTableRequest{
+		Name:       req.Name,
+		Location:   req.Location,
+		Schema:     schema,
+		Properties: req.Properties,
+	}
+
+	metadata, err := client.CreateTable(ctx, namespace, createReq)
+	if err != nil {
+		s.jsonError(w, "Failed to create table: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	s.jsonResponse(w, IcebergTableResponse{
+		Namespace:     namespace,
+		Name:          req.Name,
+		Location:      metadata.Metadata.Location,
+		FormatVersion: metadata.Metadata.FormatVersion,
+	})
 }
 
 // listIcebergTables lists all tables in a namespace

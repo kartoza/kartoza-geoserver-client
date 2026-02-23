@@ -22,6 +22,8 @@ interface SchemaInfo {
   tables: TableInfo[];
 }
 
+type SQLDialect = 'postgresql' | 'duckdb';
+
 interface SQLEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -33,6 +35,7 @@ interface SQLEditorProps {
   serviceName?: string;
   readOnly?: boolean;
   className?: string;
+  dialect?: SQLDialect;
 }
 
 // PostgreSQL keywords for completion
@@ -113,6 +116,98 @@ const POSTGIS_FUNCTIONS = [
   'ST_ForceRHR', 'ST_Reverse', 'ST_FlipCoordinates', 'ST_OrientedEnvelope',
 ];
 
+// DuckDB-specific functions
+const DUCKDB_FUNCTIONS = [
+  // Aggregate functions
+  'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'FIRST', 'LAST', 'LIST', 'STRING_AGG',
+  'ARG_MIN', 'ARG_MAX', 'BIT_AND', 'BIT_OR', 'BIT_XOR', 'BOOL_AND', 'BOOL_OR',
+  'APPROX_COUNT_DISTINCT', 'APPROX_QUANTILE', 'RESERVOIR_SAMPLE', 'HISTOGRAM',
+  'MODE', 'ENTROPY', 'KURTOSIS', 'SKEWNESS', 'STDDEV', 'STDDEV_POP', 'STDDEV_SAMP',
+  'VARIANCE', 'VAR_POP', 'VAR_SAMP', 'COVAR_POP', 'COVAR_SAMP', 'CORR', 'REGR_SLOPE',
+  // String functions
+  'LENGTH', 'LOWER', 'UPPER', 'TRIM', 'LTRIM', 'RTRIM', 'SUBSTRING', 'REPLACE',
+  'CONCAT', 'CONCAT_WS', 'SPLIT_PART', 'REGEXP_REPLACE', 'REGEXP_MATCHES',
+  'REGEXP_EXTRACT', 'REGEXP_EXTRACT_ALL', 'LEFT', 'RIGHT', 'REVERSE', 'REPEAT',
+  'LPAD', 'RPAD', 'INSTR', 'POSITION', 'CONTAINS', 'STARTS_WITH', 'ENDS_WITH',
+  'STRIP_ACCENTS', 'LEVENSHTEIN', 'JACCARD', 'JARO_WINKLER_SIMILARITY',
+  'PRINTF', 'FORMAT', 'ASCII', 'CHR', 'MD5', 'SHA256', 'HASH', 'BASE64', 'ENCODE', 'DECODE',
+  // Numeric functions
+  'ABS', 'CEIL', 'CEILING', 'FLOOR', 'ROUND', 'TRUNC', 'MOD', 'POWER', 'POW', 'SQRT',
+  'EXP', 'LN', 'LOG', 'LOG2', 'LOG10', 'RANDOM', 'SETSEED', 'SIGN', 'GREATEST', 'LEAST',
+  'RADIANS', 'DEGREES', 'SIN', 'COS', 'TAN', 'ASIN', 'ACOS', 'ATAN', 'ATAN2',
+  'PI', 'EVEN', 'FACTORIAL', 'GCD', 'LCM', 'ISNAN', 'ISINF', 'ISFINITE',
+  // Date/time functions
+  'NOW', 'CURRENT_DATE', 'CURRENT_TIME', 'CURRENT_TIMESTAMP', 'TODAY',
+  'DATE_PART', 'DATEPART', 'DATE_TRUNC', 'DATETRUNC', 'DATE_DIFF', 'DATEDIFF',
+  'DATE_ADD', 'DATE_SUB', 'EXTRACT', 'YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'SECOND',
+  'DAYOFWEEK', 'DAYOFYEAR', 'WEEK', 'WEEKOFYEAR', 'QUARTER', 'EPOCH', 'EPOCH_MS',
+  'STRFTIME', 'STRPTIME', 'TO_TIMESTAMP', 'MAKE_DATE', 'MAKE_TIME', 'MAKE_TIMESTAMP',
+  'AGE', 'LAST_DAY', 'MONTHNAME', 'DAYNAME',
+  // List/Array functions
+  'LIST_VALUE', 'LIST_AGGREGATE', 'LIST_DISTINCT', 'LIST_UNIQUE', 'LIST_SORT',
+  'LIST_REVERSE', 'LIST_CONTAINS', 'LIST_ELEMENT', 'LIST_EXTRACT', 'LIST_SLICE',
+  'LIST_CONCAT', 'LIST_FILTER', 'LIST_TRANSFORM', 'LIST_REDUCE', 'LIST_APPLY',
+  'UNNEST', 'FLATTEN', 'ARRAY_AGG', 'ARRAY_LENGTH', 'ARRAY_SLICE', 'GENERATE_SERIES',
+  // Struct functions
+  'STRUCT_PACK', 'STRUCT_EXTRACT', 'ROW',
+  // Map functions
+  'MAP', 'MAP_EXTRACT', 'MAP_KEYS', 'MAP_VALUES', 'MAP_ENTRIES', 'ELEMENT_AT',
+  // JSON functions
+  'JSON', 'JSON_EXTRACT', 'JSON_EXTRACT_STRING', 'JSON_TYPE', 'JSON_VALID',
+  'JSON_ARRAY_LENGTH', 'JSON_KEYS', 'JSON_STRUCTURE', 'JSON_TRANSFORM',
+  'TO_JSON', 'JSON_SERIALIZE', 'JSON_DESERIALIZE', 'JSON_QUOTE',
+  // Type conversion
+  'CAST', 'TRY_CAST', 'TYPEOF', 'COALESCE', 'NULLIF', 'IFNULL', 'NVL',
+  // Window functions
+  'ROW_NUMBER', 'RANK', 'DENSE_RANK', 'PERCENT_RANK', 'CUME_DIST', 'NTILE',
+  'LAG', 'LEAD', 'FIRST_VALUE', 'LAST_VALUE', 'NTH_VALUE',
+  // Table functions
+  'READ_PARQUET', 'READ_CSV', 'READ_CSV_AUTO', 'READ_JSON', 'READ_JSON_AUTO',
+  'GLOB', 'RANGE', 'GENERATE_SERIES', 'UNNEST',
+  // Utility functions
+  'ALIAS', 'COLUMNS', 'EXCLUDE', 'REPLACE', 'DESCRIBE', 'SUMMARIZE',
+  'SAMPLE', 'TABLESAMPLE', 'QUALIFY',
+];
+
+// DuckDB Spatial extension functions (similar to PostGIS but with some DuckDB-specific ones)
+const DUCKDB_SPATIAL_FUNCTIONS = [
+  // Geometry constructors
+  'ST_Point', 'ST_MakePoint', 'ST_MakeLine', 'ST_MakePolygon', 'ST_MakeEnvelope',
+  'ST_GeomFromText', 'ST_GeomFromWKB', 'ST_GeomFromGeoJSON', 'ST_GeomFromHEXWKB',
+  'ST_Point2D', 'ST_Point3D', 'ST_Point4D', 'ST_LineString2D', 'ST_Polygon2D',
+  // Geometry outputs
+  'ST_AsText', 'ST_AsBinary', 'ST_AsGeoJSON', 'ST_AsHEXWKB', 'ST_AsWKB', 'ST_AsWKT',
+  // Geometry accessors
+  'ST_X', 'ST_Y', 'ST_Z', 'ST_M', 'ST_XMin', 'ST_XMax', 'ST_YMin', 'ST_YMax',
+  'ST_GeometryType', 'ST_Dimension', 'ST_NPoints', 'ST_NumGeometries', 'ST_NumPoints',
+  'ST_NumInteriorRings', 'ST_ExteriorRing', 'ST_InteriorRingN', 'ST_GeometryN',
+  'ST_PointN', 'ST_StartPoint', 'ST_EndPoint', 'ST_Centroid', 'ST_Envelope', 'ST_Boundary',
+  // Spatial relationships
+  'ST_Intersects', 'ST_Contains', 'ST_Within', 'ST_Overlaps', 'ST_Touches',
+  'ST_Crosses', 'ST_Disjoint', 'ST_Equals', 'ST_Covers', 'ST_CoveredBy',
+  'ST_DWithin', 'ST_Distance', 'ST_Distance_Sphere', 'ST_Distance_Spheroid',
+  // Spatial measurements
+  'ST_Area', 'ST_Area_Spheroid', 'ST_Perimeter', 'ST_Length', 'ST_Length_Spheroid',
+  // Geometry processing
+  'ST_Simplify', 'ST_SimplifyPreserveTopology', 'ST_ConvexHull', 'ST_Buffer',
+  'ST_Difference', 'ST_Intersection', 'ST_SymDifference', 'ST_Union', 'ST_UnaryUnion',
+  'ST_MakeValid', 'ST_Normalize', 'ST_ReducePrecision', 'ST_RemoveRepeatedPoints',
+  'ST_Reverse', 'ST_FlipCoordinates', 'ST_Transform', 'ST_Collect', 'ST_Multi',
+  // Validation
+  'ST_IsValid', 'ST_IsSimple', 'ST_IsEmpty', 'ST_IsClosed', 'ST_IsRing', 'ST_IsCollection',
+  // Aggregates
+  'ST_Extent', 'ST_Union_Agg', 'ST_Collect_Agg',
+  // Bounding box
+  'ST_Extent', 'Box2D',
+  // Coordinate reference system
+  'ST_SRID', 'ST_SetSRID', 'ST_Transform',
+  // H3 functions (DuckDB specific)
+  'H3_LATLNG_TO_CELL', 'H3_CELL_TO_LAT', 'H3_CELL_TO_LNG', 'H3_CELL_TO_LATLNG',
+  'H3_CELL_TO_BOUNDARY_WKT', 'H3_GET_RESOLUTION', 'H3_CELL_TO_PARENT', 'H3_CELL_TO_CHILDREN',
+  'H3_GRID_DISK', 'H3_GRID_RING_UNSAFE', 'H3_IS_VALID_CELL', 'H3_IS_PENTAGON',
+  'H3_STRING_TO_H3', 'H3_H3_TO_STRING',
+];
+
 // Data types
 const PG_TYPES = [
   'integer', 'int', 'int4', 'bigint', 'int8', 'smallint', 'int2',
@@ -121,6 +216,17 @@ const PG_TYPES = [
   'boolean', 'bool', 'date', 'time', 'timestamp', 'timestamptz', 'interval',
   'json', 'jsonb', 'uuid', 'bytea', 'array', 'point', 'line', 'polygon',
   'geometry', 'geography', 'box', 'circle', 'inet', 'cidr', 'macaddr',
+];
+
+// DuckDB types
+const DUCKDB_TYPES = [
+  'BIGINT', 'INT8', 'LONG', 'BOOLEAN', 'BOOL', 'LOGICAL', 'BLOB', 'BYTEA', 'BINARY', 'VARBINARY',
+  'DATE', 'DOUBLE', 'FLOAT8', 'NUMERIC', 'DECIMAL', 'HUGEINT', 'INTEGER', 'INT4', 'INT', 'SIGNED',
+  'INTERVAL', 'REAL', 'FLOAT4', 'FLOAT', 'SMALLINT', 'INT2', 'SHORT', 'TIME', 'TIMESTAMP',
+  'TIMESTAMP WITH TIME ZONE', 'TIMESTAMPTZ', 'TINYINT', 'INT1', 'UBIGINT', 'UHUGEINT',
+  'UINTEGER', 'USMALLINT', 'UTINYINT', 'UUID', 'VARCHAR', 'CHAR', 'BPCHAR', 'TEXT', 'STRING',
+  'BIT', 'BITSTRING', 'GEOMETRY', 'POINT_2D', 'LINESTRING_2D', 'POLYGON_2D', 'BOX_2D',
+  'LIST', 'MAP', 'STRUCT', 'UNION', 'ENUM',
 ];
 
 export const SQLEditor: React.FC<SQLEditorProps> = ({
@@ -134,6 +240,7 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({
   serviceName,
   readOnly = false,
   className = '',
+  dialect = 'postgresql',
 }) => {
   const [loadedSchemas, setLoadedSchemas] = useState<SchemaInfo[]>(schemas);
 
@@ -231,38 +338,75 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({
           }
         }
 
-        // PostgreSQL functions
-        for (const fn of PG_FUNCTIONS) {
-          if (fn.toLowerCase().startsWith(text)) {
-            options.push({
-              label: fn + '()',
-              type: 'function',
-              detail: 'PostgreSQL',
-              boost: 3,
-            });
+        if (dialect === 'postgresql') {
+          // PostgreSQL functions
+          for (const fn of PG_FUNCTIONS) {
+            if (fn.toLowerCase().startsWith(text)) {
+              options.push({
+                label: fn + '()',
+                type: 'function',
+                detail: 'PostgreSQL',
+                boost: 3,
+              });
+            }
           }
-        }
 
-        // PostGIS functions
-        for (const fn of POSTGIS_FUNCTIONS) {
-          if (fn.toLowerCase().startsWith(text)) {
-            options.push({
-              label: fn + '()',
-              type: 'function',
-              detail: 'PostGIS',
-              boost: 4,
-            });
+          // PostGIS functions
+          for (const fn of POSTGIS_FUNCTIONS) {
+            if (fn.toLowerCase().startsWith(text)) {
+              options.push({
+                label: fn + '()',
+                type: 'function',
+                detail: 'PostGIS',
+                boost: 4,
+              });
+            }
           }
-        }
 
-        // Data types
-        for (const t of PG_TYPES) {
-          if (t.toLowerCase().startsWith(text)) {
-            options.push({
-              label: t,
-              type: 'type',
-              boost: 1,
-            });
+          // PostgreSQL types
+          for (const t of PG_TYPES) {
+            if (t.toLowerCase().startsWith(text)) {
+              options.push({
+                label: t,
+                type: 'type',
+                boost: 1,
+              });
+            }
+          }
+        } else if (dialect === 'duckdb') {
+          // DuckDB functions
+          for (const fn of DUCKDB_FUNCTIONS) {
+            if (fn.toLowerCase().startsWith(text)) {
+              options.push({
+                label: fn + '()',
+                type: 'function',
+                detail: 'DuckDB',
+                boost: 3,
+              });
+            }
+          }
+
+          // DuckDB Spatial functions
+          for (const fn of DUCKDB_SPATIAL_FUNCTIONS) {
+            if (fn.toLowerCase().startsWith(text)) {
+              options.push({
+                label: fn + '()',
+                type: 'function',
+                detail: 'DuckDB Spatial',
+                boost: 4,
+              });
+            }
+          }
+
+          // DuckDB types
+          for (const t of DUCKDB_TYPES) {
+            if (t.toLowerCase().startsWith(text)) {
+              options.push({
+                label: t,
+                type: 'type',
+                boost: 1,
+              });
+            }
           }
         }
 
@@ -315,7 +459,7 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({
         validFor: /^[\w.]*$/,
       };
     };
-  }, [loadedSchemas]);
+  }, [loadedSchemas, dialect]);
 
   // Build SQL dialect with schema info
   const sqlExtension = useMemo(() => {

@@ -1998,6 +1998,43 @@ export async function getIcebergTables(connectionId: string, namespace: string):
   return handleResponse<IcebergTable[]>(response)
 }
 
+// Create table schema field type
+export interface IcebergFieldCreate {
+  id: number
+  name: string
+  type: string // 'string', 'long', 'double', 'boolean', 'timestamp', 'binary', etc.
+  required: boolean
+  doc?: string
+}
+
+// Create table request
+export interface CreateIcebergTableRequest {
+  name: string
+  location?: string
+  schema: {
+    type: string
+    fields: IcebergFieldCreate[]
+  }
+  properties?: Record<string, string>
+}
+
+// Create a new table in a namespace
+export async function createIcebergTable(
+  connectionId: string,
+  namespace: string,
+  request: CreateIcebergTableRequest
+): Promise<IcebergTable> {
+  const response = await fetch(
+    `${API_BASE}/iceberg/connections/${connectionId}/namespaces/${encodeURIComponent(namespace)}/tables`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }
+  )
+  return handleResponse<IcebergTable>(response)
+}
+
 // Get table details
 export async function getIcebergTable(connectionId: string, namespace: string, tableName: string): Promise<IcebergTable> {
   const response = await fetch(

@@ -16,6 +16,7 @@ export function PGServiceNode({ service }: PGServiceNodeProps) {
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const openDialog = useUIStore((state) => state.openDialog)
+  const setPGQuery = useUIStore((state) => state.setPGQuery)
   const toast = useToast()
   const queryClient = useQueryClient()
 
@@ -79,9 +80,8 @@ export function PGServiceNode({ service }: PGServiceNodeProps) {
 
   const handleQuery = (e: React.MouseEvent) => {
     e.stopPropagation()
-    openDialog('query', {
-      mode: 'view',
-      data: { serviceName: service.name },
+    setPGQuery({
+      serviceName: service.name,
     })
   }
 

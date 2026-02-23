@@ -92,6 +92,7 @@ export default function PGSchemaPanel({ serviceName, schemaName }: PGSchemaPanel
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const openDialog = useUIStore((state) => state.openDialog)
+  const setPGQuery = useUIStore((state) => state.setPGQuery)
 
   const cardBg = useColorModeValue('white', 'gray.800')
   const tableBg = useColorModeValue('gray.50', 'gray.700')
@@ -171,9 +172,9 @@ export default function PGSchemaPanel({ serviceName, schemaName }: PGSchemaPanel
                 color="white"
                 _hover={{ bg: 'whiteAlpha.300' }}
                 leftIcon={<FiCode />}
-                onClick={() => openDialog('query', {
-                  mode: 'create',
-                  data: { serviceName, schemaName },
+                onClick={() => setPGQuery({
+                  serviceName,
+                  schemaName,
                 })}
               >
                 SQL Query
@@ -397,14 +398,11 @@ export default function PGSchemaPanel({ serviceName, schemaName }: PGSchemaPanel
                           size="xs"
                           variant="ghost"
                           colorScheme="teal"
-                          onClick={() => openDialog('query', {
-                            mode: 'view',
-                            data: {
-                              serviceName,
-                              schemaName,
-                              tableName: table.name,
-                              initialSQL: `SELECT * FROM "${schemaName}"."${table.name}" LIMIT 100`,
-                            },
+                          onClick={() => setPGQuery({
+                            serviceName,
+                            schemaName,
+                            tableName: table.name,
+                            initialSQL: `SELECT * FROM "${schemaName}"."${table.name}" LIMIT 100`,
                           })}
                         >
                           <Icon as={FiCode} />
@@ -471,14 +469,11 @@ export default function PGSchemaPanel({ serviceName, schemaName }: PGSchemaPanel
                           size="xs"
                           variant="ghost"
                           colorScheme="teal"
-                          onClick={() => openDialog('query', {
-                            mode: 'view',
-                            data: {
-                              serviceName,
-                              schemaName,
-                              tableName: view.name,
-                              initialSQL: `SELECT * FROM "${schemaName}"."${view.name}" LIMIT 100`,
-                            },
+                          onClick={() => setPGQuery({
+                            serviceName,
+                            schemaName,
+                            tableName: view.name,
+                            initialSQL: `SELECT * FROM "${schemaName}"."${view.name}" LIMIT 100`,
                           })}
                         >
                           <Icon as={FiCode} />

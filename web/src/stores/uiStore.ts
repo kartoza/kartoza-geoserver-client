@@ -34,6 +34,7 @@ export type DialogType =
   | 'geonodeupload'
   | 'icebergconnection'
   | 'icebergnamespace'
+  | 'icebergtable'
   | 'icebergtablepreview'
   | 'icebergtabledata'
   | 'icebergquery'

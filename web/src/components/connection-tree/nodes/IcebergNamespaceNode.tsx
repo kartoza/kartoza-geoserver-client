@@ -63,6 +63,18 @@ export function IcebergNamespaceNode({ connectionId, connectionName, namespace }
     queryClient.invalidateQueries({ queryKey: ['icebergtables', connectionId, namespace.name] })
   }
 
+  const handleAdd = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    openDialog('icebergtable', {
+      mode: 'create',
+      data: {
+        connectionId,
+        connectionName,
+        namespace: namespace.name,
+      },
+    })
+  }
+
   return (
     <Box>
       <TreeNodeRow
@@ -71,6 +83,7 @@ export function IcebergNamespaceNode({ connectionId, connectionName, namespace }
         isSelected={isSelected}
         isLoading={isLoading}
         onClick={handleClick}
+        onAdd={handleAdd}
         onDelete={handleDelete}
         onRefresh={handleRefresh}
         level={3}

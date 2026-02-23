@@ -18,6 +18,7 @@ import GeoNodeConnectionDialog from './GeoNodeConnectionDialog'
 import GeoNodeUploadDialog from './GeoNodeUploadDialog'
 import IcebergConnectionDialog from './IcebergConnectionDialog'
 import IcebergNamespaceDialog from './IcebergNamespaceDialog'
+import IcebergTableDialog from './IcebergTableDialog'
 import IcebergTableSchemaDialog from './IcebergTableSchemaDialog'
 import IcebergTableDataDialog from './IcebergTableDataDialog'
 import IcebergQueryDialog from './IcebergQueryDialog'
@@ -52,6 +53,7 @@ export default function Dialogs() {
       <GeoNodeUploadDialog />
       <IcebergConnectionDialog />
       <IcebergNamespaceDialog />
+      <IcebergTableDialog />
       <IcebergTableSchemaDialog />
       <IcebergTableDataDialog />
       <IcebergQueryDialog />

@@ -315,7 +315,7 @@ func (c *Client) UploadFile(projectID, filename string, content io.Reader, conte
 
 // DownloadFile downloads a file from a project and returns its content.
 func (c *Client) DownloadFile(projectID, filename string) ([]byte, error) {
-	path := "/api/v1/files/" + projectID + "/" + url.PathEscape(filename) + "/"
+	path := "/api/v1/files/" + url.PathEscape(projectID) + "/" + url.PathEscape(filename) + "/"
 
 	// Use a longer timeout for file downloads
 	downloadClient := &http.Client{Timeout: 10 * time.Minute}
@@ -532,7 +532,7 @@ type Package struct {
 // GetLatestPackage returns the latest package for a project.
 func (c *Client) GetLatestPackage(projectID string) (*Package, error) {
 	var pkg Package
-	if err := c.doJSON("GET", "/api/v1/packages/"+projectID+"/latest/", nil, &pkg); err != nil {
+	if err := c.doJSON("GET", "/api/v1/packages/"+url.PathEscape(projectID)+"/latest/", nil, &pkg); err != nil {
 		return nil, err
 	}
 	return &pkg, nil

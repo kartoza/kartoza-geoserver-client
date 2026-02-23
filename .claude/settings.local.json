@@ -38,7 +38,8 @@
       "WebFetch(domain:hub.docker.com)",
       "Bash(xargs:*)",
       "Bash(find:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(GIT_EDITOR=true git rebase:*)"
     ],
     "deny": [],
     "ask": []

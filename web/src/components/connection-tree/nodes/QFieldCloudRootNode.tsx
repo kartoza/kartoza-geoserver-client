@@ -26,7 +26,8 @@ export function QFieldCloudRootNode() {
     if (!isExpanded) {
       toggleNode(nodeId)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const node: TreeNode = {
     id: nodeId,

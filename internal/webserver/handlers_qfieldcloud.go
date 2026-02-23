@@ -3,6 +3,7 @@ package webserver
 import (
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -203,10 +204,12 @@ func (s *Server) createQFieldCloudConnection(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id":       conn.ID,
-		"name":     conn.Name,
-		"url":      conn.URL,
-		"username": conn.Username,
+		"id":        conn.ID,
+		"name":      conn.Name,
+		"url":       conn.URL,
+		"username":  conn.Username,
+		"has_token": conn.Token != "",
+		"is_active": conn.IsActive,
 	})
 }
 
@@ -540,7 +543,9 @@ func (s *Server) handleQFieldCloudDownload(w http.ResponseWriter, r *http.Reques
 		s.jsonError(w, "Download failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	// Sanitize filename for Content-Disposition header: strip quotes and backslashes
+	safeFilename := strings.NewReplacer(`"`, "", `\`, "").Replace(filepath.Base(filename))
+	w.Header().Set("Content-Disposition", `attachment; filename="`+safeFilename+`"`)
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Write(data)
 }

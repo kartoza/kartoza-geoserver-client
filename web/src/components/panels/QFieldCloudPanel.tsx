@@ -32,6 +32,7 @@ import {
 } from 'react-icons/fi'
 import type { TreeNode, QFieldCloudProject, QFieldCloudFile, QFieldCloudJob, QFieldCloudCollaborator, QFieldCloudDelta } from '../../types'
 import * as api from '../../api/client'
+import { useUIStore } from '../../stores/uiStore'
 
 interface QFieldCloudPanelProps {
   node: TreeNode
@@ -42,6 +43,7 @@ export function QFieldCloudPanel({ node }: QFieldCloudPanelProps) {
   const cardBg = useColorModeValue('gray.50', 'gray.700')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const toast = useToast()
+  const openDialog = useUIStore((state) => state.openDialog)
 
   const [projects, setProjects] = useState<QFieldCloudProject[]>([])
   const [files, setFiles] = useState<QFieldCloudFile[]>([])
@@ -56,7 +58,7 @@ export function QFieldCloudPanel({ node }: QFieldCloudPanelProps) {
   useEffect(() => {
     loadData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [node.id])
+  }, [node.id, connectionId, projectId])
 
   const loadData = async () => {
     if (!connectionId) return
@@ -93,35 +95,47 @@ export function QFieldCloudPanel({ node }: QFieldCloudPanelProps) {
   }
 
   const handleDeleteProject = async (proj: QFieldCloudProject) => {
-    if (!window.confirm(`Delete project "${proj.name}"? This cannot be undone.`)) return
-    try {
-      await api.deleteQFieldCloudProject(connectionId, proj.id)
-      toast({ title: 'Project deleted', status: 'success', duration: 3000 })
-      loadData()
-    } catch (err) {
-      toast({
-        title: 'Failed to delete project',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        status: 'error',
-        duration: 5000,
-      })
-    }
+    openDialog('confirm', {
+      mode: 'delete',
+      title: 'Delete Project',
+      message: `Delete project "${proj.name}"? This cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          await api.deleteQFieldCloudProject(connectionId, proj.id)
+          toast({ title: 'Project deleted', status: 'success', duration: 3000 })
+          loadData()
+        } catch (err) {
+          toast({
+            title: 'Failed to delete project',
+            description: err instanceof Error ? err.message : 'Unknown error',
+            status: 'error',
+            duration: 5000,
+          })
+        }
+      },
+    })
   }
 
   const handleDeleteFile = async (filename: string) => {
-    if (!window.confirm(`Delete file "${filename}"?`)) return
-    try {
-      await api.deleteQFieldCloudFile(connectionId, projectId, filename)
-      toast({ title: 'File deleted', status: 'success', duration: 3000 })
-      loadData()
-    } catch (err) {
-      toast({
-        title: 'Failed to delete file',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        status: 'error',
-        duration: 5000,
-      })
-    }
+    openDialog('confirm', {
+      mode: 'delete',
+      title: 'Delete File',
+      message: `Delete file "${filename}"?`,
+      onConfirm: async () => {
+        try {
+          await api.deleteQFieldCloudFile(connectionId, projectId, filename)
+          toast({ title: 'File deleted', status: 'success', duration: 3000 })
+          loadData()
+        } catch (err) {
+          toast({
+            title: 'Failed to delete file',
+            description: err instanceof Error ? err.message : 'Unknown error',
+            status: 'error',
+            duration: 5000,
+          })
+        }
+      },
+    })
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

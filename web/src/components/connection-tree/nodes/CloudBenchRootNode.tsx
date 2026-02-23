@@ -10,6 +10,7 @@ import { S3StorageRootNode } from './S3StorageRootNode'
 import { QGISProjectsRootNode } from './QGISProjectsRootNode'
 import { GeoNodeRootNode } from './GeoNodeRootNode'
 import { IcebergRootNode } from './IcebergRootNode'
+import { QFieldCloudRootNode } from './QFieldCloudRootNode'
 
 interface CloudBenchRootNodeProps {
   connections: { id: string; name: string; url: string }[]
@@ -67,6 +68,8 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
           <QGISProjectsRootNode />
           {/* GeoNode Section */}
           <GeoNodeRootNode />
+          {/* QFieldCloud Section */}
+          <QFieldCloudRootNode />
         </Box>
       )}
     </Box>

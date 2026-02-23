@@ -249,6 +249,7 @@ export type NodeType =
   | 'qgisprojects'   // "QGIS Projects" container
   | 'geonode'        // "GeoNode" container
   | 'iceberg'        // "Apache Iceberg" container
+  | 'qfieldcloud'    // "QFieldCloud" container
   | 'connection'     // GeoServer connection
   | 'pgservice'      // pg_service.conf entry
   | 'pgschema'       // PostgreSQL schema
@@ -274,6 +275,16 @@ export type NodeType =
   | 'icebergconnection'   // Iceberg catalog connection
   | 'icebergnamespace'    // Iceberg namespace (database)
   | 'icebergtable'        // Iceberg table
+  | 'qfieldcloudconnection'    // QFieldCloud connection
+  | 'qfieldcloudprojects'      // QFieldCloud projects container
+  | 'qfieldcloudproject'       // Single QFieldCloud project
+  | 'qfieldcloudfiles'         // QFieldCloud files container
+  | 'qfieldcloudfile'          // Single project file
+  | 'qfieldcloudjobs'          // QFieldCloud jobs container
+  | 'qfieldcloudjob'           // Single job
+  | 'qfieldcloudcollaborators' // QFieldCloud collaborators container
+  | 'qfieldcloudcollaborator'  // Single collaborator
+  | 'qfieldclouddeltas'        // QFieldCloud deltas container
   | 'workspace'
   | 'datastores'
   | 'coveragestores'
@@ -333,6 +344,12 @@ export interface TreeNode {
   icebergGeometryColumns?: string[]
   icebergRowCount?: number
   icebergSnapshotCount?: number
+  // QFieldCloud-specific fields
+  qfieldcloudConnectionId?: string
+  qfieldcloudProjectId?: string
+  qfieldcloudFilename?: string
+  qfieldcloudJobId?: string
+  qfieldcloudUsername?: string
 }
 
 // GeoWebCache (GWC) types
@@ -930,4 +947,102 @@ export interface IcebergSnapshot {
   timestampMs: number
   summary?: Record<string, string>
   parentId?: number
+}
+
+// ============================================================================
+// QFieldCloud Types
+// ============================================================================
+
+export interface QFieldCloudConnection {
+  id: string
+  name: string
+  url: string
+  username?: string
+  has_token: boolean
+  is_active: boolean
+}
+
+export interface QFieldCloudConnectionCreate {
+  name: string
+  url?: string
+  username?: string
+  password?: string
+  token?: string
+}
+
+export interface QFieldCloudTestResult {
+  success: boolean
+  error?: string
+}
+
+export interface QFieldCloudProject {
+  id: string
+  name: string
+  owner: string
+  description: string
+  is_public: boolean
+  can_repackage: boolean
+  needs_repackaging: boolean
+  file_storage_bytes: number
+  status: string
+  last_packaged_at?: string
+  data_last_packaged_at?: string
+}
+
+export interface QFieldCloudProjectCreate {
+  name: string
+  description?: string
+  is_public?: boolean
+}
+
+export interface QFieldCloudProjectUpdate {
+  name?: string
+  description?: string
+  is_public?: boolean
+}
+
+export interface QFieldCloudFile {
+  name: string
+  size: number
+  sha256: string
+  last_modified: string
+  is_packaging_file: boolean
+  versions_count: number
+}
+
+export interface QFieldCloudJob {
+  id: string
+  project_id: string
+  type: string
+  status: string
+  output?: string
+  feedback?: string
+  created_at: string
+  updated_at: string
+  finished_at?: string
+}
+
+export interface QFieldCloudJobCreate {
+  type: string
+}
+
+export interface QFieldCloudCollaborator {
+  collaborator: string
+  role: string
+  project_id?: string
+}
+
+export interface QFieldCloudCollaboratorCreate {
+  collaborator: string
+  role: string
+}
+
+export interface QFieldCloudDelta {
+  id: string
+  project_id: string
+  client_id: string
+  status: string
+  output?: string
+  created_at: string
+  updated_at: string
 }

@@ -64,6 +64,18 @@ import type {
   IcebergTable,
   IcebergSchema,
   IcebergSnapshot,
+  QFieldCloudConnection,
+  QFieldCloudConnectionCreate,
+  QFieldCloudTestResult,
+  QFieldCloudProject,
+  QFieldCloudProjectCreate,
+  QFieldCloudProjectUpdate,
+  QFieldCloudFile,
+  QFieldCloudJob,
+  QFieldCloudJobCreate,
+  QFieldCloudCollaborator,
+  QFieldCloudCollaboratorCreate,
+  QFieldCloudDelta,
 } from '../types'
 
 const API_BASE = '/api'
@@ -2067,4 +2079,197 @@ export async function getIcebergSnapshots(connectionId: string, namespace: strin
     `${API_BASE}/iceberg/connections/${connectionId}/namespaces/${encodeURIComponent(namespace)}/tables/${encodeURIComponent(tableName)}/snapshots`
   )
   return handleResponse<IcebergSnapshot[]>(response)
+}
+
+// ============================================================================
+// QFieldCloud API
+// ============================================================================
+
+const QFIELDCLOUD_BASE = `${API_BASE}/qfieldcloud/connections`
+
+// List all QFieldCloud connections
+export async function getQFieldCloudConnections(): Promise<QFieldCloudConnection[]> {
+  const response = await fetch(QFIELDCLOUD_BASE)
+  return handleResponse<QFieldCloudConnection[]>(response)
+}
+
+// Get a single QFieldCloud connection
+export async function getQFieldCloudConnection(id: string): Promise<QFieldCloudConnection> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${id}`)
+  return handleResponse<QFieldCloudConnection>(response)
+}
+
+// Create a new QFieldCloud connection
+export async function createQFieldCloudConnection(conn: QFieldCloudConnectionCreate): Promise<QFieldCloudConnection> {
+  const response = await fetch(QFIELDCLOUD_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<QFieldCloudConnection>(response)
+}
+
+// Update a QFieldCloud connection
+export async function updateQFieldCloudConnection(id: string, conn: Partial<QFieldCloudConnectionCreate>): Promise<QFieldCloudConnection> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<QFieldCloudConnection>(response)
+}
+
+// Delete a QFieldCloud connection
+export async function deleteQFieldCloudConnection(id: string): Promise<void> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${id}`, { method: 'DELETE' })
+  return handleResponse<void>(response)
+}
+
+// Test an existing QFieldCloud connection
+export async function testQFieldCloudConnection(id: string): Promise<QFieldCloudTestResult> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${id}/test`, { method: 'POST' })
+  return handleResponse<QFieldCloudTestResult>(response)
+}
+
+// Test QFieldCloud connection without saving
+export async function testQFieldCloudConnectionDirect(conn: QFieldCloudConnectionCreate): Promise<QFieldCloudTestResult> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<QFieldCloudTestResult>(response)
+}
+
+// List projects for a QFieldCloud connection
+export async function listQFieldCloudProjects(connectionId: string): Promise<QFieldCloudProject[]> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects`)
+  return handleResponse<QFieldCloudProject[]>(response)
+}
+
+// Get a single project
+export async function getQFieldCloudProject(connectionId: string, projectId: string): Promise<QFieldCloudProject> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}`)
+  return handleResponse<QFieldCloudProject>(response)
+}
+
+// Create a project
+export async function createQFieldCloudProject(connectionId: string, req: QFieldCloudProjectCreate): Promise<QFieldCloudProject> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  return handleResponse<QFieldCloudProject>(response)
+}
+
+// Update a project
+export async function updateQFieldCloudProject(connectionId: string, projectId: string, req: QFieldCloudProjectUpdate): Promise<QFieldCloudProject> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  return handleResponse<QFieldCloudProject>(response)
+}
+
+// Delete a project
+export async function deleteQFieldCloudProject(connectionId: string, projectId: string): Promise<void> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}`, { method: 'DELETE' })
+  return handleResponse<void>(response)
+}
+
+// List files for a project
+export async function listQFieldCloudFiles(connectionId: string, projectId: string): Promise<QFieldCloudFile[]> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/files`)
+  return handleResponse<QFieldCloudFile[]>(response)
+}
+
+// Upload a file to a project
+export async function uploadQFieldCloudFile(connectionId: string, projectId: string, file: File, remoteName?: string): Promise<void> {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (remoteName) formData.append('filename', remoteName)
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/files`, {
+    method: 'POST',
+    body: formData,
+  })
+  return handleResponse<void>(response)
+}
+
+// Download a file from a project
+export function getQFieldCloudFileDownloadUrl(connectionId: string, projectId: string, filename: string): string {
+  return `${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/download/${encodeURIComponent(filename)}`
+}
+
+// Delete a file from a project
+export async function deleteQFieldCloudFile(connectionId: string, projectId: string, filename: string): Promise<void> {
+  const response = await fetch(
+    `${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/files/${encodeURIComponent(filename)}`,
+    { method: 'DELETE' }
+  )
+  return handleResponse<void>(response)
+}
+
+// List jobs for a project
+export async function listQFieldCloudJobs(connectionId: string, projectId: string): Promise<QFieldCloudJob[]> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/jobs`)
+  return handleResponse<QFieldCloudJob[]>(response)
+}
+
+// Create/trigger a job
+export async function createQFieldCloudJob(connectionId: string, projectId: string, req: QFieldCloudJobCreate): Promise<QFieldCloudJob> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/jobs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  return handleResponse<QFieldCloudJob>(response)
+}
+
+// Get a single job
+export async function getQFieldCloudJob(connectionId: string, projectId: string, jobId: string): Promise<QFieldCloudJob> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/jobs/${jobId}`)
+  return handleResponse<QFieldCloudJob>(response)
+}
+
+// List collaborators for a project
+export async function listQFieldCloudCollaborators(connectionId: string, projectId: string): Promise<QFieldCloudCollaborator[]> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/collaborators`)
+  return handleResponse<QFieldCloudCollaborator[]>(response)
+}
+
+// Add a collaborator to a project
+export async function addQFieldCloudCollaborator(connectionId: string, projectId: string, req: QFieldCloudCollaboratorCreate): Promise<QFieldCloudCollaborator> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/collaborators`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  return handleResponse<QFieldCloudCollaborator>(response)
+}
+
+// Update a collaborator's role
+export async function updateQFieldCloudCollaborator(connectionId: string, projectId: string, username: string, role: string): Promise<QFieldCloudCollaborator> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/collaborators/${encodeURIComponent(username)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role }),
+  })
+  return handleResponse<QFieldCloudCollaborator>(response)
+}
+
+// Remove a collaborator from a project
+export async function removeQFieldCloudCollaborator(connectionId: string, projectId: string, username: string): Promise<void> {
+  const response = await fetch(
+    `${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/collaborators/${encodeURIComponent(username)}`,
+    { method: 'DELETE' }
+  )
+  return handleResponse<void>(response)
+}
+
+// List deltas for a project
+export async function listQFieldCloudDeltas(connectionId: string, projectId: string): Promise<QFieldCloudDelta[]> {
+  const response = await fetch(`${QFIELDCLOUD_BASE}/${connectionId}/projects/${projectId}/deltas`)
+  return handleResponse<QFieldCloudDelta[]>(response)
 }

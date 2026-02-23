@@ -115,6 +115,18 @@ type GeoNodeConnection struct {
 	IsActive bool   `json:"is_active"`
 }
 
+// QFieldCloudConnection represents a QFieldCloud instance connection configuration.
+// API reference: https://docs.qfield.org/reference/qfieldcloud/api/
+type QFieldCloudConnection struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	URL      string `json:"url"`                   // Base URL, defaults to https://app.qfield.cloud
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	Token    string `json:"token,omitempty"`       // Auth token (alternative to username/password)
+	IsActive bool   `json:"is_active"`
+}
+
 // IcebergCatalogConnection represents an Apache Iceberg REST Catalog connection
 type IcebergCatalogConnection struct {
 	ID         string `json:"id"`
@@ -148,10 +160,11 @@ type Config struct {
 	PingIntervalSecs int                 `json:"ping_interval_secs,omitempty"` // Dashboard refresh interval, default 60
 	PGServiceStates  []PGServiceState    `json:"pg_services,omitempty"`        // PostgreSQL service states
 	SavedQueries     []SavedQuery        `json:"saved_queries,omitempty"`      // Visual query definitions
-	S3Connections        []S3Connection             `json:"s3_connections,omitempty"`        // S3-compatible storage connections
-	QGISProjects         []QGISProject              `json:"qgis_projects,omitempty"`         // QGIS project files
-	GeoNodeConnections   []GeoNodeConnection        `json:"geonode_connections,omitempty"`   // GeoNode instance connections
-	IcebergConnections   []IcebergCatalogConnection `json:"iceberg_connections,omitempty"`   // Iceberg REST Catalog connections
+	S3Connections           []S3Connection             `json:"s3_connections,omitempty"`        // S3-compatible storage connections
+	QGISProjects            []QGISProject              `json:"qgis_projects,omitempty"`         // QGIS project files
+	GeoNodeConnections      []GeoNodeConnection        `json:"geonode_connections,omitempty"`   // GeoNode instance connections
+	QFieldCloudConnections  []QFieldCloudConnection    `json:"qfieldcloud_connections,omitempty"` // QFieldCloud connections
+	IcebergConnections      []IcebergCatalogConnection `json:"iceberg_connections,omitempty"`   // Iceberg REST Catalog connections
 }
 
 // GetPingInterval returns the ping interval in seconds, with a default of 60
@@ -590,6 +603,42 @@ func (c *Config) RemoveIcebergConnection(id string) {
 	for i, conn := range c.IcebergConnections {
 		if conn.ID == id {
 			c.IcebergConnections = append(c.IcebergConnections[:i], c.IcebergConnections[i+1:]...)
+			return
+		}
+	}
+}
+
+// GetQFieldCloudConnection returns a QFieldCloud connection by ID
+func (c *Config) GetQFieldCloudConnection(id string) *QFieldCloudConnection {
+	for i := range c.QFieldCloudConnections {
+		if c.QFieldCloudConnections[i].ID == id {
+			return &c.QFieldCloudConnections[i]
+		}
+	}
+	return nil
+}
+
+// AddQFieldCloudConnection adds a new QFieldCloud connection
+func (c *Config) AddQFieldCloudConnection(conn QFieldCloudConnection) {
+	c.QFieldCloudConnections = append(c.QFieldCloudConnections, conn)
+}
+
+// UpdateQFieldCloudConnection updates an existing QFieldCloud connection
+func (c *Config) UpdateQFieldCloudConnection(conn QFieldCloudConnection) bool {
+	for i := range c.QFieldCloudConnections {
+		if c.QFieldCloudConnections[i].ID == conn.ID {
+			c.QFieldCloudConnections[i] = conn
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveQFieldCloudConnection removes a QFieldCloud connection by ID
+func (c *Config) RemoveQFieldCloudConnection(id string) {
+	for i, conn := range c.QFieldCloudConnections {
+		if conn.ID == id {
+			c.QFieldCloudConnections = append(c.QFieldCloudConnections[:i], c.QFieldCloudConnections[i+1:]...)
 			return
 		}
 	}

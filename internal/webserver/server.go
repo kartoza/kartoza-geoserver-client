@@ -14,6 +14,7 @@ import (
 	"github.com/kartoza/kartoza-cloudbench/internal/cloudnative"
 	"github.com/kartoza/kartoza-cloudbench/internal/config"
 	"github.com/kartoza/kartoza-cloudbench/internal/geonode"
+	"github.com/kartoza/kartoza-cloudbench/internal/iceberg"
 	"github.com/kartoza/kartoza-cloudbench/internal/preview"
 	"github.com/kartoza/kartoza-cloudbench/internal/s3client"
 )
@@ -27,9 +28,11 @@ type Server struct {
 	clients          map[string]*api.Client        // GeoServer Connection ID -> Client
 	s3Clients        map[string]*s3client.Client   // S3 Connection ID -> Client
 	geonodeClients   map[string]*geonode.Client    // GeoNode Connection ID -> Client
+	icebergClients   map[string]*iceberg.Client    // Iceberg Catalog Connection ID -> Client
 	clientsMu        sync.RWMutex
 	s3ClientsMu      sync.RWMutex
 	geonodeClientsMu sync.RWMutex
+	icebergClientsMu sync.RWMutex
 	previewServer    *preview.Server
 	conversionMgr    *cloudnative.Manager
 	addr             string
@@ -42,6 +45,7 @@ func New(cfg *config.Config) *Server {
 		clients:        make(map[string]*api.Client),
 		s3Clients:      make(map[string]*s3client.Client),
 		geonodeClients: make(map[string]*geonode.Client),
+		icebergClients: make(map[string]*iceberg.Client),
 		conversionMgr:  cloudnative.NewManager(),
 	}
 
@@ -62,6 +66,17 @@ func New(cfg *config.Config) *Server {
 	for _, conn := range cfg.GeoNodeConnections {
 		client := geonode.NewClient(&conn)
 		s.geonodeClients[conn.ID] = client
+	}
+
+	// Initialize clients for existing Iceberg catalog connections
+	for i := range cfg.IcebergConnections {
+		conn := &cfg.IcebergConnections[i]
+		if client, err := iceberg.NewClient(iceberg.ClientConfig{
+			BaseURL: conn.URL,
+			Prefix:  conn.Prefix,
+		}); err == nil {
+			s.icebergClients[conn.ID] = client
+		}
 	}
 
 	return s
@@ -216,6 +231,11 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/geonode/connections", s.handleGeoNodeConnections)
 	mux.HandleFunc("/api/geonode/connections/test", s.handleGeoNodeTestConnection)
 	mux.HandleFunc("/api/geonode/connections/", s.handleGeoNodeConnectionByID)
+
+	// API routes - Iceberg (Apache Iceberg REST Catalog)
+	mux.HandleFunc("/api/iceberg/connections", s.handleIcebergConnections)
+	mux.HandleFunc("/api/iceberg/connections/test", s.handleTestIcebergConnectionDirect)
+	mux.HandleFunc("/api/iceberg/connections/", s.handleIcebergConnectionByID)
 
 	// API routes - SQL View Layers (publish queries as GeoServer layers)
 	mux.HandleFunc("/api/sqlview/", s.handleSQLView)
@@ -438,6 +458,37 @@ func (s *Server) removeS3Client(connID string) {
 	s.s3ClientsMu.Lock()
 	defer s.s3ClientsMu.Unlock()
 	delete(s.s3Clients, connID)
+}
+
+// Iceberg client management methods
+
+// getIcebergClient returns the Iceberg client for a connection ID
+func (s *Server) getIcebergClient(connID string) *iceberg.Client {
+	s.icebergClientsMu.RLock()
+	defer s.icebergClientsMu.RUnlock()
+	return s.icebergClients[connID]
+}
+
+// addIcebergClient adds a new Iceberg client for a connection
+func (s *Server) addIcebergClient(conn *config.IcebergCatalogConnection) {
+	client, err := iceberg.NewClient(iceberg.ClientConfig{
+		BaseURL: conn.URL,
+		Prefix:  conn.Prefix,
+	})
+	if err != nil {
+		log.Printf("Failed to create Iceberg client for %s: %v", conn.ID, err)
+		return
+	}
+	s.icebergClientsMu.Lock()
+	defer s.icebergClientsMu.Unlock()
+	s.icebergClients[conn.ID] = client
+}
+
+// removeIcebergClient removes an Iceberg client
+func (s *Server) removeIcebergClient(connID string) {
+	s.icebergClientsMu.Lock()
+	defer s.icebergClientsMu.Unlock()
+	delete(s.icebergClients, connID)
 }
 
 // Conversion job handlers

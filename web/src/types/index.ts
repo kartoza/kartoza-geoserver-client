@@ -248,6 +248,7 @@ export type NodeType =
   | 's3storage'      // "S3 Storage" container
   | 'qgisprojects'   // "QGIS Projects" container
   | 'geonode'        // "GeoNode" container
+  | 'iceberg'        // "Apache Iceberg" container
   | 'connection'     // GeoServer connection
   | 'pgservice'      // pg_service.conf entry
   | 'pgschema'       // PostgreSQL schema
@@ -270,6 +271,9 @@ export type NodeType =
   | 'geonodedocument'     // Single GeoNode document
   | 'geonodegeostory'     // Single GeoNode geostory
   | 'geonodedashboard'    // Single GeoNode dashboard
+  | 'icebergconnection'   // Iceberg catalog connection
+  | 'icebergnamespace'    // Iceberg namespace (database)
+  | 'icebergtable'        // Iceberg table
   | 'workspace'
   | 'datastores'
   | 'coveragestores'
@@ -321,6 +325,14 @@ export interface TreeNode {
   geonodeDetailUrl?: string
   geonodeAlternate?: string // For datasets: workspace:layer_name format
   geonodeUrl?: string // Base URL of the GeoNode instance
+  // Iceberg-specific fields
+  icebergConnectionId?: string
+  icebergNamespace?: string
+  icebergTableName?: string
+  icebergHasGeometry?: boolean
+  icebergGeometryColumns?: string[]
+  icebergRowCount?: number
+  icebergSnapshotCount?: number
 }
 
 // GeoWebCache (GWC) types
@@ -839,4 +851,83 @@ export interface GeoNodeDashboardsResponse {
   page_size: number
   total: number
   dashboards: GeoNodeDashboard[]
+}
+
+// ============================================================================
+// Apache Iceberg Types
+// ============================================================================
+
+// Iceberg Catalog Connection
+export interface IcebergConnection {
+  id: string
+  name: string
+  url: string
+  prefix?: string
+  s3Endpoint?: string
+  accessKey?: string
+  region?: string
+  jupyterUrl?: string
+  isActive: boolean
+}
+
+export interface IcebergConnectionCreate {
+  name: string
+  url: string
+  prefix?: string
+  s3Endpoint?: string
+  accessKey?: string
+  secretKey?: string
+  region?: string
+  jupyterUrl?: string
+}
+
+export interface IcebergTestResult {
+  success: boolean
+  message: string
+  namespaceCount?: number
+  defaults?: Record<string, string>
+}
+
+// Iceberg Namespace (similar to a database/schema)
+export interface IcebergNamespace {
+  name: string
+  path: string[]
+  properties?: Record<string, string>
+}
+
+// Iceberg Table
+export interface IcebergTable {
+  namespace: string
+  name: string
+  location?: string
+  formatVersion?: number
+  rowCount?: number
+  snapshotCount?: number
+  lastUpdatedMs?: number
+  hasGeometry?: boolean
+  geometryColumns?: string[]
+}
+
+// Iceberg Table Schema
+export interface IcebergField {
+  id: number
+  name: string
+  type: string
+  required: boolean
+  doc?: string
+}
+
+export interface IcebergSchema {
+  schemaId: number
+  type: string
+  fields: IcebergField[]
+}
+
+// Iceberg Snapshot (table version)
+export interface IcebergSnapshot {
+  snapshotId: number
+  sequenceNumber: number
+  timestampMs: number
+  summary?: Record<string, string>
+  parentId?: number
 }

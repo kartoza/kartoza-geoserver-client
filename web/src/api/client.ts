@@ -57,6 +57,13 @@ import type {
   DuckDBTableInfo,
   DuckDBQueryRequest,
   DuckDBQueryResponse,
+  IcebergConnection,
+  IcebergConnectionCreate,
+  IcebergTestResult,
+  IcebergNamespace,
+  IcebergTable,
+  IcebergSchema,
+  IcebergSnapshot,
 } from '../types'
 
 const API_BASE = '/api'
@@ -1881,4 +1888,146 @@ export async function executeDuckDBQueryAsGeoJSON(
     body: JSON.stringify(request),
   })
   return handleResponse<GeoJSON.FeatureCollection>(response)
+}
+
+// ============================================================================
+// Apache Iceberg API
+// ============================================================================
+
+// Get all Iceberg connections
+export async function getIcebergConnections(): Promise<IcebergConnection[]> {
+  const response = await fetch(`${API_BASE}/iceberg/connections`)
+  return handleResponse<IcebergConnection[]>(response)
+}
+
+// Get a single Iceberg connection
+export async function getIcebergConnection(id: string): Promise<IcebergConnection> {
+  const response = await fetch(`${API_BASE}/iceberg/connections/${id}`)
+  return handleResponse<IcebergConnection>(response)
+}
+
+// Create a new Iceberg connection
+export async function createIcebergConnection(conn: IcebergConnectionCreate): Promise<IcebergConnection> {
+  const response = await fetch(`${API_BASE}/iceberg/connections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<IcebergConnection>(response)
+}
+
+// Update an Iceberg connection
+export async function updateIcebergConnection(id: string, conn: Partial<IcebergConnectionCreate>): Promise<IcebergConnection> {
+  const response = await fetch(`${API_BASE}/iceberg/connections/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<IcebergConnection>(response)
+}
+
+// Delete an Iceberg connection
+export async function deleteIcebergConnection(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/iceberg/connections/${id}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<void>(response)
+}
+
+// Test an existing Iceberg connection
+export async function testIcebergConnection(id: string): Promise<IcebergTestResult> {
+  const response = await fetch(`${API_BASE}/iceberg/connections/${id}/test`, {
+    method: 'POST',
+  })
+  return handleResponse<IcebergTestResult>(response)
+}
+
+// Test Iceberg connection without saving
+export async function testIcebergConnectionDirect(conn: IcebergConnectionCreate): Promise<IcebergTestResult> {
+  const response = await fetch(`${API_BASE}/iceberg/connections/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conn),
+  })
+  return handleResponse<IcebergTestResult>(response)
+}
+
+// Get all namespaces for an Iceberg connection
+export async function getIcebergNamespaces(connectionId: string, parent?: string): Promise<IcebergNamespace[]> {
+  let url = `${API_BASE}/iceberg/connections/${connectionId}/namespaces`
+  if (parent) {
+    url += `?parent=${encodeURIComponent(parent)}`
+  }
+  const response = await fetch(url)
+  return handleResponse<IcebergNamespace[]>(response)
+}
+
+// Get a single namespace
+export async function getIcebergNamespace(connectionId: string, namespace: string): Promise<IcebergNamespace> {
+  const response = await fetch(`${API_BASE}/iceberg/connections/${connectionId}/namespaces/${encodeURIComponent(namespace)}`)
+  return handleResponse<IcebergNamespace>(response)
+}
+
+// Create a new namespace
+export async function createIcebergNamespace(
+  connectionId: string,
+  name: string,
+  properties?: Record<string, string>
+): Promise<IcebergNamespace> {
+  const response = await fetch(`${API_BASE}/iceberg/connections/${connectionId}/namespaces`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, properties }),
+  })
+  return handleResponse<IcebergNamespace>(response)
+}
+
+// Delete a namespace
+export async function deleteIcebergNamespace(connectionId: string, namespace: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/iceberg/connections/${connectionId}/namespaces/${encodeURIComponent(namespace)}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<void>(response)
+}
+
+// Get all tables in a namespace
+export async function getIcebergTables(connectionId: string, namespace: string): Promise<IcebergTable[]> {
+  const response = await fetch(
+    `${API_BASE}/iceberg/connections/${connectionId}/namespaces/${encodeURIComponent(namespace)}/tables`
+  )
+  return handleResponse<IcebergTable[]>(response)
+}
+
+// Get table details
+export async function getIcebergTable(connectionId: string, namespace: string, tableName: string): Promise<IcebergTable> {
+  const response = await fetch(
+    `${API_BASE}/iceberg/connections/${connectionId}/namespaces/${encodeURIComponent(namespace)}/tables/${encodeURIComponent(tableName)}`
+  )
+  return handleResponse<IcebergTable>(response)
+}
+
+// Get table schema
+export async function getIcebergTableSchema(connectionId: string, namespace: string, tableName: string): Promise<IcebergSchema> {
+  const response = await fetch(
+    `${API_BASE}/iceberg/connections/${connectionId}/namespaces/${encodeURIComponent(namespace)}/tables/${encodeURIComponent(tableName)}/schema`
+  )
+  return handleResponse<IcebergSchema>(response)
+}
+
+// Delete a table
+export async function deleteIcebergTable(connectionId: string, namespace: string, tableName: string, purge = false): Promise<void> {
+  const params = purge ? '?purge=true' : ''
+  const response = await fetch(
+    `${API_BASE}/iceberg/connections/${connectionId}/namespaces/${encodeURIComponent(namespace)}/tables/${encodeURIComponent(tableName)}${params}`,
+    { method: 'DELETE' }
+  )
+  return handleResponse<void>(response)
+}
+
+// Get table snapshots
+export async function getIcebergSnapshots(connectionId: string, namespace: string, tableName: string): Promise<IcebergSnapshot[]> {
+  const response = await fetch(
+    `${API_BASE}/iceberg/connections/${connectionId}/namespaces/${encodeURIComponent(namespace)}/tables/${encodeURIComponent(tableName)}/snapshots`
+  )
+  return handleResponse<IcebergSnapshot[]>(response)
 }

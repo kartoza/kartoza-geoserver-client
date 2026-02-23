@@ -22,7 +22,6 @@ export type DialogType =
   | 'sync'
   | 'globe3d'
   | 'settings'
-  | 'query'
   | 'dataviewer'
   | 'pgdashboard'
   | 'pgupload'
@@ -33,7 +32,11 @@ export type DialogType =
   | 'qgispreview'
   | 'geonode'
   | 'geonodeupload'
-  | 'duckdbquery'
+  | 'icebergconnection'
+  | 'icebergnamespace'
+  | 'icebergtablepreview'
+  | 'icebergtabledata'
+  | 'icebergquery'
   | null
 
 export type DialogMode = 'create' | 'edit' | 'delete' | 'view'
@@ -79,6 +82,35 @@ interface GeoNodePreviewState {
   detailUrl?: string    // Full URL to view this resource in GeoNode
 }
 
+interface DuckDBQueryState {
+  connectionId: string  // S3 connection ID
+  bucketName: string    // S3 bucket name
+  objectKey: string     // Path to Parquet/GeoParquet file
+  displayName: string   // Display name for the file
+}
+
+interface PGQueryState {
+  serviceName: string   // PostgreSQL service name
+  schemaName?: string   // Initial schema
+  tableName?: string    // Initial table
+  initialSQL?: string   // Initial SQL query
+}
+
+interface IcebergPreviewState {
+  connectionId: string    // Iceberg connection ID
+  connectionName: string  // Connection display name
+  namespace: string       // Namespace name
+  tableName: string       // Table name
+}
+
+interface JupyterPreviewState {
+  connectionId: string    // Iceberg connection ID
+  connectionName: string  // Connection display name
+  jupyterUrl: string      // Jupyter URL
+  namespace?: string      // Optional namespace context
+  tableName?: string      // Optional table context
+}
+
 interface Settings {
   showHiddenPGServices: boolean
   instanceName: string
@@ -105,6 +137,18 @@ interface UIState {
   // GeoNode map view state (persisted across layer changes)
   geonodeMapView: MapViewState | null
 
+  // DuckDB Query state (for S3 Parquet/GeoParquet files)
+  activeDuckDBQuery: DuckDBQueryState | null
+
+  // PostgreSQL Query state (for PG service queries)
+  activePGQuery: PGQueryState | null
+
+  // Iceberg Preview state (for Iceberg table preview)
+  activeIcebergPreview: IcebergPreviewState | null
+
+  // Jupyter Preview state (for embedded Jupyter notebook)
+  activeJupyterPreview: JupyterPreviewState | null
+
   // Status messages
   statusMessage: string
   errorMessage: string | null
@@ -128,6 +172,10 @@ interface UIState {
   setQGISPreview: (preview: QGISPreviewState | null) => void
   setGeoNodePreview: (preview: GeoNodePreviewState | null) => void
   setGeoNodeMapView: (view: MapViewState | null) => void
+  setDuckDBQuery: (query: DuckDBQueryState | null) => void
+  setPGQuery: (query: PGQueryState | null) => void
+  setIcebergPreview: (preview: IcebergPreviewState | null) => void
+  setJupyterPreview: (preview: JupyterPreviewState | null) => void
   setStatus: (message: string) => void
   setError: (message: string | null) => void
   setSuccess: (message: string | null) => void
@@ -169,6 +217,10 @@ export const useUIStore = create<UIState>((set) => ({
   activeQGISPreview: null,
   activeGeoNodePreview: null,
   geonodeMapView: null,
+  activeDuckDBQuery: null,
+  activePGQuery: null,
+  activeIcebergPreview: null,
+  activeJupyterPreview: null,
   statusMessage: 'Ready',
   errorMessage: null,
   successMessage: null,
@@ -185,8 +237,8 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   setPreview: (preview) => {
-    // Clear S3, QGIS, and GeoNode previews when setting GeoServer preview
-    set({ activePreview: preview, activeS3Preview: null, activeQGISPreview: null, activeGeoNodePreview: null })
+    // Clear all other previews when setting GeoServer preview
+    set({ activePreview: preview, activeS3Preview: null, activeQGISPreview: null, activeGeoNodePreview: null, activeDuckDBQuery: null, activePGQuery: null, activeIcebergPreview: null, activeJupyterPreview: null })
   },
 
   setPreviewMode: (mode) => {
@@ -194,27 +246,83 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   setS3Preview: (preview) => {
-    // Clear GeoServer, QGIS, and GeoNode previews when setting S3 preview
-    set({ activeS3Preview: preview, activePreview: null, activeQGISPreview: null, activeGeoNodePreview: null })
+    // Clear all other previews when setting S3 preview
+    set({ activeS3Preview: preview, activePreview: null, activeQGISPreview: null, activeGeoNodePreview: null, activeDuckDBQuery: null, activePGQuery: null, activeIcebergPreview: null, activeJupyterPreview: null })
   },
 
   setQGISPreview: (preview) => {
-    // Clear GeoServer, S3, and GeoNode previews when setting QGIS preview
-    set({ activeQGISPreview: preview, activePreview: null, activeS3Preview: null, activeGeoNodePreview: null })
+    // Clear all other previews when setting QGIS preview
+    set({ activeQGISPreview: preview, activePreview: null, activeS3Preview: null, activeGeoNodePreview: null, activeDuckDBQuery: null, activePGQuery: null, activeIcebergPreview: null, activeJupyterPreview: null })
   },
 
   setGeoNodePreview: (preview) => {
-    // Clear GeoServer, S3, and QGIS previews when setting GeoNode preview
+    // Clear all other previews when setting GeoNode preview
     // Clear map view only when closing the preview (preview is null)
     if (preview === null) {
-      set({ activeGeoNodePreview: null, activePreview: null, activeS3Preview: null, activeQGISPreview: null, geonodeMapView: null })
+      set({ activeGeoNodePreview: null, activePreview: null, activeS3Preview: null, activeQGISPreview: null, geonodeMapView: null, activeDuckDBQuery: null, activePGQuery: null, activeIcebergPreview: null, activeJupyterPreview: null })
     } else {
-      set({ activeGeoNodePreview: preview, activePreview: null, activeS3Preview: null, activeQGISPreview: null })
+      set({ activeGeoNodePreview: preview, activePreview: null, activeS3Preview: null, activeQGISPreview: null, activeDuckDBQuery: null, activePGQuery: null, activeIcebergPreview: null, activeJupyterPreview: null })
     }
   },
 
   setGeoNodeMapView: (view) => {
     set({ geonodeMapView: view })
+  },
+
+  setDuckDBQuery: (query) => {
+    // Clear all other previews when setting DuckDB query
+    set({
+      activeDuckDBQuery: query,
+      activePreview: null,
+      activeS3Preview: null,
+      activeQGISPreview: null,
+      activeGeoNodePreview: null,
+      activePGQuery: null,
+      activeIcebergPreview: null,
+      activeJupyterPreview: null
+    })
+  },
+
+  setPGQuery: (query) => {
+    // Clear all other previews when setting PG query
+    set({
+      activePGQuery: query,
+      activePreview: null,
+      activeS3Preview: null,
+      activeQGISPreview: null,
+      activeGeoNodePreview: null,
+      activeDuckDBQuery: null,
+      activeIcebergPreview: null,
+      activeJupyterPreview: null
+    })
+  },
+
+  setIcebergPreview: (preview) => {
+    // Clear all other previews when setting Iceberg preview
+    set({
+      activeIcebergPreview: preview,
+      activePreview: null,
+      activeS3Preview: null,
+      activeQGISPreview: null,
+      activeGeoNodePreview: null,
+      activeDuckDBQuery: null,
+      activePGQuery: null,
+      activeJupyterPreview: null
+    })
+  },
+
+  setJupyterPreview: (preview) => {
+    // Clear all other previews when setting Jupyter preview
+    set({
+      activeJupyterPreview: preview,
+      activePreview: null,
+      activeS3Preview: null,
+      activeQGISPreview: null,
+      activeGeoNodePreview: null,
+      activeDuckDBQuery: null,
+      activePGQuery: null,
+      activeIcebergPreview: null
+    })
   },
 
   setStatus: (message) => {

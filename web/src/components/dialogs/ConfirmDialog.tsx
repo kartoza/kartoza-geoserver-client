@@ -78,6 +78,45 @@ export default function ConfirmDialog() {
           status: 'success',
           duration: 2000,
         })
+      } else if (data?.icebergConnectionId && data?.icebergNamespace && data?.icebergTableName) {
+        // Delete Iceberg table
+        await api.deleteIcebergTable(
+          data.icebergConnectionId as string,
+          data.icebergNamespace as string,
+          data.icebergTableName as string,
+          true // purge
+        )
+        queryClient.invalidateQueries({
+          queryKey: ['icebergtables', data.icebergConnectionId, data.icebergNamespace]
+        })
+        toast({
+          title: 'Iceberg table deleted',
+          status: 'success',
+          duration: 2000,
+        })
+      } else if (data?.icebergConnectionId && data?.icebergNamespace && !data?.icebergTableName) {
+        // Delete Iceberg namespace
+        await api.deleteIcebergNamespace(
+          data.icebergConnectionId as string,
+          data.icebergNamespace as string
+        )
+        queryClient.invalidateQueries({
+          queryKey: ['icebergnamespaces', data.icebergConnectionId]
+        })
+        toast({
+          title: 'Iceberg namespace deleted',
+          status: 'success',
+          duration: 2000,
+        })
+      } else if (data?.icebergConnectionId && !data?.icebergNamespace) {
+        // Delete Iceberg connection
+        await api.deleteIcebergConnection(data.icebergConnectionId as string)
+        queryClient.invalidateQueries({ queryKey: ['icebergconnections'] })
+        toast({
+          title: 'Iceberg catalog removed',
+          status: 'success',
+          duration: 2000,
+        })
       } else if (data?.connectionId && !data?.workspace) {
         // Delete connection
         await removeConnection(data.connectionId as string)

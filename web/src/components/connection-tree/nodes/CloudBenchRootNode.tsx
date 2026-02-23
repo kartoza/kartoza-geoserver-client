@@ -9,6 +9,7 @@ import { PostgreSQLRootNode } from './PostgreSQLRootNode'
 import { S3StorageRootNode } from './S3StorageRootNode'
 import { QGISProjectsRootNode } from './QGISProjectsRootNode'
 import { GeoNodeRootNode } from './GeoNodeRootNode'
+import { IcebergRootNode } from './IcebergRootNode'
 
 interface CloudBenchRootNodeProps {
   connections: { id: string; name: string; url: string }[]
@@ -60,6 +61,8 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
           <PostgreSQLRootNode />
           {/* S3 Storage Section */}
           <S3StorageRootNode />
+          {/* Apache Iceberg Section */}
+          <IcebergRootNode />
           {/* QGIS Projects Section */}
           <QGISProjectsRootNode />
           {/* GeoNode Section */}

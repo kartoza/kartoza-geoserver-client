@@ -29,6 +29,7 @@ import {
   FiCode,
   FiRefreshCw,
   FiPlus,
+  FiBook,
 } from 'react-icons/fi'
 import { getNodeIconComponent, getNodeColor } from './utils'
 import type { TreeNodeRowProps } from './types'
@@ -51,6 +52,7 @@ export function TreeNodeRow({
   onRefresh,
   onDownloadConfig,
   onDownloadData,
+  onJupyter,
   downloadDataLabel,
   level,
   isLeaf,
@@ -264,6 +266,19 @@ export function TreeNodeRow({
               colorScheme="purple"
               onClick={onQuery}
               _hover={{ bg: 'purple.50' }}
+            />
+          </Tooltip>
+        )}
+        {onJupyter && (
+          <Tooltip label="Open Jupyter" fontSize="xs">
+            <IconButton
+              aria-label="Open Jupyter"
+              icon={<FiBook size={14} />}
+              size="xs"
+              variant="ghost"
+              colorScheme="orange"
+              onClick={onJupyter}
+              _hover={{ bg: 'orange.50' }}
             />
           </Tooltip>
         )}

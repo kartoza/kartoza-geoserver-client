@@ -561,6 +561,90 @@
             }
             export -f minio-mc
 
+            # Iceberg/Sedona test environment commands
+            iceberg-start() {
+              echo "Starting Iceberg/Sedona stack..."
+              echo "  - Iceberg REST Catalog (port 8181)"
+              echo "  - MinIO for Iceberg (ports 9002/9003)"
+              echo "  - Apache Sedona with Spark (ports 8888, 8082-8083, 4040)"
+              cd docker/iceberg && docker compose up -d
+              echo ""
+              echo "Waiting for services to start..."
+              sleep 10
+              echo ""
+              echo "Services:"
+              echo "  Iceberg REST:    http://localhost:8181"
+              echo "  MinIO Console:   http://localhost:9003"
+              echo "  Jupyter:         http://localhost:8888"
+              echo "  Spark Master:    http://localhost:8082"
+              echo ""
+              echo "Check status with: iceberg-status"
+            }
+            export -f iceberg-start
+
+            iceberg-stop() {
+              echo "Stopping Iceberg/Sedona stack..."
+              cd docker/iceberg && docker compose down
+              echo "Iceberg stack stopped."
+              echo "Note: Data volumes preserved. Use 'iceberg-clean' to remove them."
+            }
+            export -f iceberg-stop
+
+            iceberg-clean() {
+              echo "Removing Iceberg data volumes..."
+              docker volume rm kartoza-iceberg-minio-data 2>/dev/null || true
+              docker volume rm kartoza-sedona-notebooks 2>/dev/null || true
+              echo "Data volumes removed."
+            }
+            export -f iceberg-clean
+
+            iceberg-status() {
+              echo "Iceberg/Sedona Stack Status:"
+              echo ""
+              # Check Iceberg REST
+              if curl -s -o /dev/null -w "%{http_code}" "http://localhost:8181/v1/config" 2>/dev/null | grep -q "200"; then
+                echo "  Iceberg REST:  READY (http://localhost:8181)"
+              else
+                echo "  Iceberg REST:  NOT RUNNING"
+              fi
+              # Check MinIO
+              if curl -s -o /dev/null -w "%{http_code}" "http://localhost:9002/minio/health/live" 2>/dev/null | grep -q "200"; then
+                echo "  MinIO:         READY (http://localhost:9002, console: 9003)"
+              else
+                echo "  MinIO:         NOT RUNNING"
+              fi
+              # Check Sedona/Jupyter
+              if curl -s -o /dev/null -w "%{http_code}" "http://localhost:8888" 2>/dev/null | grep -q "200"; then
+                echo "  Sedona/Spark:  READY (Jupyter: 8888, Spark UI: 8082)"
+              else
+                echo "  Sedona/Spark:  NOT RUNNING"
+              fi
+              echo ""
+              echo "Credentials:"
+              echo "  MinIO User:     minioadmin"
+              echo "  MinIO Password: minioadmin"
+            }
+            export -f iceberg-status
+
+            iceberg-logs() {
+              cd docker/iceberg && docker compose logs -f "$@"
+            }
+            export -f iceberg-logs
+
+            iceberg-jupyter() {
+              echo "Opening Jupyter (Sedona) in browser..."
+              xdg-open "http://localhost:8888" 2>/dev/null || \
+              open "http://localhost:8888" 2>/dev/null || \
+              echo "Open http://localhost:8888 in your browser"
+            }
+            export -f iceberg-jupyter
+
+            iceberg-spark-sql() {
+              echo "Connecting to Spark SQL via Thrift..."
+              docker exec -it kartoza-sedona-spark /opt/spark/bin/spark-sql
+            }
+            export -f iceberg-spark-sql
+
             # Web development commands
             web-dev() {
               echo "Starting web development servers..."
@@ -621,6 +705,15 @@
             echo "  minio-creds      - Show connection credentials"
             echo "  minio-console    - Open MinIO web console"
             echo "  minio-mc         - Run MinIO client (mc) commands"
+            echo ""
+            echo "Apache Iceberg/Sedona (Lakehouse):"
+            echo "  iceberg-start    - Start Iceberg + Sedona stack"
+            echo "  iceberg-stop     - Stop stack (keeps data)"
+            echo "  iceberg-clean    - Remove data volumes"
+            echo "  iceberg-status   - Check all services status"
+            echo "  iceberg-logs     - Follow container logs"
+            echo "  iceberg-jupyter  - Open Jupyter (Sedona) in browser"
+            echo "  iceberg-spark-sql - Open Spark SQL shell"
             echo ""
             echo "Documentation:"
             echo "  docs       - Serve docs locally (http://localhost:8000)"

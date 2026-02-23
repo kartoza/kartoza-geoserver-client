@@ -37,8 +37,9 @@ This document provides a detailed specification of all features, behaviors, and 
 31. [S3 Storage Integration](#s3-storage-integration)
 32. [Cloud-Native Format Conversion](#cloud-native-format-conversion)
 33. [DuckDB Query Engine](#duckdb-query-engine)
-34. [Future Enhancements](#future-enhancements)
-35. [Version History](#version-history)
+34. [Apache Iceberg Integration](#apache-iceberg-integration)
+35. [Future Enhancements](#future-enhancements)
+36. [Version History](#version-history)
 
 ---
 
@@ -2277,6 +2278,25 @@ The application integrates DuckDB for querying Parquet and GeoParquet files stor
 | **Map Visualization** | View spatial query results on an interactive map |
 | **CSV Export** | Export query results to CSV format |
 | **Sample Queries** | Pre-generated sample queries based on file schema |
+| **SQL Autocompletion** | Intelligent autocompletion with DuckDB functions, spatial functions, and schema-aware column suggestions |
+
+### SQL Autocompletion
+
+The SQL editor provides intelligent autocompletion for DuckDB queries:
+
+| Completion Type | Examples |
+|-----------------|----------|
+| **SQL Keywords** | SELECT, FROM, WHERE, JOIN, GROUP BY, ORDER BY |
+| **DuckDB Functions** | READ_PARQUET, LIST_AGG, REGEXP_EXTRACT, TRY_CAST |
+| **DuckDB Spatial** | ST_Point, ST_GeomFromWKB, ST_AsGeoJSON, ST_Distance |
+| **H3 Functions** | H3_LATLNG_TO_CELL, H3_CELL_TO_BOUNDARY_WKT |
+| **DuckDB Types** | BIGINT, VARCHAR, GEOMETRY, LIST, MAP, STRUCT |
+| **Table Columns** | Auto-detected from Parquet schema (type `data.` to see columns) |
+
+The autocompletion is context-aware:
+- Type `data.` to see all columns from the Parquet file with their types
+- Start typing a column name to filter suggestions
+- Spatial columns are highlighted with their geometry type
 
 ### Supported File Formats
 
@@ -2385,6 +2405,192 @@ The following DuckDB extensions are automatically installed:
 
 ---
 
+## Apache Iceberg Integration
+
+The application provides integration with Apache Iceberg, an open table format for large-scale analytics with support for spatial data through Apache Sedona.
+
+### Overview
+
+Apache Iceberg is a high-performance table format designed for huge analytic tables. Combined with Apache Sedona for spatial data processing, it provides a powerful lakehouse architecture for geospatial analytics.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Catalog Management** | Connect to and manage Iceberg REST catalogs |
+| **Namespace Browsing** | Navigate namespaces (databases) in catalogs |
+| **Table Discovery** | Browse tables with metadata including row counts and snapshots |
+| **Spatial Support** | Detect and visualize geometry columns in Iceberg v3 tables |
+| **Schema Viewing** | View table schemas with field types and constraints |
+| **Snapshot History** | Track table versions through snapshot timeline |
+
+### Supported Catalog Types
+
+| Catalog Type | Description | Configuration |
+|--------------|-------------|---------------|
+| REST Catalog | Standard Iceberg REST API | URL endpoint |
+| (Planned) AWS Glue | AWS Glue Data Catalog | AWS credentials |
+| (Planned) Hive Metastore | Apache Hive metastore | JDBC connection |
+
+### Connection Configuration
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| `name` | Display name for the catalog | Yes |
+| `url` | REST catalog endpoint (e.g., `http://localhost:8181`) | Yes |
+| `prefix` | Catalog prefix for multi-tenant setups | No |
+| `s3Endpoint` | S3-compatible endpoint for warehouse storage | No |
+| `accessKey` | AWS/S3 access key ID | No |
+| `secretKey` | AWS/S3 secret access key | No |
+| `region` | AWS region | No |
+
+### Tree Structure
+
+```
+☁️ Kartoza CloudBench
+└── ❄️ Apache Iceberg
+    └── 🔷 Catalog Connection
+        └── 📁 Namespace
+            └── 📦 Table
+                ├── [Geo] badge (if has geometry)
+                ├── Row count
+                └── Snapshot count
+```
+
+### Node Types
+
+| Node Type | Icon | Description |
+|-----------|------|-------------|
+| `iceberg` | ❄️ | Root container for Iceberg catalogs |
+| `icebergconnection` | 🔷 | Individual catalog connection |
+| `icebergnamespace` | 📁 | Namespace (database) in catalog |
+| `icebergtable` | 📦 | Iceberg table with metadata |
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/iceberg/connections` | GET | List all Iceberg connections |
+| `/api/iceberg/connections` | POST | Create new Iceberg connection |
+| `/api/iceberg/connections/{id}` | GET | Get connection details |
+| `/api/iceberg/connections/{id}` | PUT | Update Iceberg connection |
+| `/api/iceberg/connections/{id}` | DELETE | Delete Iceberg connection |
+| `/api/iceberg/connections/test` | POST | Test connection credentials |
+| `/api/iceberg/connections/{id}/test` | POST | Test existing connection |
+| `/api/iceberg/connections/{id}/namespaces` | GET | List namespaces |
+| `/api/iceberg/connections/{id}/namespaces` | POST | Create namespace |
+| `/api/iceberg/connections/{id}/namespaces/{ns}` | GET | Get namespace details |
+| `/api/iceberg/connections/{id}/namespaces/{ns}` | DELETE | Delete namespace |
+| `/api/iceberg/connections/{id}/namespaces/{ns}/tables` | GET | List tables |
+| `/api/iceberg/connections/{id}/namespaces/{ns}/tables/{tbl}` | GET | Get table metadata |
+| `/api/iceberg/connections/{id}/namespaces/{ns}/tables/{tbl}` | DELETE | Delete table |
+| `/api/iceberg/connections/{id}/namespaces/{ns}/tables/{tbl}/schema` | GET | Get table schema |
+| `/api/iceberg/connections/{id}/namespaces/{ns}/tables/{tbl}/snapshots` | GET | Get snapshot history |
+
+### Table Metadata Response
+
+```json
+{
+  "namespace": "my_namespace",
+  "name": "spatial_data",
+  "location": "s3://bucket/warehouse/my_namespace/spatial_data",
+  "formatVersion": 3,
+  "rowCount": 1500000,
+  "snapshotCount": 5,
+  "lastUpdatedMs": 1708617600000,
+  "hasGeometry": true,
+  "geometryColumns": ["geom", "centroid"]
+}
+```
+
+### Schema Response
+
+```json
+{
+  "schemaId": 1,
+  "type": "struct",
+  "fields": [
+    {"id": 1, "name": "id", "type": "long", "required": true},
+    {"id": 2, "name": "name", "type": "string", "required": false},
+    {"id": 3, "name": "geom", "type": "geometry", "required": false, "doc": "Primary geometry"}
+  ]
+}
+```
+
+### Development Testbed
+
+For local development, an Iceberg/Sedona stack can be started via Docker:
+
+```bash
+# In nix shell
+iceberg-start    # Start Iceberg REST catalog + Spark + MinIO
+iceberg-status   # Check all services
+iceberg-logs     # View container logs
+iceberg-jupyter  # Open Jupyter notebook (Sedona)
+iceberg-spark-sql # Open Spark SQL shell
+iceberg-stop     # Stop stack
+iceberg-clean    # Remove volumes
+```
+
+### Docker Components
+
+| Service | Purpose | Port |
+|---------|---------|------|
+| Iceberg REST Catalog | Catalog API server | 8181 |
+| Spark + Sedona | Query engine with spatial support | 8888 (Jupyter), 4040 (Spark UI) |
+| MinIO | S3-compatible warehouse storage | 9000 (API), 9001 (Console) |
+
+### Web UI Components
+
+- **IcebergRootNode**: Root tree node for Apache Iceberg section
+- **IcebergConnectionNode**: Individual catalog connection with namespace expansion
+- **IcebergNamespaceNode**: Namespace node with table listing
+- **IcebergTableNode**: Table node with geometry badges, row counts, and actions
+- **IcebergConnectionDialog**: Create/edit catalog connections with test functionality
+- **IcebergNamespaceDialog**: Create namespaces with optional properties
+- **IcebergTableSchemaDialog**: View table schemas with field types, constraints, and documentation
+- **IcebergTableDataDialog**: Browse table data with pagination (requires Spark/Sedona)
+- **IcebergQueryDialog**: SQL query interface with syntax highlighting and history
+- **IcebergTablePreview**: Main panel preview for Iceberg tables with:
+  - Table metadata display (location, last updated, format version)
+  - Geometry detection badges and column listing
+  - Schema viewer with type-colored badges
+  - Snapshot history viewer with current marker
+  - Map placeholder with "Open SQL Query" action for spatial tables
+
+### Tree Node Actions
+
+| Node Type | Available Actions |
+|-----------|-------------------|
+| Iceberg Root | Add connection (+) |
+| Connection | Add namespace (+), Edit, Delete, Refresh |
+| Namespace | Delete, Refresh |
+| Table | Preview (if has geometry), View Data, Query, Delete |
+
+### Geometry Detection
+
+Iceberg v3 supports native geometry types. The application detects:
+- Column type `geometry` or `geography`
+- Columns with PostGIS-compatible WKB encoding
+- Sedona UDT geometry columns
+
+Tables with detected geometry columns show:
+- "Geo" badge in the tree
+- List of geometry column names
+- Map preview capability
+
+### Future Enhancements (Iceberg)
+
+- **Table Creation**: Create new Iceberg tables with schema definition
+- ~~**Data Query**: SQL query interface using Spark/DuckDB~~ (Implemented - IcebergQueryDialog with SQL editor)
+- ~~**Map Preview**: Visualize spatial Iceberg tables on map~~ (Implemented - IcebergTablePreview with metadata and schema viewer; full map visualization requires Sedona backend)
+- **Data Import**: Import data from GeoPackage/Shapefile to Iceberg
+- **Partitioning**: Configure spatial partitioning strategies
+- **Time Travel**: Query historical table versions via snapshot selection
+- **Sedona Integration**: Execute spatial queries via Spark/Sedona for actual data visualization
+
+---
+
 ## Future Enhancements
 
 ### Planned Features
@@ -2438,6 +2644,7 @@ The following DuckDB extensions are automatically installed:
 | 0.13.0 | 2025 | GeoWebCache management, server synchronization, layer groups, dashboard |
 | 0.14.0 | 2025 | PostgreSQL raster import, table data viewer with infinite scroll, embedded 3D viewer |
 | 0.15.0 | 2025 | S3 storage integration (MinIO, AWS S3, Wasabi), cloud-native format conversion (COG, COPC, GeoParquet) |
+| 0.16.0 | 2025 | Apache Iceberg integration with REST catalog support, namespace/table browsing, geometry detection, Docker testbed (Spark+Sedona) |
 
 ---
 

@@ -106,6 +106,7 @@ export interface TreeNodeRowProps {
   onRefresh?: (e: React.MouseEvent) => void
   onDownloadConfig?: (e: React.MouseEvent) => void
   onDownloadData?: (e: React.MouseEvent) => void
+  onJupyter?: (e: React.MouseEvent) => void
   downloadDataLabel?: string
   level: number
   isLeaf?: boolean
@@ -141,4 +142,38 @@ export interface S3ObjectNodeProps {
     isFolder: boolean
   }
   prefix?: string
+}
+
+// Iceberg types
+export interface IcebergConnectionNodeProps {
+  connection: {
+    id: string
+    name: string
+    url: string
+    prefix?: string
+    isActive: boolean
+  }
+}
+
+export interface IcebergNamespaceNodeProps {
+  connectionId: string
+  namespace: {
+    name: string
+    path: string[]
+    properties?: Record<string, string>
+  }
+}
+
+export interface IcebergTableNodeProps {
+  connectionId: string
+  namespace: string
+  table: {
+    namespace: string
+    name: string
+    location?: string
+    rowCount?: number
+    snapshotCount?: number
+    hasGeometry?: boolean
+    geometryColumns?: string[]
+  }
 }

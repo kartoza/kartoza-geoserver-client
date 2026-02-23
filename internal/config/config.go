@@ -115,6 +115,20 @@ type GeoNodeConnection struct {
 	IsActive bool   `json:"is_active"`
 }
 
+// IcebergCatalogConnection represents an Apache Iceberg REST Catalog connection
+type IcebergCatalogConnection struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	URL        string `json:"url"`                     // REST Catalog URL e.g., "http://localhost:8181"
+	Prefix     string `json:"prefix,omitempty"`        // Optional warehouse prefix
+	S3Endpoint string `json:"s3_endpoint,omitempty"`   // S3 endpoint for data access
+	AccessKey  string `json:"access_key,omitempty"`    // S3 access key
+	SecretKey  string `json:"secret_key,omitempty"`    // S3 secret key
+	Region     string `json:"region,omitempty"`        // AWS region
+	JupyterURL string `json:"jupyter_url,omitempty"`   // Jupyter/Sedona notebook URL for data exploration
+	IsActive   bool   `json:"is_active"`
+}
+
 // SavedQuery represents a saved visual query definition
 type SavedQuery struct {
 	Name        string      `json:"name"`
@@ -134,9 +148,10 @@ type Config struct {
 	PingIntervalSecs int                 `json:"ping_interval_secs,omitempty"` // Dashboard refresh interval, default 60
 	PGServiceStates  []PGServiceState    `json:"pg_services,omitempty"`        // PostgreSQL service states
 	SavedQueries     []SavedQuery        `json:"saved_queries,omitempty"`      // Visual query definitions
-	S3Connections      []S3Connection      `json:"s3_connections,omitempty"`      // S3-compatible storage connections
-	QGISProjects       []QGISProject       `json:"qgis_projects,omitempty"`       // QGIS project files
-	GeoNodeConnections []GeoNodeConnection `json:"geonode_connections,omitempty"` // GeoNode instance connections
+	S3Connections        []S3Connection             `json:"s3_connections,omitempty"`        // S3-compatible storage connections
+	QGISProjects         []QGISProject              `json:"qgis_projects,omitempty"`         // QGIS project files
+	GeoNodeConnections   []GeoNodeConnection        `json:"geonode_connections,omitempty"`   // GeoNode instance connections
+	IcebergConnections   []IcebergCatalogConnection `json:"iceberg_connections,omitempty"`   // Iceberg REST Catalog connections
 }
 
 // GetPingInterval returns the ping interval in seconds, with a default of 60
@@ -539,6 +554,42 @@ func (c *Config) RemoveGeoNodeConnection(id string) {
 	for i, conn := range c.GeoNodeConnections {
 		if conn.ID == id {
 			c.GeoNodeConnections = append(c.GeoNodeConnections[:i], c.GeoNodeConnections[i+1:]...)
+			return
+		}
+	}
+}
+
+// GetIcebergConnection returns an Iceberg Catalog connection by ID
+func (c *Config) GetIcebergConnection(id string) *IcebergCatalogConnection {
+	for i := range c.IcebergConnections {
+		if c.IcebergConnections[i].ID == id {
+			return &c.IcebergConnections[i]
+		}
+	}
+	return nil
+}
+
+// AddIcebergConnection adds a new Iceberg Catalog connection
+func (c *Config) AddIcebergConnection(conn IcebergCatalogConnection) {
+	c.IcebergConnections = append(c.IcebergConnections, conn)
+}
+
+// UpdateIcebergConnection updates an existing Iceberg Catalog connection
+func (c *Config) UpdateIcebergConnection(conn IcebergCatalogConnection) bool {
+	for i := range c.IcebergConnections {
+		if c.IcebergConnections[i].ID == conn.ID {
+			c.IcebergConnections[i] = conn
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveIcebergConnection removes an Iceberg Catalog connection by ID
+func (c *Config) RemoveIcebergConnection(id string) {
+	for i, conn := range c.IcebergConnections {
+		if conn.ID == id {
+			c.IcebergConnections = append(c.IcebergConnections[:i], c.IcebergConnections[i+1:]...)
 			return
 		}
 	}

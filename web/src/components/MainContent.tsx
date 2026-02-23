@@ -8,6 +8,10 @@ import Globe3DPreview from './Globe3DPreview'
 import S3LayerPreview from './S3LayerPreview'
 import QGISMapPreview from './QGISMapPreview'
 import GeoNodeMapPreview from './GeoNodeMapPreview'
+import DuckDBQueryPanel from './DuckDBQueryPanel'
+import IcebergTablePreview from './IcebergTablePreview'
+import JupyterPanel from './JupyterPanel'
+import { QueryPanel } from './QueryPanel'
 import Dashboard from './Dashboard'
 import {
   ConnectionPanel,
@@ -37,11 +41,19 @@ export default function MainContent() {
   const activeS3Preview = useUIStore((state) => state.activeS3Preview)
   const activeQGISPreview = useUIStore((state) => state.activeQGISPreview)
   const activeGeoNodePreview = useUIStore((state) => state.activeGeoNodePreview)
+  const activeDuckDBQuery = useUIStore((state) => state.activeDuckDBQuery)
+  const activePGQuery = useUIStore((state) => state.activePGQuery)
+  const activeIcebergPreview = useUIStore((state) => state.activeIcebergPreview)
+  const activeJupyterPreview = useUIStore((state) => state.activeJupyterPreview)
   const previewMode = useUIStore((state) => state.previewMode)
   const setPreview = useUIStore((state) => state.setPreview)
   const setS3Preview = useUIStore((state) => state.setS3Preview)
   const setQGISPreview = useUIStore((state) => state.setQGISPreview)
   const setGeoNodePreview = useUIStore((state) => state.setGeoNodePreview)
+  const setDuckDBQuery = useUIStore((state) => state.setDuckDBQuery)
+  const setPGQuery = useUIStore((state) => state.setPGQuery)
+  const setIcebergPreview = useUIStore((state) => state.setIcebergPreview)
+  const setJupyterPreview = useUIStore((state) => state.setJupyterPreview)
   const prevSelectedNodeRef = useRef(selectedNode)
 
   // Auto-update preview when selection changes to a previewable entity
@@ -94,6 +106,71 @@ export default function MainContent() {
 
     startAutoPreview()
   }, [selectedNode, activePreview, setPreview])
+
+  // Show PostgreSQL query panel if active
+  if (activePGQuery) {
+    return (
+      <Box flex="1" display="flex" flexDirection="column" minH="0">
+        <QueryPanel
+          key={`pg-${activePGQuery.serviceName}:${activePGQuery.schemaName || 'public'}:${activePGQuery.tableName || ''}`}
+          serviceName={activePGQuery.serviceName}
+          initialSchema={activePGQuery.schemaName}
+          initialTable={activePGQuery.tableName}
+          initialSQL={activePGQuery.initialSQL}
+          onClose={() => setPGQuery(null)}
+        />
+      </Box>
+    )
+  }
+
+  // Show Jupyter panel if active
+  if (activeJupyterPreview) {
+    return (
+      <Box flex="1" display="flex" flexDirection="column" minH="0">
+        <JupyterPanel
+          key={`jupyter-${activeJupyterPreview.connectionId}`}
+          connectionId={activeJupyterPreview.connectionId}
+          connectionName={activeJupyterPreview.connectionName}
+          jupyterUrl={activeJupyterPreview.jupyterUrl}
+          namespace={activeJupyterPreview.namespace}
+          tableName={activeJupyterPreview.tableName}
+          onClose={() => setJupyterPreview(null)}
+        />
+      </Box>
+    )
+  }
+
+  // Show Iceberg table preview if active
+  if (activeIcebergPreview) {
+    return (
+      <Box flex="1" display="flex" flexDirection="column" minH="0">
+        <IcebergTablePreview
+          key={`iceberg-${activeIcebergPreview.connectionId}:${activeIcebergPreview.namespace}:${activeIcebergPreview.tableName}`}
+          connectionId={activeIcebergPreview.connectionId}
+          connectionName={activeIcebergPreview.connectionName}
+          namespace={activeIcebergPreview.namespace}
+          tableName={activeIcebergPreview.tableName}
+          onClose={() => setIcebergPreview(null)}
+        />
+      </Box>
+    )
+  }
+
+  // Show DuckDB query panel if active
+  if (activeDuckDBQuery) {
+    return (
+      <Box flex="1" display="flex" flexDirection="column" minH="0">
+        <DuckDBQueryPanel
+          key={`duckdb-${activeDuckDBQuery.connectionId}:${activeDuckDBQuery.bucketName}:${activeDuckDBQuery.objectKey}`}
+          connectionId={activeDuckDBQuery.connectionId}
+          bucketName={activeDuckDBQuery.bucketName}
+          objectKey={activeDuckDBQuery.objectKey}
+          displayName={activeDuckDBQuery.displayName}
+          onClose={() => setDuckDBQuery(null)}
+        />
+      </Box>
+    )
+  }
 
   // Show QGIS preview if active
   if (activeQGISPreview) {

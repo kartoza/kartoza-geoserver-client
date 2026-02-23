@@ -7,7 +7,6 @@ import CacheDialog from './CacheDialog'
 import LayerDialog from './LayerDialog'
 import StoreDialog from './StoreDialog'
 import AppSettingsDialog from './AppSettingsDialog'
-import QueryDialog from './QueryDialog'
 import DataViewerDialog from './DataViewerDialog'
 import PGServiceDashboardDialog from './PGServiceDashboardDialog'
 import PGUploadDialog from './PGUploadDialog'
@@ -17,7 +16,11 @@ import QGISProjectDialog from './QGISProjectDialog'
 import QGISPreviewDialog from './QGISPreviewDialog'
 import GeoNodeConnectionDialog from './GeoNodeConnectionDialog'
 import GeoNodeUploadDialog from './GeoNodeUploadDialog'
-import DuckDBQueryDialog from './DuckDBQueryDialog'
+import IcebergConnectionDialog from './IcebergConnectionDialog'
+import IcebergNamespaceDialog from './IcebergNamespaceDialog'
+import IcebergTableSchemaDialog from './IcebergTableSchemaDialog'
+import IcebergTableDataDialog from './IcebergTableDataDialog'
+import IcebergQueryDialog from './IcebergQueryDialog'
 import { SettingsDialog } from './SettingsDialog'
 import { SyncDialog } from './SyncDialog'
 import { StyleDialog } from './StyleDialog'
@@ -38,7 +41,6 @@ export default function Dialogs() {
       <StyleDialog />
       <Globe3DDialog />
       <AppSettingsDialog />
-      <QueryDialog />
       <DataViewerDialog />
       <PGServiceDashboardDialog />
       <PGUploadDialog />
@@ -48,9 +50,13 @@ export default function Dialogs() {
       <QGISPreviewDialog />
       <GeoNodeConnectionDialog />
       <GeoNodeUploadDialog />
-      <DuckDBQueryDialog />
+      <IcebergConnectionDialog />
+      <IcebergNamespaceDialog />
+      <IcebergTableSchemaDialog />
+      <IcebergTableDataDialog />
+      <IcebergQueryDialog />
     </>
   )
 }
 
-export { SettingsDialog, SyncDialog, StyleDialog, Globe3DDialog, QueryDialog }
+export { SettingsDialog, SyncDialog, StyleDialog, Globe3DDialog }

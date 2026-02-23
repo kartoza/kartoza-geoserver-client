@@ -19,9 +19,10 @@ import {
   FiFile,
   FiBook,
   FiBarChart2,
+  FiBox,
 } from 'react-icons/fi'
-import { SiPostgresql, SiAmazons3, SiQgis } from 'react-icons/si'
-import { TbWorld } from 'react-icons/tb'
+import { SiPostgresql, SiAmazons3, SiQgis, SiApache } from 'react-icons/si'
+import { TbWorld, TbSnowflake } from 'react-icons/tb'
 
 // Get the icon component for each node type
 export function getNodeIconComponent(type: NodeType | 'featuretype' | 'coverage') {
@@ -82,6 +83,14 @@ export function getNodeIconComponent(type: NodeType | 'featuretype' | 'coverage'
       return FiBook
     case 'geonodedashboard':
       return FiBarChart2
+    case 'iceberg':
+      return TbSnowflake
+    case 'icebergconnection':
+      return SiApache
+    case 'icebergnamespace':
+      return FiFolder
+    case 'icebergtable':
+      return FiBox
     case 'workspace':
       return FiFolder
     case 'datastores':
@@ -167,6 +176,14 @@ export function getNodeColor(type: NodeType | 'featuretype' | 'coverage'): strin
       return 'purple.400'
     case 'geonodedashboard':
       return 'orange.400'
+    case 'iceberg':
+      return 'cyan.500'
+    case 'icebergconnection':
+      return 'cyan.400'
+    case 'icebergnamespace':
+      return 'cyan.300'
+    case 'icebergtable':
+      return 'cyan.600'
     case 'workspace':
       return 'accent.400'
     case 'datastores':

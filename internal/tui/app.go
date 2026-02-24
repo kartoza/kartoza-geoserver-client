@@ -1542,7 +1542,7 @@ func (a *App) renderMainScreen() string {
 	panels := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 
 	// Title bar
-	title := styles.TitleStyle.Render(" \uf0ac Kartoza GeoServer Client") // fa-globe
+	title := styles.TitleStyle.Render(" \uf0ac Kartoza Cloud Workbench") // fa-globe
 	titleBar := lipgloss.PlaceHorizontal(a.width, lipgloss.Left, title)
 
 	// Status bar
@@ -1638,7 +1638,7 @@ func (a *App) renderSyncScreen() string {
 // renderDashboardScreen renders the dashboard screen with proper header/footer
 func (a *App) renderDashboardScreen() string {
 	// Title bar (same as main screen)
-	title := styles.TitleStyle.Render(" \uf0ac Kartoza GeoServer Client") // fa-globe
+	title := styles.TitleStyle.Render(" \uf0ac Kartoza Cloud Workbench") // fa-globe
 	titleBar := lipgloss.PlaceHorizontal(a.width, lipgloss.Left, title)
 
 	// Help bar

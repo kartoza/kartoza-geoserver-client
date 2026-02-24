@@ -12,12 +12,12 @@ import (
 var (
 	appVersion string
 	rootCmd    = &cobra.Command{
-		Use:   "geoserver-client",
-		Short: "A dual-panel TUI for managing GeoServer instances",
-		Long: `Kartoza GeoServer Client is a Midnight Commander-style TUI application
-for browsing local geospatial files and managing GeoServer instances.
+		Use:   "kartoza-cloudbench",
+		Short: "A dual-panel TUI for managing geospatial cloud infrastructure",
+		Long: `Kartoza Cloud Workbench is a Midnight Commander-style TUI and web application
+for browsing local geospatial files and managing cloud geospatial services.
 
-Upload layers and styles to GeoServer and publish them as services.`,
+Supports GeoServer, PostgreSQL/PostGIS, S3 storage, Apache Iceberg, QFieldCloud, and more.`,
 		RunE: runTUI,
 	}
 )
@@ -35,7 +35,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Kartoza GeoServer Client %s\n", appVersion)
+		fmt.Printf("Kartoza Cloud Workbench %s\n", appVersion)
 	},
 }
 

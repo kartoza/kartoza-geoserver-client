@@ -8,7 +8,7 @@
 # This config builds the TUI package only. For web UI, modify
 # the package name and binary path below.
 
-name: kartoza-geoserver-client
+name: kartoza-cloudbench
 arch: "${ARCH}"
 platform: linux
 version: "${VERSION}"
@@ -16,26 +16,26 @@ section: utils
 priority: optional
 maintainer: Tim Sutton <tim@kartoza.com>
 description: |
-  A Midnight Commander-style TUI for managing GeoServer instances.
-  Browse local geospatial files and upload them to GeoServer with ease.
+  A Midnight Commander-style TUI and web interface for managing geospatial cloud infrastructure.
+  Browse local geospatial files and manage GeoServer, PostgreSQL, S3, QFieldCloud, and more.
 vendor: Kartoza
-homepage: https://github.com/kartoza/kartoza-geoserver-client
+homepage: https://github.com/kartoza/kartoza-cloudbench
 license: MIT
 
 contents:
-  - src: ./dist/kartoza-geoserver-client_linux_${ARCH}
-    dst: /usr/bin/kartoza-geoserver-client
+  - src: ./dist/kartoza-cloudbench_linux_${ARCH}
+    dst: /usr/bin/kartoza-cloudbench
     file_info:
       mode: 0755
 
   - src: ./README.md
-    dst: /usr/share/doc/kartoza-geoserver-client/README.md
+    dst: /usr/share/doc/kartoza-cloudbench/README.md
 
   - src: ./LICENSE
-    dst: /usr/share/doc/kartoza-geoserver-client/LICENSE
+    dst: /usr/share/doc/kartoza-cloudbench/LICENSE
 
   - src: ./SPECIFICATION.md
-    dst: /usr/share/doc/kartoza-geoserver-client/SPECIFICATION.md
+    dst: /usr/share/doc/kartoza-cloudbench/SPECIFICATION.md
 
 overrides:
   deb:

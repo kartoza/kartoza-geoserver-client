@@ -1,6 +1,6 @@
 version: 2
 
-project_name: kartoza-geoserver-client
+project_name: kartoza-cloudbench
 
 before:
   hooks:
@@ -8,8 +8,8 @@ before:
 
 builds:
   # TUI application
-  - id: kartoza-geoserver-client
-    binary: kartoza-geoserver-client
+  - id: kartoza-cloudbench
+    binary: kartoza-cloudbench
     main: .
     env:
       - CGO_ENABLED=0
@@ -27,8 +27,8 @@ builds:
       - -X main.date={{.Date}}
 
   # Web application (requires frontend to be pre-built)
-  - id: kartoza-geoserver-web
-    binary: kartoza-geoserver-web
+  - id: kartoza-cloudbench-web
+    binary: kartoza-cloudbench-web
     main: ./cmd/web
     env:
       - CGO_ENABLED=0
@@ -49,7 +49,7 @@ archives:
   # TUI archive
   - id: tui
     builds:
-      - kartoza-geoserver-client
+      - kartoza-cloudbench
     format: tar.gz
     name_template: >-
       {{ .ProjectName }}_
@@ -67,10 +67,10 @@ archives:
   # Web archive
   - id: web
     builds:
-      - kartoza-geoserver-web
+      - kartoza-cloudbench-web
     format: tar.gz
     name_template: >-
-      kartoza-geoserver-web_
+      kartoza-cloudbench-web_
       {{- .Version }}_
       {{- .Os }}_
       {{- .Arch }}
@@ -100,27 +100,27 @@ changelog:
 release:
   github:
     owner: kartoza
-    name: kartoza-geoserver-client
+    name: kartoza-cloudbench
   draft: false
   prerelease: auto
   mode: replace
   header: |
-    ## Kartoza GeoServer Client {{ .Version }}
+    ## Kartoza Cloud Workbench {{ .Version }}
 
-    A Midnight Commander-style TUI and modern Web interface for managing GeoServer instances.
+    A Midnight Commander-style TUI and modern Web interface for managing geospatial cloud infrastructure.
 
     ### Available Packages
 
     This release includes two applications:
 
-    - **kartoza-geoserver-client** - Terminal UI (TUI) with dual-panel interface
-    - **kartoza-geoserver-web** - Web interface with React-based UI
+    - **kartoza-cloudbench** - Terminal UI (TUI) with dual-panel interface
+    - **kartoza-cloudbench-web** - Web interface with React-based UI
 
     ### Highlights
 
-    - **Dual-panel TUI** - Local filesystem on the left, GeoServer explorer on the right
+    - **Dual-panel TUI** - Local filesystem on the left, cloud services explorer on the right
     - **Modern Web UI** - React-based interface with Chakra UI
-    - **Multi-connection support** - Manage multiple GeoServer instances simultaneously
+    - **Multi-service support** - Manage GeoServer, PostgreSQL/PostGIS, S3 storage, Apache Iceberg, QFieldCloud
     - **Upload with verification** - Upload Shapefiles, GeoPackage, GeoTIFF with automatic verification
     - **Full CRUD operations** - Create, edit, delete workspaces, stores, and layers
     - **Layer preview** - Built-in MapLibre GL web viewer with WMS support
@@ -135,44 +135,44 @@ release:
     #### TUI - Quick Install (Linux/macOS)
     ```bash
     # Download and extract
-    curl -sSL https://github.com/kartoza/kartoza-geoserver-client/releases/download/{{ .Tag }}/kartoza-geoserver-client_{{ .Version }}_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
+    curl -sSL https://github.com/kartoza/kartoza-cloudbench/releases/download/{{ .Tag }}/kartoza-cloudbench_{{ .Version }}_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
 
     # Move to PATH
-    sudo mv kartoza-geoserver-client /usr/local/bin/
+    sudo mv kartoza-cloudbench /usr/local/bin/
     ```
 
     #### Web UI - Quick Install (Linux/macOS)
     ```bash
     # Download and extract
-    curl -sSL https://github.com/kartoza/kartoza-geoserver-client/releases/download/{{ .Tag }}/kartoza-geoserver-web_{{ .Version }}_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
+    curl -sSL https://github.com/kartoza/kartoza-cloudbench/releases/download/{{ .Tag }}/kartoza-cloudbench-web_{{ .Version }}_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
 
     # Move to PATH
-    sudo mv kartoza-geoserver-web /usr/local/bin/
+    sudo mv kartoza-cloudbench-web /usr/local/bin/
 
     # Run on port 8080 (default)
-    kartoza-geoserver-web
+    kartoza-cloudbench-web
     # Or specify a different port
-    kartoza-geoserver-web -addr :3000
+    kartoza-cloudbench-web -addr :3000
     ```
 
     #### Debian/Ubuntu - TUI
     ```bash
-    sudo dpkg -i kartoza-geoserver-client_{{ .Version }}_amd64.deb
+    sudo dpkg -i kartoza-cloudbench_{{ .Version }}_amd64.deb
     ```
 
     #### Debian/Ubuntu - Web UI
     ```bash
-    sudo dpkg -i kartoza-geoserver-web_{{ .Version }}_amd64.deb
+    sudo dpkg -i kartoza-cloudbench-web_{{ .Version }}_amd64.deb
     ```
 
     #### Fedora/RHEL - TUI
     ```bash
-    sudo rpm -i kartoza-geoserver-client-{{ .Version }}.x86_64.rpm
+    sudo rpm -i kartoza-cloudbench-{{ .Version }}.x86_64.rpm
     ```
 
     #### Fedora/RHEL - Web UI
     ```bash
-    sudo rpm -i kartoza-geoserver-web-{{ .Version }}.x86_64.rpm
+    sudo rpm -i kartoza-cloudbench-web-{{ .Version }}.x86_64.rpm
     ```
 
     ---
@@ -181,21 +181,21 @@ release:
 
     #### Run TUI directly (no install)
     ```bash
-    nix run github:kartoza/kartoza-geoserver-client
+    nix run github:kartoza/kartoza-cloudbench
     ```
 
     #### Run Web UI directly (no install)
     ```bash
-    nix run github:kartoza/kartoza-geoserver-client#web
+    nix run github:kartoza/kartoza-cloudbench#web
     ```
 
     #### Install to profile
     ```bash
     # TUI
-    nix profile install github:kartoza/kartoza-geoserver-client
+    nix profile install github:kartoza/kartoza-cloudbench
 
     # Web UI
-    nix profile install github:kartoza/kartoza-geoserver-client#kartoza-geoserver-web
+    nix profile install github:kartoza/kartoza-cloudbench#kartoza-cloudbench-web
     ```
 
     #### Add to flake.nix
@@ -203,19 +203,19 @@ release:
     {
       inputs = {
         nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-        kartoza-geoserver-client.url = "github:kartoza/kartoza-geoserver-client";
+        kartoza-cloudbench.url = "github:kartoza/kartoza-cloudbench";
       };
 
-      outputs = { self, nixpkgs, kartoza-geoserver-client, ... }: {
+      outputs = { self, nixpkgs, kartoza-cloudbench, ... }: {
         # Option 1: Use the overlay
         nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           modules = [
             ({ pkgs, ... }: {
-              nixpkgs.overlays = [ kartoza-geoserver-client.overlays.default ];
+              nixpkgs.overlays = [ kartoza-cloudbench.overlays.default ];
               environment.systemPackages = [
-                pkgs.kartoza-geoserver-client  # TUI
-                pkgs.kartoza-geoserver-web     # Web UI
+                pkgs.kartoza-cloudbench      # TUI
+                pkgs.kartoza-cloudbench-web  # Web UI
               ];
             })
           ];
@@ -223,8 +223,8 @@ release:
 
         # Option 2: Reference package directly
         # environment.systemPackages = [
-        #   kartoza-geoserver-client.packages.x86_64-linux.default
-        #   kartoza-geoserver-client.packages.x86_64-linux.kartoza-geoserver-web
+        #   kartoza-cloudbench.packages.x86_64-linux.default
+        #   kartoza-cloudbench.packages.x86_64-linux.kartoza-cloudbench-web
         # ];
       };
     }
@@ -234,12 +234,12 @@ release:
     ```nix
     { config, pkgs, ... }:
     let
-      kgc = builtins.getFlake "github:kartoza/kartoza-geoserver-client";
+      kcb = builtins.getFlake "github:kartoza/kartoza-cloudbench";
     in
     {
       environment.systemPackages = [
-        kgc.packages.${pkgs.system}.default              # TUI
-        kgc.packages.${pkgs.system}.kartoza-geoserver-web  # Web UI
+        kcb.packages.${pkgs.system}.default               # TUI
+        kcb.packages.${pkgs.system}.kartoza-cloudbench-web  # Web UI
       ];
     }
     ```
@@ -248,12 +248,12 @@ release:
     ```nix
     { pkgs, ... }:
     let
-      kgc = builtins.getFlake "github:kartoza/kartoza-geoserver-client";
+      kcb = builtins.getFlake "github:kartoza/kartoza-cloudbench";
     in
     {
       home.packages = [
-        kgc.packages.${pkgs.system}.default              # TUI
-        kgc.packages.${pkgs.system}.kartoza-geoserver-web  # Web UI
+        kcb.packages.${pkgs.system}.default               # TUI
+        kcb.packages.${pkgs.system}.kartoza-cloudbench-web  # Web UI
       ];
     }
     ```
@@ -263,29 +263,29 @@ release:
     ### Quick Start
 
     #### TUI
-    1. Launch: `kartoza-geoserver-client`
+    1. Launch: `kartoza-cloudbench`
     2. Press `c` to open connection manager
     3. Press `a` to add a GeoServer connection
     4. Navigate and explore!
 
     #### Web UI
-    1. Launch: `kartoza-geoserver-web`
+    1. Launch: `kartoza-cloudbench-web`
     2. Open browser: http://localhost:8080
     3. Click "Add Connection" to add a GeoServer
-    4. Browse and manage your GeoServer instances!
+    4. Browse and manage your geospatial cloud services!
 
     **Made with love by [Kartoza](https://kartoza.com)**
 
 nfpms:
   # TUI package
   - id: tui-packages
-    package_name: kartoza-geoserver-client
+    package_name: kartoza-cloudbench
     builds:
-      - kartoza-geoserver-client
+      - kartoza-cloudbench
     vendor: Kartoza
-    homepage: https://github.com/kartoza/kartoza-geoserver-client
+    homepage: https://github.com/kartoza/kartoza-cloudbench
     maintainer: Tim Sutton <tim@kartoza.com>
-    description: "A Midnight Commander-style TUI for managing GeoServer instances"
+    description: "A Midnight Commander-style TUI for managing geospatial cloud infrastructure"
     license: MIT
     formats:
       - deb
@@ -293,19 +293,19 @@ nfpms:
     bindir: /usr/bin
     contents:
       - src: README.md
-        dst: /usr/share/doc/kartoza-geoserver-client/README.md
+        dst: /usr/share/doc/kartoza-cloudbench/README.md
       - src: LICENSE
-        dst: /usr/share/doc/kartoza-geoserver-client/LICENSE
+        dst: /usr/share/doc/kartoza-cloudbench/LICENSE
 
   # Web package
   - id: web-packages
-    package_name: kartoza-geoserver-web
+    package_name: kartoza-cloudbench-web
     builds:
-      - kartoza-geoserver-web
+      - kartoza-cloudbench-web
     vendor: Kartoza
-    homepage: https://github.com/kartoza/kartoza-geoserver-client
+    homepage: https://github.com/kartoza/kartoza-cloudbench
     maintainer: Tim Sutton <tim@kartoza.com>
-    description: "A modern web interface for managing GeoServer instances"
+    description: "A modern web interface for managing geospatial cloud infrastructure"
     license: MIT
     formats:
       - deb
@@ -313,6 +313,6 @@ nfpms:
     bindir: /usr/bin
     contents:
       - src: README.md
-        dst: /usr/share/doc/kartoza-geoserver-web/README.md
+        dst: /usr/share/doc/kartoza-cloudbench-web/README.md
       - src: LICENSE
-        dst: /usr/share/doc/kartoza-geoserver-web/LICENSE
+        dst: /usr/share/doc/kartoza-cloudbench-web/LICENSE

@@ -25,32 +25,34 @@ var staticFiles embed.FS
 
 // Server represents the web server
 type Server struct {
-	config                *config.Config
-	clients               map[string]*api.Client        // GeoServer Connection ID -> Client
-	s3Clients             map[string]*s3client.Client   // S3 Connection ID -> Client
-	geonodeClients        map[string]*geonode.Client    // GeoNode Connection ID -> Client
-	qfieldcloudClients    map[string]*qfieldcloud.Client // QFieldCloud Connection ID -> Client
-	icebergClients        map[string]*iceberg.Client    // Iceberg Catalog Connection ID -> Client
-	clientsMu             sync.RWMutex
-	s3ClientsMu           sync.RWMutex
-	geonodeClientsMu      sync.RWMutex
-	qfieldcloudClientsMu  sync.RWMutex
-	icebergClientsMu      sync.RWMutex
-	previewServer         *preview.Server
-	conversionMgr         *cloudnative.Manager
-	addr                  string
+	config               *config.Config
+	clients              map[string]*api.Client         // GeoServer Connection ID -> Client
+	s3Clients            map[string]*s3client.Client    // S3 Connection ID -> Client
+	geonodeClients       map[string]*geonode.Client     // GeoNode Connection ID -> Client
+	qfieldcloudClients   map[string]*qfieldcloud.Client // QFieldCloud Connection ID -> Client
+	icebergClients       map[string]*iceberg.Client     // Iceberg Catalog Connection ID -> Client
+	clientsMu            sync.RWMutex
+	s3ClientsMu          sync.RWMutex
+	geonodeClientsMu     sync.RWMutex
+	qfieldcloudClientsMu sync.RWMutex
+	icebergClientsMu     sync.RWMutex
+	previewServer        *preview.Server
+	conversionMgr        *cloudnative.Manager
+	sessions             *sessionStore
+	addr                 string
 }
 
 // New creates a new web server
 func New(cfg *config.Config) *Server {
 	s := &Server{
-		config:              cfg,
-		clients:             make(map[string]*api.Client),
-		s3Clients:           make(map[string]*s3client.Client),
-		geonodeClients:      make(map[string]*geonode.Client),
-		qfieldcloudClients:  make(map[string]*qfieldcloud.Client),
-		icebergClients:      make(map[string]*iceberg.Client),
-		conversionMgr:       cloudnative.NewManager(),
+		config:             cfg,
+		clients:            make(map[string]*api.Client),
+		s3Clients:          make(map[string]*s3client.Client),
+		geonodeClients:     make(map[string]*geonode.Client),
+		qfieldcloudClients: make(map[string]*qfieldcloud.Client),
+		icebergClients:     make(map[string]*iceberg.Client),
+		conversionMgr:      cloudnative.NewManager(),
+		sessions:           newSessionStore(),
 	}
 
 	// Initialize clients for existing GeoServer connections
@@ -155,6 +157,12 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	// API routes - coverages
 	mux.HandleFunc("/api/coverages/", s.handleCoverages)
 
+	// API routes - chunked upload
+	mux.HandleFunc("/api/upload/init", s.handleChunkUploadInit)
+	mux.HandleFunc("/api/upload/chunk", s.handleChunkUploadChunk)
+	mux.HandleFunc("/api/upload/complete", s.handleChunkUploadComplete)
+	mux.HandleFunc("/api/upload/session/", s.handleUploadSession)
+
 	// API routes - upload
 	mux.HandleFunc("/api/upload", s.handleUpload)
 
@@ -251,7 +259,6 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/mergin/connections", s.handleMerginMapsConnections)
 	mux.HandleFunc("/api/mergin/connections/test", s.handleMerginMapsTestConnection)
 	mux.HandleFunc("/api/mergin/connections/", s.handleMerginMapsConnectionByID)
-
 
 	// API routes - Iceberg (Apache Iceberg REST Catalog)
 	mux.HandleFunc("/api/iceberg/connections", s.handleIcebergConnections)
@@ -397,10 +404,11 @@ func (s *Server) removeClient(connID string) {
 
 // parsePathParams extracts connection ID, workspace, and resource name from URL path
 // Expected patterns:
-//   /api/workspaces/{connId}
-//   /api/workspaces/{connId}/{workspace}
-//   /api/datastores/{connId}/{workspace}
-//   /api/datastores/{connId}/{workspace}/{storeName}
+//
+//	/api/workspaces/{connId}
+//	/api/workspaces/{connId}/{workspace}
+//	/api/datastores/{connId}/{workspace}
+//	/api/datastores/{connId}/{workspace}/{storeName}
 func parsePathParams(path, prefix string) (connID, workspace, resource string) {
 	// Remove prefix
 	path = strings.TrimPrefix(path, prefix)

@@ -102,10 +102,9 @@ const theme = extendTheme({
       '.kartoza-card': {
         borderRadius: '12px',
         boxShadow: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
-        transition: 'box-shadow 0.3s ease, transform 0.3s ease',
+        transition: 'box-shadow 0.3s ease',
         _hover: {
           boxShadow: '0 8px 28px rgba(27, 107, 155, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08)',
-          transform: 'translateY(-3px)',
         },
       },
       '.kartoza-text-gradient': {
@@ -134,7 +133,6 @@ const theme = extendTheme({
           _hover: {
             bg: 'kartoza.700',
             boxShadow: '0 4px 14px rgba(27, 107, 155, 0.20)',
-            transform: 'translateY(-1px)',
           },
         },
         outline: {
@@ -143,7 +141,6 @@ const theme = extendTheme({
           color: 'kartoza.500',
           _hover: {
             bg: 'kartoza.50',
-            transform: 'translateY(-1px)',
           },
         },
         ghost: {
@@ -159,7 +156,6 @@ const theme = extendTheme({
           _hover: {
             bg: 'accent.600',
             boxShadow: '0 6px 28px rgba(232, 163, 49, 0.5)',
-            transform: 'translateY(-2px)',
           },
         },
         'accent-outline': {
@@ -182,7 +178,6 @@ const theme = extendTheme({
           _hover: {
             bg: 'accent.600',
             boxShadow: '0 6px 28px rgba(232, 163, 49, 0.5)',
-            transform: 'translateY(-2px)',
           },
         },
         heroSecondary: {
@@ -196,7 +191,6 @@ const theme = extendTheme({
           fontWeight: '600',
           _hover: {
             bg: 'whiteAlpha.200',
-            transform: 'translateY(-1px)',
           },
         },
       },
@@ -248,7 +242,7 @@ const theme = extendTheme({
         container: {
           borderRadius: '12px',
           boxShadow: '0 4px 16px rgba(27, 107, 155, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
-          transition: 'box-shadow 0.3s ease, transform 0.3s ease',
+          transition: 'box-shadow 0.3s ease',
           overflow: 'hidden',
           _hover: {
             boxShadow: '0 8px 28px rgba(27, 107, 155, 0.14), 0 2px 8px rgba(0, 0, 0, 0.08)',
@@ -260,11 +254,7 @@ const theme = extendTheme({
       },
       variants: {
         elevated: {
-          container: {
-            _hover: {
-              transform: 'translateY(-3px)',
-            },
-          },
+          container: {},
         },
         feature: {
           container: {

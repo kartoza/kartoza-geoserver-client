@@ -1,13 +1,38 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Layout from './components/Layout'
 import MainContent from './components/MainContent'
 import Dialogs from './components/dialogs'
 import { SearchModal, useSearchShortcut } from './components/SearchModal'
 import { HelpPanel, useHelpShortcut } from './components/HelpPanel'
+import { useTreeStore } from './stores/treeStore'
+import { getNodeUrlParam, parseNodeId } from './utils/nodeUrl'
+import type { TreeNode } from './types'
+
+function applyUrlToTree(restoreNode: (node: TreeNode) => void) {
+  const param = getNodeUrlParam()
+  if (!param) return
+  const partial = parseNodeId(param)
+  if (partial?.type) {
+    restoreNode(partial as TreeNode)
+  }
+}
 
 function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const restoreNode = useTreeStore((state) => state.restoreNode)
+
+  // Restore selected node + expand parents from URL on initial load
+  useEffect(() => {
+    applyUrlToTree(restoreNode)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const onPopState = () => applyUrlToTree(restoreNode)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [restoreNode])
 
   // Enable Ctrl+K global shortcut
   useSearchShortcut(() => setIsSearchOpen(true))

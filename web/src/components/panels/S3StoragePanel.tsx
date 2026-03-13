@@ -52,11 +52,10 @@ function S3ConnectionCard({ connection, onSelect }: S3ConnectionCardProps) {
       borderColor={borderColor}
       cursor="pointer"
       onClick={onSelect}
-      transition="all 0.2s"
+      transition="box-shadow 0.2s, border-color 0.2s"
       _hover={{
         shadow: 'lg',
         borderColor: 'orange.300',
-        transform: 'translateY(-2px)',
       }}
     >
       <CardBody>

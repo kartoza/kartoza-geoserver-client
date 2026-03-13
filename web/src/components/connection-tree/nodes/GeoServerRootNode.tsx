@@ -11,7 +11,7 @@ interface GeoServerRootNodeProps {
 }
 
 export function GeoServerRootNode({ connections }: GeoServerRootNodeProps) {
-  const nodeId = 'geoserver-root'
+  const nodeId = 'geoserver'
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)

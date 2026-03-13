@@ -23,17 +23,25 @@ import {
   Divider,
   Spinner,
 } from '@chakra-ui/react'
-import { FiFile, FiCheck, FiX, FiUploadCloud, FiLayers, FiDatabase } from 'react-icons/fi'
+import { FiFile, FiCheck, FiX, FiUploadCloud, FiLayers, FiDatabase, FiPause, FiPlay } from 'react-icons/fi'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUIStore } from '../../stores/uiStore'
 import { useTreeStore } from '../../stores/treeStore'
 import { useConnectionStore } from '../../stores/connectionStore'
 import * as api from '../../api'
+import { useChunkedUpload } from '../../hooks/useChunkedUpload'
 
 interface FileUpload {
   file: File
   progress: number
-  status: 'pending' | 'uploading' | 'success' | 'error'
+  chunkProgress: number
+  status: 'pending' | 'uploading' | 'paused' | 'success' | 'error' | 'cancelled'
+  speedBps: number
+  etaSeconds: number
+  chunksUploaded: number
+  chunksTotal: number
+  geoServerSent: number
+  geoServerTotal: number
   error?: string
   storeName?: string
   storeType?: string
@@ -42,6 +50,21 @@ interface FileUpload {
 interface AvailableLayer {
   name: string
   selected: boolean
+}
+
+function formatSpeed(bps: number): string {
+  if (bps <= 0) return ''
+  if (bps < 1024) return `${bps.toFixed(0)} B/s`
+  if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`
+  return `${(bps / (1024 * 1024)).toFixed(1)} MB/s`
+}
+
+function formatEta(seconds: number): string {
+  if (!isFinite(seconds) || seconds <= 0) return ''
+  if (seconds < 60) return `${Math.ceil(seconds)}s`
+  const m = Math.floor(seconds / 60)
+  const s = Math.ceil(seconds % 60)
+  return `${m}m ${s}s`
 }
 
 export default function UploadDialog() {
@@ -59,6 +82,7 @@ export default function UploadDialog() {
   const [loadingLayers, setLoadingLayers] = useState(false)
   const [publishingLayers, setPublishingLayers] = useState(false)
   const [currentStore, setCurrentStore] = useState<{ name: string; type: string } | null>(null)
+  const [currentFileIndex, setCurrentFileIndex] = useState<number>(-1)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const dropzoneBg = useColorModeValue('gray.50', 'gray.700')
@@ -68,6 +92,8 @@ export default function UploadDialog() {
   const connectionId = selectedNode?.connectionId || activeConnectionId
   const workspace = selectedNode?.workspace
 
+  const chunkedUpload = useChunkedUpload()
+
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
@@ -75,8 +101,47 @@ export default function UploadDialog() {
       setUploadComplete(false)
       setAvailableLayers([])
       setCurrentStore(null)
+      setCurrentFileIndex(-1)
+      chunkedUpload.reset()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
+
+  useEffect(() => {
+    if (currentFileIndex < 0) return
+    const { state } = chunkedUpload
+    setFiles((prev) =>
+      prev.map((f, idx) => {
+        if (idx !== currentFileIndex) return f
+
+        const overallPct =
+          state.chunksTotal > 0
+            ? Math.round((state.chunksUploaded / state.chunksTotal) * 100)
+            : f.progress
+
+        let status = f.status
+        if (state.status === 'uploading') status = 'uploading'
+        else if (state.status === 'paused') status = 'paused'
+        else if (state.status === 'completed') status = 'success'
+        else if (state.status === 'error') status = 'error'
+        else if (state.status === 'cancelled') status = 'cancelled'
+
+        return {
+          ...f,
+          status,
+          progress: overallPct,
+          chunkProgress: state.currentChunkProgress,
+          speedBps: state.speedBps,
+          etaSeconds: state.etaSeconds,
+          chunksUploaded: state.chunksUploaded,
+          chunksTotal: state.chunksTotal,
+          geoServerSent: state.geoServerSent,
+          geoServerTotal: state.geoServerTotal,
+          error: state.error,
+        }
+      })
+    )
+  }, [chunkedUpload.state, currentFileIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -111,10 +176,16 @@ export default function UploadDialog() {
       ...validFiles.map((file) => ({
         file,
         progress: 0,
+        chunkProgress: 0,
         status: 'pending' as const,
+        speedBps: 0,
+        etaSeconds: 0,
+        chunksUploaded: 0,
+        chunksTotal: 0,
+        geoServerSent: 0,
+        geoServerTotal: 0,
       })),
     ])
-    // Reset upload complete state when adding new files
     setUploadComplete(false)
     setAvailableLayers([])
   }
@@ -150,6 +221,9 @@ export default function UploadDialog() {
     for (let i = 0; i < files.length; i++) {
       if (files[i].status !== 'pending') continue
 
+      setCurrentFileIndex(i)
+      chunkedUpload.reset()
+
       setFiles((prev) =>
         prev.map((f, idx) =>
           idx === i ? { ...f, status: 'uploading' as const } : f
@@ -157,45 +231,48 @@ export default function UploadDialog() {
       )
 
       try {
-        const result = await api.uploadFile(connectionId, workspace, files[i].file, (progress) => {
-          setFiles((prev) =>
-            prev.map((f, idx) =>
-              idx === i ? { ...f, progress } : f
-            )
-          )
-        })
+        const result = await chunkedUpload.start(connectionId, workspace, files[i].file)
 
         setFiles((prev) =>
           prev.map((f, idx) =>
-            idx === i ? {
-              ...f,
-              status: 'success' as const,
-              progress: 100,
-              storeName: result.storeName,
-              storeType: result.storeType,
-            } : f
+            idx === i
+              ? {
+                  ...f,
+                  status: 'success' as const,
+                  progress: 100,
+                  chunkProgress: 100,
+                  storeName: result.storeName,
+                  storeType: result.storeType,
+                }
+              : f
           )
         )
 
-        // Track the last successful GeoPackage upload
         if (files[i].file.name.toLowerCase().endsWith('.gpkg') && result.storeName) {
           lastGpkgStore = { name: result.storeName, type: result.storeType || 'datastore' }
         }
       } catch (err) {
-        setFiles((prev) =>
-          prev.map((f, idx) =>
-            idx === i
-              ? { ...f, status: 'error' as const, error: (err as Error).message }
-              : f
+        const errMsg = (err as Error).message
+        if (errMsg === 'Upload cancelled') {
+          setFiles((prev) =>
+            prev.map((f, idx) =>
+              idx === i ? { ...f, status: 'cancelled' as const } : f
+            )
           )
-        )
+        } else {
+          setFiles((prev) =>
+            prev.map((f, idx) =>
+              idx === i ? { ...f, status: 'error' as const, error: errMsg } : f
+            )
+          )
+        }
       }
     }
 
+    setCurrentFileIndex(-1)
     setIsUploading(false)
     setUploadComplete(true)
 
-    // Invalidate queries to refresh the tree
     queryClient.invalidateQueries({ queryKey: ['datastores', connectionId, workspace] })
     queryClient.invalidateQueries({ queryKey: ['coveragestores', connectionId, workspace] })
     queryClient.invalidateQueries({ queryKey: ['styles', connectionId, workspace] })
@@ -211,7 +288,6 @@ export default function UploadDialog() {
       })
     }
 
-    // Check for available layers in GeoPackage stores
     if (lastGpkgStore && lastGpkgStore.type === 'datastore') {
       setCurrentStore(lastGpkgStore)
       await loadAvailableLayers(lastGpkgStore.name)
@@ -280,12 +356,10 @@ export default function UploadDialog() {
           duration: 3000,
         })
 
-        // Remove published layers from available list
         setAvailableLayers((prev) =>
           prev.filter((l) => !result.published.includes(l.name))
         )
 
-        // Invalidate queries to refresh the tree
         queryClient.invalidateQueries({ queryKey: ['layers', connectionId, workspace] })
       }
 
@@ -314,6 +388,8 @@ export default function UploadDialog() {
     setUploadComplete(false)
     setAvailableLayers([])
     setCurrentStore(null)
+    setCurrentFileIndex(-1)
+    chunkedUpload.reset()
     closeDialog()
   }
 
@@ -322,6 +398,8 @@ export default function UploadDialog() {
       case 'success':
         return FiCheck
       case 'error':
+        return FiX
+      case 'cancelled':
         return FiX
       default:
         return FiFile
@@ -334,6 +412,8 @@ export default function UploadDialog() {
         return 'green.500'
       case 'error':
         return 'red.500'
+      case 'cancelled':
+        return 'orange.500'
       default:
         return 'gray.500'
     }
@@ -341,6 +421,10 @@ export default function UploadDialog() {
 
   const hasPendingUploads = files.some((f) => f.status === 'pending')
   const selectedLayerCount = availableLayers.filter((l) => l.selected).length
+
+  const uploadingFiles = files.filter((f) => f.status === 'uploading' || f.status === 'paused')
+  const totalFiles = files.length
+  const completedFiles = files.filter((f) => f.status === 'success' || f.status === 'error' || f.status === 'cancelled').length
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} size="lg" isCentered>
@@ -429,6 +513,26 @@ export default function UploadDialog() {
               </Box>
             )}
 
+            {/* Overall progress when uploading multiple files */}
+            {isUploading && totalFiles > 1 && (
+              <Box w="100%" p={3} bg={dropzoneBg} borderRadius="lg" border="1px solid" borderColor="gray.200">
+                <HStack justify="space-between" mb={2}>
+                  <Text fontSize="sm" fontWeight="500" color="gray.700">
+                    File {completedFiles + (uploadingFiles.length > 0 ? 1 : 0)} of {totalFiles}
+                  </Text>
+                  <Text fontSize="xs" color="gray.500">
+                    {completedFiles} completed
+                  </Text>
+                </HStack>
+                <Progress
+                  value={totalFiles > 0 ? (completedFiles / totalFiles) * 100 : 0}
+                  size="sm"
+                  colorScheme="kartoza"
+                  borderRadius="full"
+                />
+              </Box>
+            )}
+
             {/* File list */}
             {files.length > 0 && (
               <List spacing={2} w="100%">
@@ -439,7 +543,15 @@ export default function UploadDialog() {
                     bg={dropzoneBg}
                     borderRadius="lg"
                     border="1px solid"
-                    borderColor={upload.status === 'success' ? 'green.200' : upload.status === 'error' ? 'red.200' : 'gray.200'}
+                    borderColor={
+                      upload.status === 'success'
+                        ? 'green.200'
+                        : upload.status === 'error'
+                        ? 'red.200'
+                        : upload.status === 'cancelled'
+                        ? 'orange.200'
+                        : 'gray.200'
+                    }
                   >
                     <VStack align="stretch" spacing={2}>
                       <Box display="flex" alignItems="center" gap={2}>
@@ -465,15 +577,135 @@ export default function UploadDialog() {
                         {upload.status === 'success' && (
                           <Badge colorScheme="green" borderRadius="md">Complete</Badge>
                         )}
+                        {upload.status === 'cancelled' && (
+                          <Badge colorScheme="orange" borderRadius="md">Cancelled</Badge>
+                        )}
+                        {(upload.status === 'uploading' || upload.status === 'paused') &&
+                          !(upload.chunksUploaded >= upload.chunksTotal && upload.chunksTotal > 0) && (
+                          <HStack spacing={1}>
+                            {upload.status === 'uploading' ? (
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                colorScheme="yellow"
+                                onClick={chunkedUpload.pause}
+                                leftIcon={<FiPause />}
+                                borderRadius="md"
+                              >
+                                Pause
+                              </Button>
+                            ) : (
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                colorScheme="green"
+                                onClick={chunkedUpload.resume}
+                                leftIcon={<FiPlay />}
+                                borderRadius="md"
+                              >
+                                Resume
+                              </Button>
+                            )}
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              colorScheme="red"
+                              onClick={chunkedUpload.cancel}
+                              borderRadius="md"
+                            >
+                              Cancel
+                            </Button>
+                          </HStack>
+                        )}
                       </Box>
-                      {upload.status === 'uploading' && (
+
+                      {/* GeoServer upload progress (finalizing phase) */}
+                      {(upload.status === 'uploading' || upload.status === 'paused') &&
+                        upload.chunksUploaded >= upload.chunksTotal &&
+                        upload.chunksTotal > 0 && (
+                        <Box>
+                          <HStack justify="space-between" mb={1}>
+                            <Text fontSize="xs" color="blue.500" fontWeight="500">
+                              Sending to GeoServer…
+                            </Text>
+                            {upload.geoServerTotal > 0 && (
+                              <Text fontSize="xs" color="gray.500">
+                                {Math.round((upload.geoServerSent / upload.geoServerTotal) * 100)}%
+                              </Text>
+                            )}
+                          </HStack>
+                          <Progress
+                            value={
+                              upload.geoServerTotal > 0
+                                ? (upload.geoServerSent / upload.geoServerTotal) * 100
+                                : undefined
+                            }
+                            isIndeterminate={upload.geoServerTotal === 0}
+                            size="sm"
+                            colorScheme="blue"
+                            borderRadius="full"
+                          />
+                        </Box>
+                      )}
+
+                      {/* Overall progress bar */}
+                      {(upload.status === 'uploading' || upload.status === 'paused') && upload.chunksTotal > 0 && (
+                        <>
+                          <Box>
+                            <HStack justify="space-between" mb={1}>
+                              <Text fontSize="xs" color="gray.500">
+                                {upload.chunksUploaded >= upload.chunksTotal
+                                  ? 'All chunks received'
+                                  : `Overall: ${upload.chunksUploaded}/${upload.chunksTotal} chunks`}
+                              </Text>
+                              <HStack spacing={3}>
+                                {upload.speedBps > 0 && (
+                                  <Text fontSize="xs" color="gray.500">
+                                    {formatSpeed(upload.speedBps)}
+                                  </Text>
+                                )}
+                                {upload.etaSeconds > 0 && (
+                                  <Text fontSize="xs" color="gray.500">
+                                    ETA: {formatEta(upload.etaSeconds)}
+                                  </Text>
+                                )}
+                              </HStack>
+                            </HStack>
+                            <Progress
+                              value={upload.progress}
+                              size="sm"
+                              colorScheme={upload.status === 'paused' ? 'yellow' : 'kartoza'}
+                              borderRadius="full"
+                            />
+                          </Box>
+
+                          {/* Current chunk progress bar */}
+                          {upload.chunksTotal > 1 && (
+                            <Box>
+                              <Text fontSize="xs" color="gray.400" mb={1}>
+                                Current chunk: {upload.chunkProgress}%
+                              </Text>
+                              <Progress
+                                value={upload.chunkProgress}
+                                size="xs"
+                                colorScheme="blue"
+                                borderRadius="full"
+                                opacity={0.7}
+                              />
+                            </Box>
+                          )}
+                        </>
+                      )}
+
+                      {(upload.status === 'uploading' || upload.status === 'paused') && upload.chunksTotal <= 1 && (
                         <Progress
-                          value={upload.progress}
+                          value={upload.chunkProgress}
                           size="sm"
-                          colorScheme="kartoza"
+                          colorScheme={upload.status === 'paused' ? 'yellow' : 'kartoza'}
                           borderRadius="full"
                         />
                       )}
+
                       {upload.status === 'error' && (
                         <Text fontSize="xs" color="red.500">
                           {upload.error}

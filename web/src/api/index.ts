@@ -18,6 +18,7 @@
 
 // Re-export everything from modular files
 export * from './common'
+export * from './chunkedUpload'
 export * from './connection'
 export * from './workspace'
 export * from './stores'

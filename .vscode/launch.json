@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Vite Dev Server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/web"
+    },
+    {
+      "name": "Run Web Server",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/web",
+      "env": {},
+      "args": []
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Web: Vite dev + Go server",
+      "configurations": ["Vite Dev Server", "Run Web Server"],
+      "stopAll": true
+    }
+  ]
+}

@@ -36,6 +36,7 @@ import {
   StylesDashboard,
   LayerGroupsDashboard,
 } from './dashboards'
+import { ShopPanel, InstancePanel } from './hosting'
 
 export default function MainContent() {
   const selectedNode = useTreeStore((state) => state.selectedNode)
@@ -379,6 +380,15 @@ export default function MainContent() {
       return <QFieldCloudPanel node={selectedNode} />
     case 'merginmapsproject':
       return <MerginMapsProjectPanel node={selectedNode} />
+    case 'hosting':
+    case 'hostingshop':
+      return <ShopPanel />
+    case 'hostinginstance':
+      return selectedNode.hostingInstanceId ? (
+        <InstancePanel instanceId={selectedNode.hostingInstanceId} />
+      ) : (
+        <Dashboard />
+      )
     default:
       return <Dashboard />
   }

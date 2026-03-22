@@ -38,8 +38,9 @@ This document provides a detailed specification of all features, behaviors, and 
 32. [Cloud-Native Format Conversion](#cloud-native-format-conversion)
 33. [DuckDB Query Engine](#duckdb-query-engine)
 34. [Apache Iceberg Integration](#apache-iceberg-integration)
-35. [Future Enhancements](#future-enhancements)
-36. [Version History](#version-history)
+35. [Geospatial Hosting](#geospatial-hosting)
+36. [Future Enhancements](#future-enhancements)
+37. [Version History](#version-history)
 
 ---
 
@@ -2588,6 +2589,316 @@ Tables with detected geometry columns show:
 - **Partitioning**: Configure spatial partitioning strategies
 - **Time Travel**: Query historical table versions via snapshot selection
 - **Sedona Integration**: Execute spatial queries via Spark/Sedona for actual data visualization
+
+---
+
+## Geospatial Hosting
+
+CloudBench includes an integrated SaaS platform for hosting GeoServer, GeoNode, and PostGIS instances.
+
+### Overview
+
+The Geospatial Hosting module provides:
+- User authentication and management
+- Product catalog with multiple service tiers
+- Stripe and Paystack payment integration
+- Automated instance deployment via Jenkins/ArgoCD
+- Credential management via HashiCorp Vault
+- Instance health monitoring
+
+### Architecture
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                     CloudBench Application                      │
+│  ┌────────────┐  ┌────────────┐  ┌────────────────────────┐   │
+│  │ Shop Front │  │ Tree View  │  │ TUI Interface          │   │
+│  │ (React)    │  │ (Instances)│  │ (Bubbletea)           │   │
+│  └─────┬──────┘  └─────┬──────┘  └──────────┬─────────────┘   │
+│        └───────────────┴────────────────────┘                  │
+│                         │                                       │
+│  ┌──────────────────────┴──────────────────────────────────┐  │
+│  │                  Go Backend (HTTP Server)                │  │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │  │
+│  │  │  Auth   │ │Products │ │ Orders  │ │Instance │       │  │
+│  │  │ Handler │ │ Handler │ │ Handler │ │ Handler │       │  │
+│  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘       │  │
+│  │       └───────────┴───────────┴───────────┘             │  │
+│  │                        │                                 │  │
+│  │  ┌─────────────────────┴───────────────────────────┐   │  │
+│  │  │               Service Layer                      │   │  │
+│  │  │  ┌────────┐ ┌────────┐ ┌────────┐              │   │  │
+│  │  │  │  User  │ │Payment │ │ Deploy │              │   │  │
+│  │  │  │Service │ │Service │ │Service │              │   │  │
+│  │  │  └───┬────┘ └───┬────┘ └───┬────┘              │   │  │
+│  │  └──────┼──────────┼──────────┼────────────────────┘   │  │
+│  └─────────┼──────────┼──────────┼────────────────────────┘  │
+└────────────┼──────────┼──────────┼────────────────────────────┘
+             │          │          │
+    ┌────────┴───┐ ┌────┴────┐ ┌───┴────┐
+    │ PostgreSQL │ │ Stripe  │ │Jenkins │
+    │  Database  │ │Paystack │ │ArgoCD  │
+    └────────────┘ └─────────┘ └───┬────┘
+                                   │
+                       ┌───────────┴───────────┐
+                       │   Kubernetes Cluster  │
+                       │  ┌─────┐ ┌─────┐     │
+                       │  │ GS  │ │ GN  │ ... │
+                       │  └─────┘ └─────┘     │
+                       └───────────┴──────────┘
+                                   │
+                            ┌──────┴──────┐
+                            │    Vault    │
+                            │(Credentials)│
+                            └─────────────┘
+```
+
+### User Interface Components
+
+#### Web UI
+
+1. **Shop Front** (`web/src/components/hosting/ShopPanel.tsx`)
+   - Product browsing with pricing
+   - Package comparison with feature matrix
+   - Multi-step checkout flow
+   - Login/register integration
+
+2. **Tree View Integration** (`web/src/components/connection-tree/nodes/HostingRootNode.tsx`)
+   - "Hosting" root node in resource tree
+   - Account node showing logged-in user
+   - Instance nodes with status indicators (online/starting/offline/error)
+   - Click "+" to access shop
+
+3. **Instance Panel** (`web/src/components/hosting/InstancePanel.tsx`)
+   - Instance details (product, package, URL)
+   - Activity log
+   - Resource usage
+   - Credentials access
+   - Restart/delete actions
+
+#### TUI
+
+1. **Hosting Screen** (`internal/tui/screens/hosting.go`)
+   - Accessed via 'H' key from dashboard or main screen
+   - Table view of instances with status badges
+   - Key bindings: ↑/↓ navigate, r refresh, s shop, Esc back
+
+### API Endpoints
+
+#### Authentication
+```
+POST /api/v1/auth/register     - Create account
+POST /api/v1/auth/login        - Get JWT token
+POST /api/v1/auth/logout       - Revoke token
+POST /api/v1/auth/refresh      - Refresh token
+GET  /api/v1/auth/profile      - Get current user
+PUT  /api/v1/auth/profile      - Update profile
+```
+
+#### Products
+```
+GET  /api/v1/products              - List available products
+GET  /api/v1/products/{slug}       - Get product details
+GET  /api/v1/products/{slug}/packages - List packages for product
+```
+
+#### Orders
+```
+POST /api/v1/orders                    - Create order
+GET  /api/v1/orders/{id}               - Get order status
+POST /api/v1/orders/{id}/checkout/stripe - Get Stripe checkout session
+POST /api/v1/orders/{id}/checkout/paystack - Get Paystack authorization
+POST /api/v1/orders/{id}/coupon        - Apply coupon code
+```
+
+#### Instances
+```
+GET  /api/v1/instances                     - List user instances
+GET  /api/v1/instances/{id}                - Get instance details
+GET  /api/v1/instances/{id}/credentials    - Get access credentials
+GET  /api/v1/instances/{id}/health         - Get health status
+POST /api/v1/instances/{id}/restart        - Restart instance
+DELETE /api/v1/instances/{id}              - Delete instance
+```
+
+### Node Types
+
+| Node Type | Icon | Description |
+|-----------|------|-------------|
+| `hosting` | Cloud | Hosting root container |
+| `hostingaccount` | User | Authenticated user account |
+| `hostinginstance` | Server | Deployed instance (GeoServer/GeoNode/PostGIS) |
+| `hostingshop` | Shopping Cart | Shop for new deployments |
+
+### Status Indicators
+
+| Status | Indicator | Description |
+|--------|-----------|-------------|
+| `online` | Green circle | Instance is running and healthy |
+| `starting_up` | Yellow circle | Instance is starting |
+| `deploying` | Yellow circle | Initial deployment in progress |
+| `offline` | Gray circle | Instance is stopped |
+| `error` | Red circle | Instance has errors |
+
+### Products
+
+1. **GeoServer** - Web mapping server for publishing geospatial data
+2. **GeoNode** - Geospatial content management system
+3. **PostGIS** - Spatial database extension for PostgreSQL
+
+### Deployment Flow
+
+1. User browses products and selects package
+2. User completes checkout via Stripe or Paystack
+3. Order status changes to "paid"
+4. Instance record created with status "deploying"
+5. Jenkins job triggered for deployment
+6. ArgoCD deploys to Kubernetes cluster
+7. Health checker detects instance online
+8. Credentials stored in Vault
+9. User notified via email
+
+### Email Notifications
+
+The hosting platform includes a comprehensive email notification system.
+
+#### Supported Providers
+
+| Provider | Description | Configuration |
+|----------|-------------|---------------|
+| SendGrid | Production-ready email delivery | `SENDGRID_API_KEY` |
+| Resend | Modern email API | `RESEND_API_KEY` |
+| SMTP | Generic SMTP support | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` |
+| Console | Development logging | Default (no config needed) |
+
+#### Email Templates
+
+All templates are responsive HTML emails with Kartoza branding:
+
+| Template | Trigger | Description |
+|----------|---------|-------------|
+| `welcome.html` | User registration | Welcome message with getting started info |
+| `instance_ready.html` | Instance deployed | Credentials and access URL |
+| `payment_reminder.html` | Subscription expiring | Renewal reminder with urgency levels |
+| `password_reset.html` | Password reset request | Secure reset link |
+| `order_confirmation.html` | Payment completed | Order details and deployment status |
+
+#### Notification Triggers
+
+| Event | Email Sent | Recipient |
+|-------|------------|-----------|
+| User registers | Welcome email | New user |
+| Password reset requested | Reset link email | User |
+| Payment completed | Order confirmation | User |
+| Instance deployed | Instance ready with credentials | User |
+| Subscription expiring (7 days) | Payment reminder | User |
+| Subscription expiring (1 day) | Urgent payment reminder | User |
+
+#### Email Service Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Email Service                      │
+│  ┌─────────────────────────────────────────────┐   │
+│  │              Template Engine                 │   │
+│  │  (embed.FS with HTML templates)             │   │
+│  └─────────────────────────────────────────────┘   │
+│                       │                             │
+│  ┌─────────┬──────────┼──────────┬─────────┐       │
+│  │SendGrid │  Resend  │   SMTP   │ Console │       │
+│  │Provider │ Provider │ Provider │ Provider│       │
+│  └────┬────┴────┬─────┴────┬─────┴────┬────┘       │
+└───────┼─────────┼──────────┼──────────┼────────────┘
+        │         │          │          │
+   SendGrid    Resend      SMTP      stdout
+     API        API       Server    (dev only)
+```
+
+### Admin Dashboard
+
+The hosting platform includes a comprehensive admin dashboard for platform management.
+
+#### Overview
+
+The admin dashboard provides:
+- Dashboard statistics overview
+- User management (list, activate/deactivate, admin privileges)
+- Instance oversight (all instances across all users)
+- Order management (payment history, status)
+- System health monitoring
+- Revenue analytics
+
+#### API Endpoints
+
+```
+GET  /api/v1/admin/dashboard           - Dashboard statistics
+GET  /api/v1/admin/users               - List all users (paginated)
+GET  /api/v1/admin/users/{id}          - Get user details
+PUT  /api/v1/admin/users/{id}          - Update user (is_active, is_admin)
+GET  /api/v1/admin/instances           - List all instances (paginated)
+GET  /api/v1/admin/orders              - List all orders (paginated)
+GET  /api/v1/admin/analytics/revenue   - Revenue chart data
+GET  /api/v1/admin/health              - System health status
+```
+
+#### Dashboard Statistics
+
+The overview displays:
+- Total users and active users count
+- Total instances and online instances count
+- Monthly revenue and total revenue
+- Pending orders count
+- Instances by status breakdown
+- Revenue by product breakdown
+- 30-day revenue trend chart
+
+#### User Management
+
+| Action | Description |
+|--------|-------------|
+| Search | Filter users by email, first name, or last name |
+| Sort | Order by email, name, created date, status |
+| Activate/Deactivate | Toggle user account status |
+| Make Admin | Grant or revoke admin privileges |
+
+#### Instance Oversight
+
+| Filter | Description |
+|--------|-------------|
+| Search | Filter by instance name or user email |
+| Status | Filter by online, offline, deploying, error |
+| Product | Filter by GeoServer, GeoNode, PostGIS |
+
+#### System Health
+
+The health endpoint returns:
+- Overall system status (healthy, degraded, unhealthy)
+- Database connectivity status
+- Instance health summary
+- Last check timestamps
+
+#### Access Control
+
+Admin endpoints require:
+1. Valid JWT authentication token
+2. User must have `is_admin = true`
+
+Middleware chain:
+```
+RequireAuthFunc → AdminOnly → Handler
+```
+
+#### Web UI Component
+
+The admin dashboard is implemented in `web/src/components/hosting/AdminDashboard.tsx`:
+
+| Tab | Features |
+|-----|----------|
+| Overview | Stats cards, status breakdown, revenue chart |
+| Users | Paginated table, search, activate/deactivate, admin toggle |
+| Instances | Paginated table, status filter, search |
+| Orders | Paginated table, order history |
+| Health | System status, component health indicators |
 
 ---
 

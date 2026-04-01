@@ -284,6 +284,11 @@ func (s *Server) setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/viewer/", s.handleTerriaViewer)
 	mux.HandleFunc("/viewer", s.handleTerriaViewer)
 
+	// Hosting API routes (mock data for demo)
+	mux.HandleFunc("/api/v1/products", s.handleHostingProducts)
+	mux.HandleFunc("/api/v1/products/", s.handleHostingProductBySlug)
+	mux.HandleFunc("/api/v1/clusters", s.handleHostingClusters)
+
 	// Serve static files (React app)
 	mux.HandleFunc("/", s.serveStatic)
 }

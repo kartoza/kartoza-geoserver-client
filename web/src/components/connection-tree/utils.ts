@@ -97,6 +97,16 @@ export function getNodeIconComponent(type: NodeType | 'featuretype' | 'coverage'
       return FiServer
     case 'merginmapsproject':
       return FiFolder
+    case 'hosting':
+      return FiCloud
+    case 'hostingaccount':
+      return FiServer
+    case 'hostinginstances':
+      return FiFolder
+    case 'hostinginstance':
+      return FiServer
+    case 'hostingshop':
+      return FiGrid
     case 'workspace':
       return FiFolder
     case 'datastores':
@@ -196,6 +206,16 @@ export function getNodeColor(type: NodeType | 'featuretype' | 'coverage'): strin
       return 'green.400'
     case 'merginmapsproject':
       return 'green.300'
+    case 'hosting':
+      return 'blue.500'
+    case 'hostingaccount':
+      return 'blue.400'
+    case 'hostinginstances':
+      return 'blue.300'
+    case 'hostinginstance':
+      return 'blue.500'
+    case 'hostingshop':
+      return 'green.500'
     case 'workspace':
       return 'accent.400'
     case 'datastores':

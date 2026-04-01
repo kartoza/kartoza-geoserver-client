@@ -288,6 +288,11 @@ export type NodeType =
   | 'merginmaps'          // "Mergin Maps" container
   | 'merginmapsconnection' // Mergin Maps server connection
   | 'merginmapsproject'   // Mergin Maps project
+  | 'hosting'             // "Geospatial Hosting" container
+  | 'hostingaccount'      // Hosting user account
+  | 'hostinginstances'    // "My Instances" container
+  | 'hostinginstance'     // Single hosted instance
+  | 'hostingshop'         // Shop front
   | 'workspace'
   | 'datastores'
   | 'coveragestores'
@@ -357,6 +362,12 @@ export interface TreeNode {
   merginMapsConnectionId?: string
   merginMapsNamespace?: string
   merginMapsProjectName?: string
+  // Hosting-specific fields
+  hostingInstanceId?: string
+  hostingInstanceStatus?: string
+  hostingInstanceUrl?: string
+  hostingProductName?: string
+  hostingPackageName?: string
 }
 
 // GeoWebCache (GWC) types

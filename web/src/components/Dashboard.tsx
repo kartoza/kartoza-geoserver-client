@@ -203,10 +203,9 @@ function PGServiceCard({ service, onParse, isParsing, onToggleHidden, isToggling
       p={4}
       minH="220px"
       position="relative"
-      transition="all 0.3s ease"
+      transition="box-shadow 0.3s ease"
       opacity={service.hidden ? 0.7 : 1}
       _hover={{
-        transform: 'translateY(-2px)',
         boxShadow: 'lg',
       }}
     >
@@ -344,9 +343,8 @@ function ServerCard({ server, isAlert = false }: ServerCardProps) {
       p={4}
       minH="220px"
       position="relative"
-      transition="all 0.3s ease"
+      transition="box-shadow 0.3s ease"
       _hover={{
-        transform: 'translateY(-2px)',
         boxShadow: 'lg',
       }}
       css={!server.online ? css`animation: ${pulseKeyframes} 2s ease-in-out infinite;` : undefined}

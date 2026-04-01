@@ -9,7 +9,7 @@ import { TreeNodeRow } from '../TreeNodeRow'
 import { PGServiceNode } from './PGServiceNode'
 
 export function PostgreSQLRootNode() {
-  const nodeId = 'postgresql-root'
+  const nodeId = 'postgresql'
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)

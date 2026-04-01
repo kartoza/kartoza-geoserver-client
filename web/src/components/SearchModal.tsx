@@ -165,7 +165,7 @@ export function SearchModal({ isOpen, onClose, onSelect }: SearchModalProps) {
 
     if (isPGResult) {
       // Expand PostgreSQL root node
-      expandNode('postgresql-root')
+      expandNode('postgresql')
 
       // Expand service node if we have a service name
       if (result.serviceName) {

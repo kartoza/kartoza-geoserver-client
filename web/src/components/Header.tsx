@@ -122,6 +122,8 @@ export default function Header({ onSearchClick, onHelpClick }: HeaderProps) {
             color="gray.800"
             fontWeight="600"
             mr={8}
+            cursor="pointer"
+            onClick={() => useTreeStore.getState().clearSelection()}
           >
             Cloudbench
           </Heading>

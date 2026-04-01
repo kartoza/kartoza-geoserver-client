@@ -90,7 +90,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	tempFile.Close()
 
 	// Derive store name from filename (without extension)
-	storeName := strings.TrimSuffix(filename, filepath.Ext(filename))
+	storeName := sanitizeStoreName(strings.TrimSuffix(filename, filepath.Ext(filename)))
 
 	// Upload based on file type
 	var uploadErr error
@@ -132,6 +132,28 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		StoreName: storeName,
 		StoreType: storeType,
 	})
+}
+
+func sanitizeStoreName(name string) string {
+	var b strings.Builder
+	for i, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r == '_':
+			b.WriteRune(r)
+		case r >= '0' && r <= '9', r == '.', r == '-':
+			if i == 0 {
+				b.WriteRune('_')
+			}
+			b.WriteRune(r)
+		default:
+			b.WriteRune('_')
+		}
+	}
+	s := b.String()
+	if s == "" {
+		return "store"
+	}
+	return s
 }
 
 // detectFileType detects the file type based on extension

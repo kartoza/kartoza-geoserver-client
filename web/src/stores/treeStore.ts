@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { TreeNode, NodeType } from '../types'
+import { setNodeUrlParam, clearNodeUrlParam, getParentNodeIds } from '../utils/nodeUrl'
 
 interface TreeState {
   expandedNodes: Set<string>
@@ -10,6 +11,7 @@ interface TreeState {
   expandNode: (nodeId: string) => void
   collapseNode: (nodeId: string) => void
   selectNode: (node: TreeNode | null) => void
+  restoreNode: (node: TreeNode) => void
   isExpanded: (nodeId: string) => boolean
   clearSelection: () => void
   reset: () => void
@@ -49,6 +51,22 @@ export const useTreeStore = create<TreeState>((set, get) => ({
 
   selectNode: (node: TreeNode | null) => {
     set({ selectedNode: node })
+    if (node) {
+      setNodeUrlParam(node.id)
+    } else {
+      clearNodeUrlParam()
+    }
+  },
+
+  restoreNode: (node: TreeNode) => {
+    const parentIds = getParentNodeIds(node.id)
+    const selfExpanding = ['datastore', 'coveragestore', 'layer', 'layergroups', 'styles'].includes(node.type)
+    set(state => {
+      const newExpanded = new Set(state.expandedNodes)
+      parentIds.forEach(id => newExpanded.add(id))
+      if (selfExpanding) newExpanded.add(node.id)
+      return { expandedNodes: newExpanded, selectedNode: node }
+    })
   },
 
   isExpanded: (nodeId: string) => {
@@ -57,6 +75,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
 
   clearSelection: () => {
     set({ selectedNode: null })
+    clearNodeUrlParam()
   },
 
   reset: () => {

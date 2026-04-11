@@ -78,6 +78,7 @@ class TestConnectionsScreen:
         async with app.run_test() as pilot:
             # Navigate to connections
             # This depends on the app structure
+            pass
 
     async def test_add_connection_dialog(self) -> None:
         """Test the add connection dialog."""

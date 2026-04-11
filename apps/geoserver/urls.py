@@ -115,4 +115,20 @@ urlpatterns = [
         views.LayerGroupDetailView.as_view(),
         name="layergroup-detail",
     ),
+    # File Uploads
+    path(
+        "upload/shapefile/<str:conn_id>/<str:workspace>",
+        views.UploadShapefileView.as_view(),
+        name="upload-shapefile",
+    ),
+    path(
+        "upload/geotiff/<str:conn_id>/<str:workspace>",
+        views.UploadGeoTiffView.as_view(),
+        name="upload-geotiff",
+    ),
+    path(
+        "upload/geopackage/<str:conn_id>/<str:workspace>",
+        views.UploadGeoPackageView.as_view(),
+        name="upload-geopackage",
+    ),
 ]

@@ -5,19 +5,10 @@ Tests custom Textual widgets used in the CloudBench TUI.
 
 import pytest
 
-try:
-    from textual.testing import AppTest
-    TEXTUAL_TESTING_AVAILABLE = True
-except ImportError:
-    TEXTUAL_TESTING_AVAILABLE = False
-
 
 pytestmark = [
     pytest.mark.tui,
-    pytest.mark.skipif(
-        not TEXTUAL_TESTING_AVAILABLE,
-        reason="textual-dev not installed"
-    ),
+    pytest.mark.asyncio,
 ]
 
 

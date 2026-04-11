@@ -5,21 +5,10 @@ Uses Textual's testing framework for widget and screen tests.
 
 import pytest
 
-# Note: These tests require textual-dev to be installed
-try:
-    from textual.testing import AppTest
-    TEXTUAL_TESTING_AVAILABLE = True
-except ImportError:
-    TEXTUAL_TESTING_AVAILABLE = False
-    AppTest = None
-
 
 pytestmark = [
     pytest.mark.tui,
-    pytest.mark.skipif(
-        not TEXTUAL_TESTING_AVAILABLE,
-        reason="textual-dev not installed"
-    ),
+    pytest.mark.asyncio,
 ]
 
 

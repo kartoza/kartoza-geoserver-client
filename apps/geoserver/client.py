@@ -290,6 +290,48 @@ class GeoServerClient:
         )
         return data.get("coverageStore", {})
 
+    def create_coveragestore(
+        self,
+        workspace: str,
+        name: str,
+        store_type: str = "GeoTIFF",
+        url: str | None = None,
+        description: str = "",
+        enabled: bool = True,
+    ) -> None:
+        """Create a new coverage store.
+
+        Args:
+            workspace: Workspace name
+            name: Coverage store name
+            store_type: Store type (GeoTIFF, WorldImage, etc.)
+            url: URL to coverage data
+            description: Store description
+            enabled: Whether store is enabled
+        """
+        payload = {
+            "coverageStore": {
+                "name": name,
+                "type": store_type,
+                "enabled": enabled,
+            }
+        }
+        if description:
+            payload["coverageStore"]["description"] = description
+        if url:
+            payload["coverageStore"]["url"] = url
+
+        response = self._request(
+            "POST",
+            f"/rest/workspaces/{workspace}/coveragestores.json",
+            json=payload,
+        )
+        if response.status_code >= 400:
+            raise GeoServerError(
+                f"Failed to create coveragestore: {response.text}",
+                status_code=response.status_code,
+            )
+
     def delete_coveragestore(
         self, workspace: str, name: str, recurse: bool = False
     ) -> None:

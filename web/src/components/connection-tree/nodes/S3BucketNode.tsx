@@ -81,9 +81,9 @@ export function S3BucketNode({ connectionId, bucket }: S3BucketNodeProps) {
         count={objects?.length}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {!objects || objects.length === 0 ? (
-            <Box px={2} py={2}>
+            <Box px={2} py={2} ml={4 * 4}>
               <Text fontSize="xs" color="gray.500">
                 Created: {createdDate}
               </Text>
@@ -101,7 +101,7 @@ export function S3BucketNode({ connectionId, bucket }: S3BucketNodeProps) {
               />
             ))
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

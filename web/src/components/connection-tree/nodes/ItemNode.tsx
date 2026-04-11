@@ -225,37 +225,33 @@ export function ItemNode({ connectionId, workspace, name, type, storeType }: Ite
         count={totalCount}
       />
       {isExpanded && type === 'datastore' && (
-        <Box pl={4}>
-          {featureTypesError ? (
-            <Text fontSize="xs" color="red.500" px={2} py={2}>
-              Error loading datasets: {(featureTypesError as Error).message}
-            </Text>
-          ) : (
-            <DataStoreContentsNode
-              connectionId={connectionId}
-              workspace={workspace}
-              storeName={name}
-              featureTypes={featureTypes || []}
-              availableFeatureTypes={availableFeatureTypes || []}
-            />
-          )}
-        </Box>
+        featureTypesError ? (
+          <Text fontSize="xs" color="red.500" px={2} py={2} ml={6 * 4}>
+            Error loading datasets: {(featureTypesError as Error).message}
+          </Text>
+        ) : (
+          <DataStoreContentsNode
+            connectionId={connectionId}
+            workspace={workspace}
+            storeName={name}
+            featureTypes={featureTypes || []}
+            availableFeatureTypes={availableFeatureTypes || []}
+          />
+        )
       )}
       {isExpanded && type === 'coveragestore' && (
-        <Box pl={4}>
-          {coveragesError ? (
-            <Text fontSize="xs" color="red.500" px={2} py={2}>
-              Error loading coverages: {(coveragesError as Error).message}
-            </Text>
-          ) : (
-            <CoverageStoreContentsNode
-              connectionId={connectionId}
-              workspace={workspace}
-              storeName={name}
-              coverages={coverages || []}
-            />
-          )}
-        </Box>
+        coveragesError ? (
+          <Text fontSize="xs" color="red.500" px={2} py={2} ml={6 * 4}>
+            Error loading coverages: {(coveragesError as Error).message}
+          </Text>
+        ) : (
+          <CoverageStoreContentsNode
+            connectionId={connectionId}
+            workspace={workspace}
+            storeName={name}
+            coverages={coverages || []}
+          />
+        )
       )}
     </Box>
   )

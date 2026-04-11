@@ -74,20 +74,16 @@ export function CategoryNode({ connectionId, workspace, category, label }: Categ
         level={4}
         count={items?.length}
       />
-      {isExpanded && items && (
-        <Box pl={4}>
-          {items.map((item) => (
-            <ItemNode
-              key={item.name}
-              connectionId={connectionId}
-              workspace={workspace}
-              name={item.name}
-              type={getChildType()}
-              storeType={category === 'coveragestores' ? 'coveragestore' : category === 'datastores' ? 'datastore' : undefined}
-            />
-          ))}
-        </Box>
-      )}
+      {isExpanded && items && items.map((item) => (
+        <ItemNode
+          key={item.name}
+          connectionId={connectionId}
+          workspace={workspace}
+          name={item.name}
+          type={getChildType()}
+          storeType={category === 'coveragestores' ? 'coveragestore' : category === 'datastores' ? 'datastore' : undefined}
+        />
+      ))}
     </Box>
   )
 }

@@ -132,17 +132,13 @@ export function PGServiceNode({ service }: PGServiceNodeProps) {
           </Text>
         </Box>
       )}
-      {isExpanded && service.is_parsed && schemaData?.schemas && (
-        <Box pl={4}>
-          {schemaData.schemas.map((schema) => (
-            <PGSchemaNode
-              key={schema.name}
-              serviceName={service.name}
-              schema={schema}
-            />
-          ))}
-        </Box>
-      )}
+      {isExpanded && service.is_parsed && schemaData?.schemas && schemaData.schemas.map((schema) => (
+        <PGSchemaNode
+          key={schema.name}
+          serviceName={service.name}
+          schema={schema}
+        />
+      ))}
     </Box>
   )
 }

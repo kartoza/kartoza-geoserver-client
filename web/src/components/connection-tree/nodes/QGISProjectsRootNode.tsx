@@ -61,9 +61,9 @@ export function QGISProjectsRootNode() {
         count={qgisProjects?.length}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {!qgisProjects || qgisProjects.length === 0 ? (
-            <Box px={2} py={3}>
+            <Box px={2} py={3} ml={2 * 4}>
               <Text color="gray.500" fontSize="sm">
                 No QGIS projects. Click + to add one.
               </Text>
@@ -76,7 +76,7 @@ export function QGISProjectsRootNode() {
               />
             ))
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

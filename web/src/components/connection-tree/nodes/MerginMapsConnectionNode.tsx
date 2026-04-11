@@ -82,9 +82,9 @@ export function MerginMapsConnectionNode({ connection }: MerginMapsConnectionNod
         count={projects.length}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {projects.length === 0 ? (
-            <Box px={2} py={2}>
+            <Box px={2} py={2} ml={3 * 4}>
               <Text fontSize="xs" color="gray.400">
                 No projects found.
               </Text>
@@ -98,7 +98,7 @@ export function MerginMapsConnectionNode({ connection }: MerginMapsConnectionNod
               />
             ))
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

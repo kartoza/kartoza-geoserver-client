@@ -194,9 +194,9 @@ export function S3ObjectNode({ connectionId, bucket, object }: S3ObjectNodeProps
       )}
       {/* Show folder children */}
       {object.isFolder && isExpanded && children && (
-        <Box pl={4}>
+        <>
           {children.length === 0 ? (
-            <Box px={2} py={1}>
+            <Box px={2} py={1} ml={5 * 4}>
               <Text fontSize="xs" color="gray.400">
                 Empty folder
               </Text>
@@ -212,7 +212,7 @@ export function S3ObjectNode({ connectionId, bucket, object }: S3ObjectNodeProps
               />
             ))
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

@@ -56,9 +56,9 @@ export function GeoServerRootNode({ connections }: GeoServerRootNodeProps) {
         count={connections.length}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {connections.length === 0 ? (
-            <Box px={2} py={3}>
+            <Box px={2} py={3} ml={2 * 4}>
               <Text color="gray.500" fontSize="sm">
                 No connections yet. Click + to add one.
               </Text>
@@ -73,7 +73,7 @@ export function GeoServerRootNode({ connections }: GeoServerRootNodeProps) {
               />
             ))
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

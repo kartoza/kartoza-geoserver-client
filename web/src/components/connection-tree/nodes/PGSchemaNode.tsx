@@ -57,18 +57,14 @@ export function PGSchemaNode({ serviceName, schema }: PGSchemaNodeProps) {
         level={3}
         count={schema.tables.length}
       />
-      {isExpanded && (
-        <Box pl={4}>
-          {schema.tables.map((table) => (
-            <PGTableNode
-              key={table.name}
-              serviceName={serviceName}
-              schemaName={schema.name}
-              table={table}
-            />
-          ))}
-        </Box>
-      )}
+      {isExpanded && schema.tables.map((table) => (
+        <PGTableNode
+          key={table.name}
+          serviceName={serviceName}
+          schemaName={schema.name}
+          table={table}
+        />
+      ))}
     </Box>
   )
 }

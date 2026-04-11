@@ -75,7 +75,7 @@ export function TreeNodeRow({
       align="center"
       py={2}
       px={2}
-      pl={level * 4 + 2}
+      ml={level * 4}
       cursor="pointer"
       bg={bgColor}
       borderLeft={isSelected ? '3px solid' : '3px solid transparent'}
@@ -88,7 +88,7 @@ export function TreeNodeRow({
       transition="all 0.15s ease"
       onClick={onClick}
       role="group"
-      mx={1}
+      mr={1}
       my={0.5}
     >
       {!isLeaf && (

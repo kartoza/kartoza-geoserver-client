@@ -68,19 +68,15 @@ export function PGTableNode({ serviceName, schemaName, table }: PGTableNodeProps
         onShowData={handleShowData}
         onQuery={handleQuery}
       />
-      {isExpanded && (
-        <Box pl={4}>
-          {table.columns.map((col) => (
-            <PGColumnRow
-              key={col.name}
-              serviceName={serviceName}
-              schemaName={schemaName}
-              tableName={table.name}
-              column={col}
-            />
-          ))}
-        </Box>
-      )}
+      {isExpanded && table.columns.map((col) => (
+        <PGColumnRow
+          key={col.name}
+          serviceName={serviceName}
+          schemaName={schemaName}
+          tableName={table.name}
+          column={col}
+        />
+      ))}
     </Box>
   )
 }

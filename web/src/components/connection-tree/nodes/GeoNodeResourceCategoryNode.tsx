@@ -73,9 +73,9 @@ export function GeoNodeResourceCategoryNode({
         count={total}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {resources.length === 0 ? (
-            <Box px={2} py={2}>
+            <Box px={2} py={2} ml={4 * 4}>
               <Text color="gray.500" fontSize="sm">
                 No {name.toLowerCase()} found
               </Text>
@@ -92,7 +92,7 @@ export function GeoNodeResourceCategoryNode({
               />
             ))
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

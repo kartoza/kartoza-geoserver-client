@@ -88,9 +88,9 @@ export function S3ConnectionNode({ connection }: S3ConnectionNodeProps) {
         count={buckets?.length}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {!buckets || buckets.length === 0 ? (
-            <Box px={2} py={2}>
+            <Box px={2} py={2} ml={3 * 4}>
               <Text fontSize="xs" color="gray.500">
                 {subtitle}
               </Text>
@@ -107,7 +107,7 @@ export function S3ConnectionNode({ connection }: S3ConnectionNodeProps) {
               />
             ))
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

@@ -57,14 +57,11 @@ export function QFieldCloudConnectionNode({ connection }: QFieldCloudConnectionN
         count={projects?.length}
       />
       {isExpanded && (
-        <Box pl={4}>
-          {/* Projects category */}
-          <QFieldCloudProjectsNode
-            connectionId={connection.id}
-            projects={projects || []}
-            isLoading={isLoading}
-          />
-        </Box>
+        <QFieldCloudProjectsNode
+          connectionId={connection.id}
+          projects={projects || []}
+          isLoading={isLoading}
+        />
       )}
     </Box>
   )
@@ -111,9 +108,9 @@ function QFieldCloudProjectsNode({ connectionId, projects, isLoading }: QFieldCl
         count={projects.length}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {projects.length === 0 && !isLoading && (
-            <Box px={2} py={2}>
+            <Box px={2} py={2} ml={4 * 4}>
               <Text color="gray.500" fontSize="sm">No projects found.</Text>
             </Box>
           )}
@@ -124,7 +121,7 @@ function QFieldCloudProjectsNode({ connectionId, projects, isLoading }: QFieldCl
               project={project}
             />
           ))}
-        </Box>
+        </>
       )}
     </Box>
   )
@@ -176,20 +173,16 @@ function QFieldCloudProjectNode({ connectionId, project }: QFieldCloudProjectNod
         onClick={handleClick}
         level={4}
       />
-      {isExpanded && (
-        <Box pl={4}>
-          {subCategories.map((cat) => (
-            <QFieldCloudSubCategoryNode
-              key={cat.id}
-              nodeId={cat.id}
-              name={cat.name}
-              type={cat.type}
-              connectionId={connectionId}
-              projectId={project.id}
-            />
-          ))}
-        </Box>
-      )}
+      {isExpanded && subCategories.map((cat) => (
+        <QFieldCloudSubCategoryNode
+          key={cat.id}
+          nodeId={cat.id}
+          name={cat.name}
+          type={cat.type}
+          connectionId={connectionId}
+          projectId={project.id}
+        />
+      ))}
     </Box>
   )
 }

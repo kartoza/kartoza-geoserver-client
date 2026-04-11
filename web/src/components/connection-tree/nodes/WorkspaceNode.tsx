@@ -64,7 +64,7 @@ export function WorkspaceNode({ connectionId, workspace }: WorkspaceNodeProps) {
         level={3}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           <CategoryNode
             connectionId={connectionId}
             workspace={workspace}
@@ -95,7 +95,7 @@ export function WorkspaceNode({ connectionId, workspace }: WorkspaceNodeProps) {
             category="layergroups"
             label="Layer Groups"
           />
-        </Box>
+        </>
       )}
     </Box>
   )

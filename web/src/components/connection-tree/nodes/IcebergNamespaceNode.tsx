@@ -90,9 +90,9 @@ export function IcebergNamespaceNode({ connectionId, connectionName, namespace }
         count={tables?.length}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {!tables || tables.length === 0 ? (
-            <Box px={2} py={2}>
+            <Box px={2} py={2} ml={4 * 4}>
               <Text fontSize="xs" color="gray.400">
                 No tables in this namespace.
               </Text>
@@ -108,7 +108,7 @@ export function IcebergNamespaceNode({ connectionId, connectionName, namespace }
               />
             ))
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

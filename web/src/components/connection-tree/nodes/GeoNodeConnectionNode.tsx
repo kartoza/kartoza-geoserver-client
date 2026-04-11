@@ -94,7 +94,7 @@ export function GeoNodeConnectionNode({ connection }: GeoNodeConnectionNodeProps
         level={2}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {/* Datasets */}
           <GeoNodeResourceCategoryNode
             connectionId={connection.id}
@@ -156,13 +156,13 @@ export function GeoNodeConnectionNode({ connection }: GeoNodeConnectionNodeProps
              !documentsData?.documents?.length &&
              !geostoriesData?.geostories?.length &&
              !dashboardsData?.dashboards?.length) && (
-            <Box px={2} py={2}>
+            <Box px={2} py={2} ml={3 * 4}>
               <Text color="gray.500" fontSize="sm">
                 No resources found
               </Text>
             </Box>
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

@@ -61,9 +61,9 @@ export function S3StorageRootNode() {
         count={s3Connections?.length}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {!s3Connections || s3Connections.length === 0 ? (
-            <Box px={2} py={3}>
+            <Box px={2} py={3} ml={2 * 4}>
               <Text color="gray.500" fontSize="sm">
                 No S3 connections. Click + to add one.
               </Text>
@@ -76,7 +76,7 @@ export function S3StorageRootNode() {
               />
             ))
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

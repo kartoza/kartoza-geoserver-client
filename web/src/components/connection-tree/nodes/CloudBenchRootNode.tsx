@@ -70,7 +70,7 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
         level={0}
       />
       {isExpanded && (
-        <Box pl={4}>
+        <>
           {/* GeoServer Section */}
           {(showAll || isProviderEnabled('geoserver')) && (
             <GeoServerRootNode connections={connections} />
@@ -103,7 +103,7 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
           {(showAll || isProviderEnabled('mergin')) && (
             <MerginMapsRootNode />
           )}
-        </Box>
+        </>
       )}
     </Box>
   )

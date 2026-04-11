@@ -72,17 +72,13 @@ export function ConnectionNode({ connectionId, name, url }: ConnectionNodeProps)
         level={2}
         count={workspaces?.length}
       />
-      {isExpanded && workspaces && (
-        <Box pl={4}>
-          {workspaces.map((ws) => (
-            <WorkspaceNode
-              key={ws.name}
-              connectionId={connectionId}
-              workspace={ws.name}
-            />
-          ))}
-        </Box>
-      )}
+      {isExpanded && workspaces && workspaces.map((ws) => (
+        <WorkspaceNode
+          key={ws.name}
+          connectionId={connectionId}
+          workspace={ws.name}
+        />
+      ))}
     </Box>
   )
 }

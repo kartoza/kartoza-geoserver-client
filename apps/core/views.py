@@ -1,10 +1,73 @@
-"""Views for core app - settings endpoint."""
+"""Views for core app - settings and providers endpoints."""
 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .config import config_manager
+from .providers import get_providers_manager
+
+
+class ProvidersView(APIView):
+    """API endpoint for provider configurations."""
+
+    def get(self, request):
+        """Get all provider configurations.
+
+        Returns list of providers with their enabled/experimental status.
+        """
+        providers = get_providers_manager().list_providers()
+        return Response(
+            {
+                "providers": [
+                    {
+                        "id": p.id,
+                        "name": p.name,
+                        "description": p.description,
+                        "enabled": p.enabled,
+                        "experimental": p.experimental,
+                    }
+                    for p in providers
+                ]
+            }
+        )
+
+    def put(self, request):
+        """Update provider enabled states.
+
+        Expected body:
+        {
+            "providers": [
+                {"id": "geoserver", "enabled": true},
+                {"id": "s3", "enabled": false}
+            ]
+        }
+        """
+        data = request.data
+        providers_updates = data.get("providers", [])
+
+        for update in providers_updates:
+            provider_id = update.get("id")
+            enabled = update.get("enabled")
+            if provider_id is not None and enabled is not None:
+                get_providers_manager().set_provider_enabled(provider_id, enabled)
+
+        # Return updated list
+        providers = get_providers_manager().list_providers()
+        return Response(
+            {
+                "providers": [
+                    {
+                        "id": p.id,
+                        "name": p.name,
+                        "description": p.description,
+                        "enabled": p.enabled,
+                        "experimental": p.experimental,
+                    }
+                    for p in providers
+                ]
+            }
+        )
 
 
 class SettingsView(APIView):

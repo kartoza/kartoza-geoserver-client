@@ -75,13 +75,57 @@ shell:
 
 # === Testing ===
 
+# Run all tests
 test:
-	@echo "Running pytest..."
-	pytest
+	@echo "Running all tests..."
+	pytest tests/
 
+# Run unit tests only (fast)
+test-unit:
+	@echo "Running unit tests..."
+	pytest tests/unit -v -m "unit or not integration"
+
+# Run API tests
+test-api:
+	@echo "Running API tests..."
+	pytest tests/api -v -m "api"
+
+# Run integration tests (requires services)
+test-integration:
+	@echo "Running integration tests..."
+	pytest tests/integration -v -m "integration"
+
+# Run TUI tests
+test-tui:
+	@echo "Running TUI tests..."
+	pytest tests/tui -v -m "tui"
+
+# Run E2E tests (requires browser)
+test-e2e:
+	@echo "Running E2E tests..."
+	pytest tests/e2e -v -m "e2e"
+
+# Run frontend tests
+test-frontend:
+	@echo "Running frontend tests..."
+	cd web && npm run test
+
+# Run all tests with coverage
 test-coverage:
 	@echo "Running tests with coverage..."
-	pytest --cov=apps --cov=cloudbench --cov=tui --cov-report=html
+	pytest tests/ --cov=apps --cov=cloudbench --cov=tui --cov-report=html --cov-report=xml
+	cd web && npm run test:coverage
+
+# Run quick pre-commit tests
+test-quick:
+	@echo "Running quick tests for pre-commit..."
+	pytest tests/unit -v -m "unit" --tb=short -q
+	cd web && npm run test -- --run --reporter=dot
+
+# Install Playwright browsers
+install-playwright:
+	@echo "Installing Playwright browsers..."
+	playwright install --with-deps chromium
 
 # === Linting and Formatting ===
 
@@ -180,8 +224,15 @@ help:
 	@echo "  shell            Open Django shell"
 	@echo ""
 	@echo "Testing & Quality:"
-	@echo "  test             Run pytest"
+	@echo "  test             Run all tests"
+	@echo "  test-unit        Run unit tests only (fast)"
+	@echo "  test-api         Run API tests"
+	@echo "  test-integration Run integration tests (requires services)"
+	@echo "  test-tui         Run TUI tests"
+	@echo "  test-e2e         Run E2E tests (requires browser)"
+	@echo "  test-frontend    Run frontend tests"
 	@echo "  test-coverage    Run tests with coverage report"
+	@echo "  test-quick       Run quick pre-commit tests"
 	@echo "  lint             Run ruff and mypy"
 	@echo "  format           Format code with black"
 	@echo ""

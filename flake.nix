@@ -23,7 +23,7 @@
           inherit version;
           src = "${self}/web";
 
-          npmDepsHash = "sha256-0fvFrSNV1fkuEgXt7KDswkIh3hQHLH/M+aU4jZfgGrk=";
+          npmDepsHash = "sha256-eLUsdm63gn13DF6oP1HloDQUwOh1OuY7wYfGn1QCh0Y=";
 
           buildPhase = ''
             npm run build
@@ -460,6 +460,12 @@
               echo "MinIO stopped."
             }
             export -f minio-stop
+
+            # Install npm dependencies if needed
+            if [ -d "web" ] && [ ! -d "web/node_modules" ]; then
+              echo "📦 Installing npm dependencies..."
+              (cd web && npm install --silent)
+            fi
 
             echo ""
             echo "🌍 Kartoza CloudBench Development Environment (Python/Django)"

@@ -42,16 +42,30 @@ packages = ["cloudbench", "apps", "tui"]
 
 [dependency-groups]
 dev = [
+    # Testing
     "pytest>=8.0",
     "pytest-django>=4.8",
     "pytest-asyncio>=0.23",
     "pytest-cov>=5.0",
+    "pytest-xdist>=3.5",  # Parallel test execution
+    "pytest-timeout>=2.3",  # Test timeouts
+    "pytest-mock>=3.14",  # Mocking utilities
+    "httpx>=0.27",  # For async API testing
+    "factory-boy>=3.3",  # Test factories
+    "faker>=25.0",  # Fake data generation
+    "responses>=0.25",  # Mock HTTP responses
+    "textual-dev>=1.5",  # Textual testing utilities
+    # Code quality
     "black>=24.3",
     "ruff>=0.4",
     "mypy>=1.10",
     "pre-commit>=3.7",
     "django-stubs>=5.0",
     "types-requests>=2.31",
+    "types-boto3>=1.0",
+    # E2E testing
+    "playwright>=1.44",
+    "pytest-playwright>=0.5",
 ]
 
 [project.dependencies]
@@ -152,7 +166,46 @@ exclude = [
 django_settings_module = "cloudbench.settings.development"
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "cloudbench.settings.development"
+DJANGO_SETTINGS_MODULE = "cloudbench.settings.testing"
 python_files = ["test_*.py", "*_test.py"]
-addopts = "-v --tb=short"
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
+addopts = "-v --tb=short --strict-markers"
 asyncio_mode = "auto"
+timeout = 30
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (may require external services)",
+    "e2e: End-to-end tests (browser-based, slow)",
+    "slow: Slow tests (skip with -m 'not slow')",
+    "api: API endpoint tests",
+    "tui: TUI tests",
+    "frontend: Frontend component tests",
+]
+
+[tool.coverage.run]
+source = ["apps", "cloudbench", "tui"]
+branch = true
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/conftest.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+fail_under = 70
+show_missing = true

@@ -934,6 +934,112 @@ Configuration is stored at:
 - Configuration file should have restricted permissions (600)
 - Future: Consider keyring integration for password storage
 
+### Provider Configuration
+
+Provider types can be enabled or disabled at startup via a separate configuration file:
+
+**File Location:**
+```
+~/.config/kartoza-cloudbench/providers.json
+```
+
+**Schema:**
+```json
+{
+  "providers": [
+    {
+      "id": "geoserver",
+      "name": "GeoServer",
+      "description": "OGC-compliant geospatial server for publishing and sharing geospatial data",
+      "enabled": true,
+      "experimental": false
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "description": "PostgreSQL database connections via pg_service.conf",
+      "enabled": true,
+      "experimental": false
+    },
+    {
+      "id": "geonode",
+      "name": "GeoNode",
+      "description": "Open source geospatial content management system",
+      "enabled": true,
+      "experimental": false
+    },
+    {
+      "id": "s3",
+      "name": "S3 Storage",
+      "description": "S3-compatible object storage (MinIO, AWS S3, etc.)",
+      "enabled": false,
+      "experimental": true
+    },
+    {
+      "id": "iceberg",
+      "name": "Apache Iceberg",
+      "description": "Apache Iceberg data lakehouse tables",
+      "enabled": false,
+      "experimental": true
+    },
+    {
+      "id": "qgis",
+      "name": "QGIS Projects",
+      "description": "Local QGIS project files",
+      "enabled": false,
+      "experimental": true
+    },
+    {
+      "id": "qfieldcloud",
+      "name": "QFieldCloud",
+      "description": "Cloud-based mobile GIS data synchronization",
+      "enabled": false,
+      "experimental": true
+    },
+    {
+      "id": "mergin",
+      "name": "Mergin Maps",
+      "description": "Field data collection and synchronization platform",
+      "enabled": false,
+      "experimental": true
+    }
+  ]
+}
+```
+
+**Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `providers` | Array | List of provider configurations |
+| `providers[].id` | String | Unique provider identifier |
+| `providers[].name` | String | Human-readable display name |
+| `providers[].description` | String | Description of the provider |
+| `providers[].enabled` | Boolean | Whether the provider is shown in the UI |
+| `providers[].experimental` | Boolean | Whether the provider is considered experimental |
+
+**Default Enabled Providers:**
+- **GeoServer** - Stable, production-ready
+- **PostgreSQL** - Stable, production-ready
+- **GeoNode** - Stable, production-ready
+
+**Experimental Providers (disabled by default):**
+- S3 Storage
+- Apache Iceberg
+- QGIS Projects
+- QFieldCloud
+- Mergin Maps
+
+**API Endpoints:**
+- `GET /api/providers/` - List all provider configurations
+- `PUT /api/providers/` - Update provider enabled states
+
+**Behavior:**
+- Configuration file is auto-created with defaults on first startup
+- New providers added to defaults are automatically merged into existing config
+- Disabled providers are hidden from the sidebar tree view
+- Provider settings can be modified via API or by editing the JSON file directly
+
 ---
 
 ## API Integration
@@ -2624,6 +2730,85 @@ Tables with detected geometry columns show:
 - **Partitioning**: Configure spatial partitioning strategies
 - **Time Travel**: Query historical table versions via snapshot selection
 - **Sedona Integration**: Execute spatial queries via Spark/Sedona for actual data visualization
+
+---
+
+## Testing
+
+### Test Architecture
+
+The application has a comprehensive test suite covering 5 key areas:
+
+| Test Type | Framework | Location | Purpose |
+|-----------|-----------|----------|---------|
+| **Unit Tests** | pytest | `tests/unit/` | Test individual classes and functions |
+| **API Tests** | pytest + DRF | `tests/api/` | Test REST API endpoints |
+| **Integration Tests** | pytest | `tests/integration/` | Test workflows across services |
+| **E2E Tests** | Playwright | `tests/e2e/` | Browser-based end-to-end tests |
+| **TUI Tests** | Textual | `tests/tui/` | Terminal UI tests |
+| **Frontend Tests** | Vitest | `web/src/**/*.test.ts` | React component tests |
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run specific test types
+make test-unit          # Fast unit tests
+make test-api           # API endpoint tests
+make test-integration   # Integration tests (requires services)
+make test-tui           # TUI tests
+make test-e2e           # Browser-based E2E tests
+make test-frontend      # React component tests
+
+# Run with coverage
+make test-coverage
+
+# Quick pre-commit tests
+make test-quick
+```
+
+### Test Configuration
+
+**Python Tests (pytest):**
+- Configuration: `pyproject.toml` `[tool.pytest.ini_options]`
+- Settings module: `cloudbench.settings.testing`
+- Markers: `unit`, `integration`, `e2e`, `api`, `tui`, `slow`
+- Coverage threshold: 70%
+
+**Frontend Tests (Vitest):**
+- Configuration: `web/vitest.config.ts`
+- Setup: `web/src/test/setup.ts`
+- Mock handlers: `web/src/test/mocks/handlers.ts`
+- Coverage threshold: 60%
+
+### CI/CD Integration
+
+Tests run automatically:
+- **Pre-commit hooks**: Unit tests and linting
+- **Pull requests**: Unit, API, and frontend tests
+- **Push to main**: Full test suite including integration tests
+- **Before release**: All tests must pass
+
+### Test Markers
+
+```python
+@pytest.mark.unit        # Fast unit tests
+@pytest.mark.integration # Requires external services
+@pytest.mark.e2e         # Browser-based tests
+@pytest.mark.api         # API endpoint tests
+@pytest.mark.tui         # TUI tests
+@pytest.mark.slow        # Slow tests (skip with -m "not slow")
+```
+
+### Mock Services
+
+For testing without external services, mock fixtures are available:
+- `mock_geoserver_client` - Mock GeoServer responses
+- `mock_s3_client` - Mock S3/MinIO responses
+- `mock_postgres_service` - Mock PostgreSQL responses
+- MSW handlers for frontend API mocking
 
 ---
 

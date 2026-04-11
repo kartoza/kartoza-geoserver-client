@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Box } from '@chakra-ui/react'
 import { useTreeStore } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
+import { useProvidersStore } from '../../../stores/providersStore'
 import type { TreeNode } from '../../../types'
 import { TreeNodeRow } from '../TreeNodeRow'
 import { GeoServerRootNode } from './GeoServerRootNode'
@@ -25,6 +26,16 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const instanceName = useUIStore((state) => state.settings.instanceName)
 
+  // Provider enablement
+  const fetchProviders = useProvidersStore((state) => state.fetchProviders)
+  const isProviderEnabled = useProvidersStore((state) => state.isProviderEnabled)
+  const providers = useProvidersStore((state) => state.providers)
+
+  // Fetch providers on mount
+  useEffect(() => {
+    fetchProviders()
+  }, [fetchProviders])
+
   // Auto-expand root on mount
   useEffect(() => {
     if (!isExpanded) {
@@ -45,6 +56,9 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
     toggleNode(nodeId)
   }
 
+  // If providers haven't loaded yet, show all (graceful degradation)
+  const showAll = providers.length === 0
+
   return (
     <Box>
       <TreeNodeRow
@@ -58,21 +72,37 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
       {isExpanded && (
         <Box pl={4}>
           {/* GeoServer Section */}
-          <GeoServerRootNode connections={connections} />
+          {(showAll || isProviderEnabled('geoserver')) && (
+            <GeoServerRootNode connections={connections} />
+          )}
           {/* PostgreSQL Section */}
-          <PostgreSQLRootNode />
+          {(showAll || isProviderEnabled('postgres')) && (
+            <PostgreSQLRootNode />
+          )}
           {/* S3 Storage Section */}
-          <S3StorageRootNode />
+          {(showAll || isProviderEnabled('s3')) && (
+            <S3StorageRootNode />
+          )}
           {/* Apache Iceberg Section */}
-          <IcebergRootNode />
+          {(showAll || isProviderEnabled('iceberg')) && (
+            <IcebergRootNode />
+          )}
           {/* QGIS Projects Section */}
-          <QGISProjectsRootNode />
+          {(showAll || isProviderEnabled('qgis')) && (
+            <QGISProjectsRootNode />
+          )}
           {/* GeoNode Section */}
-          <GeoNodeRootNode />
+          {(showAll || isProviderEnabled('geonode')) && (
+            <GeoNodeRootNode />
+          )}
           {/* QFieldCloud Section */}
-          <QFieldCloudRootNode />
+          {(showAll || isProviderEnabled('qfieldcloud')) && (
+            <QFieldCloudRootNode />
+          )}
           {/* Mergin Maps Section */}
-          <MerginMapsRootNode />
+          {(showAll || isProviderEnabled('mergin')) && (
+            <MerginMapsRootNode />
+          )}
         </Box>
       )}
     </Box>

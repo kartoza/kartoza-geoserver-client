@@ -20,7 +20,7 @@ This document provides an annotated list of all packages in the software archite
 
 | App | Purpose | Key Files |
 |-----|---------|-----------|
-| `apps.core` | Configuration, middleware, utilities | `config.py`, `managers.py`, `middleware.py`, `exceptions.py` |
+| `apps.core` | Configuration, middleware, utilities | `config.py`, `providers.py`, `managers.py`, `middleware.py`, `exceptions.py` |
 | `apps.connections` | GeoServer connection CRUD | `views.py`, `serializers.py` |
 | `apps.geoserver` | GeoServer REST API operations | `client.py`, `views.py` |
 | `apps.gwc` | GeoWebCache tile management | `client.py`, `views.py` |
@@ -63,7 +63,7 @@ This document provides an annotated list of all packages in the software archite
 |--------|---------|
 | `web/src/api/` | TypeScript API client modules |
 | `web/src/components/` | React components (129 .tsx files) |
-| `web/src/stores/` | Zustand state management |
+| `web/src/stores/` | Zustand state management (`connectionStore`, `treeStore`, `uiStore`, `providersStore`) |
 | `web/src/hooks/` | Custom React hooks |
 | `web/src/types/` | TypeScript type definitions |
 | `web/src/utils/` | Utility functions and animations |
@@ -140,6 +140,42 @@ The `flake.nix` provides the following packages:
 | @tanstack/react-query | ^5.17.19 | Data fetching |
 | framer-motion | ^11.0.0 | Animations |
 | @codemirror/lang-sql | ^6.0.0 | SQL editor |
+
+## Test Packages (`tests/`)
+
+| Directory | Purpose | Framework |
+|-----------|---------|-----------|
+| `tests/unit/` | Unit tests for classes and functions | pytest |
+| `tests/api/` | REST API endpoint tests | pytest + DRF |
+| `tests/integration/` | Workflow tests across services | pytest |
+| `tests/e2e/` | Browser-based end-to-end tests | Playwright |
+| `tests/tui/` | Terminal UI tests | Textual |
+| `tests/conftest.py` | Shared fixtures and configuration | pytest |
+
+### Frontend Test Packages (`web/src/test/`)
+
+| Directory | Purpose | Framework |
+|-----------|---------|-----------|
+| `web/src/test/setup.ts` | Test environment setup | Vitest |
+| `web/src/test/mocks/` | MSW API mock handlers | MSW |
+| `web/src/test/test-utils.tsx` | Custom render utilities | React Testing Library |
+| `web/src/**/*.test.ts(x)` | Component and store tests | Vitest |
+
+### Test Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| pytest | Python test framework |
+| pytest-django | Django integration |
+| pytest-asyncio | Async test support |
+| pytest-cov | Coverage reporting |
+| pytest-xdist | Parallel execution |
+| pytest-mock | Mocking utilities |
+| factory-boy | Test data factories |
+| vitest | Frontend test framework |
+| @testing-library/react | React component testing |
+| playwright | Browser automation |
+| msw | API mocking for frontend |
 
 ---
 

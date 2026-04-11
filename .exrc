@@ -97,11 +97,11 @@ command! CbMakeMigrations :!cd %:p:h && nix develop -c python manage.py makemigr
 nnoremap <leader>pM :CbMakeMigrations<CR>
 
 " ============================================================================
-" TESTING (PYTEST)
+" TESTING (PYTEST & VITEST)
 " ============================================================================
 
-" Run all tests
-command! CbTest :!cd %:p:h && nix develop -c pytest -v
+" --- All Tests ---
+command! CbTest :!cd %:p:h && nix develop -c pytest tests/ -v
 nnoremap <leader>ta :CbTest<CR>
 
 " Run tests for current file
@@ -112,9 +112,71 @@ nnoremap <leader>tf :CbTestFile<CR>
 command! CbTestCursor :!cd %:p:h && nix develop -c pytest -v % -k <cword>
 nnoremap <leader>tc :CbTestCursor<CR>
 
-" Run tests with coverage
-command! CbTestCover :!cd %:p:h && nix develop -c pytest --cov=apps --cov=cloudbench --cov=tui --cov-report=html && xdg-open htmlcov/index.html
+" Run tests with coverage (Python + Frontend)
+command! CbTestCover :!cd %:p:h && nix develop -c pytest tests/ --cov=apps --cov=cloudbench --cov=tui --cov-report=html && cd web && npm run test:coverage && cd .. && xdg-open htmlcov/index.html
 nnoremap <leader>tC :CbTestCover<CR>
+
+" --- Test by Category ---
+
+" Run unit tests only (fast)
+command! CbTestUnit :!cd %:p:h && nix develop -c pytest tests/unit -v --tb=short
+nnoremap <leader>tu :CbTestUnit<CR>
+
+" Run API tests
+command! CbTestApi :!cd %:p:h && nix develop -c pytest tests/api -v --tb=short
+nnoremap <leader>tA :CbTestApi<CR>
+
+" Run integration tests (requires services)
+command! CbTestIntegration :!cd %:p:h && nix develop -c pytest tests/integration -v --tb=short
+nnoremap <leader>ti :CbTestIntegration<CR>
+
+" Run E2E tests (requires browser)
+command! CbTestE2E :!cd %:p:h && nix develop -c pytest tests/e2e -v --tb=short
+nnoremap <leader>te :CbTestE2E<CR>
+
+" Run TUI tests
+command! CbTestTui :!cd %:p:h && nix develop -c pytest tests/tui -v --tb=short
+nnoremap <leader>tT :CbTestTui<CR>
+
+" Run frontend tests (Vitest)
+command! CbTestFrontend :!cd %:p:h/web && npm run test
+nnoremap <leader>tF :CbTestFrontend<CR>
+
+" Run frontend tests in watch mode
+command! CbTestFrontendWatch :terminal cd %:p:h/web && npm run test:watch
+nnoremap <leader>tW :CbTestFrontendWatch<CR>
+
+" --- Quick Tests ---
+
+" Run quick tests (unit only, for pre-commit)
+command! CbTestQuick :!cd %:p:h && nix develop -c pytest tests/unit -v --tb=short -q && cd web && npm run test -- --run --reporter=dot
+nnoremap <leader>tq :CbTestQuick<CR>
+
+" --- Pre-commit & CI ---
+
+" Run pre-commit hooks
+command! CbPreCommit :!cd %:p:h && nix develop -c pre-commit run --all-files
+nnoremap <leader>tp :CbPreCommit<CR>
+
+" Install pre-commit hooks
+command! CbPreCommitInstall :!cd %:p:h && nix develop -c pre-commit install
+nnoremap <leader>tP :CbPreCommitInstall<CR>
+
+" --- Playwright ---
+
+" Install Playwright browsers
+command! CbPlaywrightInstall :!cd %:p:h && nix develop -c playwright install --with-deps chromium
+nnoremap <leader>tI :CbPlaywrightInstall<CR>
+
+" --- Coverage Reports ---
+
+" Open Python coverage report
+command! CbCoverPython :!xdg-open %:p:h/htmlcov/index.html
+nnoremap <leader>tR :CbCoverPython<CR>
+
+" Open frontend coverage report
+command! CbCoverFrontend :!xdg-open %:p:h/web/coverage/index.html
+nnoremap <leader>tr :CbCoverFrontend<CR>
 
 " ============================================================================
 " LINTING & FORMATTING (PYTHON)
@@ -357,11 +419,16 @@ command! CbHelp :echo "
 \  <leader>bc  Clean build artifacts
 \  <leader>bT  TypeScript type check
 \
-\TEST (PYTEST):
-\  <leader>ta  Run all tests
-\  <leader>tf  Run tests for current file
-\  <leader>tc  Run test under cursor
-\  <leader>tC  Run tests with coverage
+\TEST:
+\  <leader>ta  Run all tests          <leader>tu  Unit tests only
+\  <leader>tA  API tests              <leader>ti  Integration tests
+\  <leader>te  E2E tests (browser)    <leader>tT  TUI tests
+\  <leader>tF  Frontend tests         <leader>tW  Frontend watch mode
+\  <leader>tf  Current file           <leader>tc  Test under cursor
+\  <leader>tq  Quick tests            <leader>tC  Tests with coverage
+\  <leader>tp  Pre-commit hooks       <leader>tP  Install pre-commit
+\  <leader>tI  Install Playwright     <leader>tR  Python coverage
+\  <leader>tr  Frontend coverage
 \
 \LINT/FORMAT:
 \  <leader>lr  Run ruff

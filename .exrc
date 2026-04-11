@@ -6,8 +6,9 @@
 "
 " Prerequisites:
 "   - Run inside 'nix develop' shell for all tools
-"   - delve (dlv) for Go debugging
-"   - DAP (nvim-dap) plugin for full debugging UI (optional)
+"   - Python 3.12+ with Django and dependencies
+"   - Node.js for frontend development
+"   - delve (dlv) for Go debugging (legacy)
 "
 " Leader key is assumed to be <Space> or your configured leader
 " ============================================================================
@@ -16,17 +17,11 @@
 lcd %:p:h
 
 " ============================================================================
-" WHICH-KEY MENU SETUP (if you have which-key.nvim)
-" ============================================================================
-" These commands can be displayed nicely if you have which-key
-" All project commands are under <leader>p (project)
-
-" ============================================================================
-" SERVER MANAGEMENT
+" PYTHON/DJANGO WEB SERVER
 " ============================================================================
 
-" Start web server in background (with nix develop environment)
-command! CbStart :!cd %:p:h && fuser -k 8080/tcp 2>/dev/null; sleep 1; nix develop -c go run ./cmd/web/ serve &
+" Start Django development server
+command! CbStart :!cd %:p:h && fuser -k 8080/tcp 2>/dev/null; sleep 1; nix develop -c python manage.py runserver 0.0.0.0:8080 &
 nnoremap <leader>ps :CbStart<CR>
 
 " Stop web server (kill process on port 8080)
@@ -34,16 +29,28 @@ command! CbStop :!fuser -k 8080/tcp 2>/dev/null && echo "Server stopped" || echo
 nnoremap <leader>pq :CbStop<CR>
 
 " Restart server (stop, build frontend, start)
-command! CbRestart :!cd %:p:h && fuser -k 8080/tcp 2>/dev/null; sleep 1; cd web && npm run build && cd .. && nix develop -c go run ./cmd/web/ serve &
+command! CbRestart :!cd %:p:h && fuser -k 8080/tcp 2>/dev/null; sleep 1; cd web && npm run build && cd .. && nix develop -c python manage.py runserver 0.0.0.0:8080 &
 nnoremap <leader>pr :CbRestart<CR>
 
 " Check server status
-command! CbStatus :!curl -s http://localhost:8080/api/health >/dev/null 2>&1 && echo "Server is RUNNING on http://localhost:8080" || echo "Server is NOT running"
+command! CbStatus :!curl -s http://localhost:8080/health/ >/dev/null 2>&1 && echo "Server is RUNNING on http://localhost:8080" || echo "Server is NOT running"
 nnoremap <leader>p? :CbStatus<CR>
 
 " Open app in browser
 command! CbOpen :!xdg-open http://localhost:8080 2>/dev/null || open http://localhost:8080
 nnoremap <leader>po :CbOpen<CR>
+
+" Run with uvicorn (ASGI)
+command! CbUvicorn :terminal cd %:p:h && nix develop -c uvicorn cloudbench.asgi:application --host 0.0.0.0 --port 8080 --reload
+nnoremap <leader>pU :CbUvicorn<CR>
+
+" ============================================================================
+" TUI (TEXTUAL)
+" ============================================================================
+
+" Run the Textual TUI
+command! CbTui :terminal cd %:p:h && nix develop -c python -m tui
+nnoremap <leader>pT :CbTui<CR>
 
 " ============================================================================
 " BUILD COMMANDS
@@ -53,16 +60,12 @@ nnoremap <leader>po :CbOpen<CR>
 command! CbBuildFrontend :!cd %:p:h/web && npm run build
 nnoremap <leader>bf :CbBuildFrontend<CR>
 
-" Build Go web server binary
-command! CbBuildWeb :!cd %:p:h && nix develop -c go build -o bin/kartoza-cloudbench ./cmd/web
-nnoremap <leader>bw :CbBuildWeb<CR>
+" Collect static files
+command! CbCollectStatic :!cd %:p:h && nix develop -c python manage.py collectstatic --noinput
+nnoremap <leader>bs :CbCollectStatic<CR>
 
-" Build TUI binary
-command! CbBuildTui :!cd %:p:h && nix develop -c go build -o bin/kartoza-cloudbench-client .
-nnoremap <leader>bt :CbBuildTui<CR>
-
-" Build everything (frontend + both binaries)
-command! CbBuildAll :!cd %:p:h && make build
+" Build everything (frontend + collect static)
+command! CbBuildAll :!cd %:p:h && make build-web
 nnoremap <leader>ba :CbBuildAll<CR>
 
 " Clean build artifacts
@@ -70,7 +73,7 @@ command! CbClean :!cd %:p:h && make clean
 nnoremap <leader>bc :CbClean<CR>
 
 " Full redeploy (clean, build, restart)
-command! CbRedeploy :!cd %:p:h && make kill-server && make clean && cd web && npm install && npm run build && cd .. && nix develop -c go run ./cmd/web/ serve &
+command! CbRedeploy :!cd %:p:h && make redeploy
 nnoremap <leader>pR :CbRedeploy<CR>
 
 " TypeScript type check (no emit)
@@ -78,32 +81,64 @@ command! CbTsc :!cd %:p:h/web && npx tsc --noEmit
 nnoremap <leader>bT :CbTsc<CR>
 
 " ============================================================================
-" TESTING
+" DJANGO MANAGEMENT
 " ============================================================================
 
-" Run all Go tests
-command! CbTest :!cd %:p:h && nix develop -c go test -v ./...
+" Django shell
+command! CbShell :terminal cd %:p:h && nix develop -c python manage.py shell
+nnoremap <leader>ps :CbShell<CR>
+
+" Run migrations
+command! CbMigrate :!cd %:p:h && nix develop -c python manage.py migrate
+nnoremap <leader>pm :CbMigrate<CR>
+
+" Make migrations
+command! CbMakeMigrations :!cd %:p:h && nix develop -c python manage.py makemigrations
+nnoremap <leader>pM :CbMakeMigrations<CR>
+
+" ============================================================================
+" TESTING (PYTEST)
+" ============================================================================
+
+" Run all tests
+command! CbTest :!cd %:p:h && nix develop -c pytest -v
 nnoremap <leader>ta :CbTest<CR>
 
-" Run tests for current package (Go)
-command! CbTestPkg :!cd %:p:h && nix develop -c go test -v ./%:h
-nnoremap <leader>tp :CbTestPkg<CR>
+" Run tests for current file
+command! CbTestFile :!cd %:p:h && nix develop -c pytest -v %
+nnoremap <leader>tf :CbTestFile<CR>
 
-" Run test under cursor (requires vim-test or similar, fallback to go test)
-command! CbTestCursor :!cd %:p:h && nix develop -c go test -v -run <cword> ./%:h
+" Run test under cursor
+command! CbTestCursor :!cd %:p:h && nix develop -c pytest -v % -k <cword>
 nnoremap <leader>tc :CbTestCursor<CR>
 
 " Run tests with coverage
-command! CbTestCover :!cd %:p:h && nix develop -c go test -v -cover ./... && nix develop -c go tool cover -html=coverage.out
+command! CbTestCover :!cd %:p:h && nix develop -c pytest --cov=apps --cov=cloudbench --cov=tui --cov-report=html && xdg-open htmlcov/index.html
 nnoremap <leader>tC :CbTestCover<CR>
 
 " ============================================================================
-" LINTING
+" LINTING & FORMATTING (PYTHON)
 " ============================================================================
 
-" Run golangci-lint
-command! CbLint :!cd %:p:h && nix develop -c golangci-lint run
-nnoremap <leader>lg :CbLint<CR>
+" Run ruff
+command! CbRuff :!cd %:p:h && nix develop -c ruff check apps cloudbench tui
+nnoremap <leader>lr :CbRuff<CR>
+
+" Run mypy
+command! CbMypy :!cd %:p:h && nix develop -c mypy apps cloudbench tui
+nnoremap <leader>lm :CbMypy<CR>
+
+" Run all linters
+command! CbLint :!cd %:p:h && make lint
+nnoremap <leader>la :CbLint<CR>
+
+" Format with black
+command! CbBlack :!cd %:p:h && nix develop -c black apps cloudbench tui
+nnoremap <leader>fb :CbBlack<CR>
+
+" Format current file
+command! CbBlackFile :!nix develop -c black %
+nnoremap <leader>ff :CbBlackFile<CR>
 
 " Run eslint on frontend
 command! CbLintFrontend :!cd %:p:h/web && npm run lint 2>/dev/null || npx eslint src/
@@ -175,74 +210,48 @@ command! CbDockerStatus :CbGeoStatus | CbPgStatus | CbMinioStatus
 nnoremap <leader>da? :CbDockerStatus<CR>
 
 " ============================================================================
-" DEBUGGING (Go with Delve)
+" DEBUGGING (Python with debugpy)
 " ============================================================================
 
-" Debug web server (headless, connect with DAP or dlv connect)
-command! CbDebugWeb :terminal cd %:p:h && nix develop -c dlv debug ./cmd/web/ -- serve
+" Debug Django server
+command! CbDebugWeb :terminal cd %:p:h && nix develop -c python -m debugpy --listen 5678 manage.py runserver 0.0.0.0:8080 --noreload
 nnoremap <leader>Dw :CbDebugWeb<CR>
 
 " Debug TUI
-command! CbDebugTui :terminal cd %:p:h && nix develop -c dlv debug . --
+command! CbDebugTui :terminal cd %:p:h && nix develop -c python -m debugpy --listen 5678 -m tui
 nnoremap <leader>Dt :CbDebugTui<CR>
 
 " Debug current test file
-command! CbDebugTest :terminal cd %:p:h && nix develop -c dlv test ./%:h
+command! CbDebugTest :terminal cd %:p:h && nix develop -c python -m debugpy --listen 5678 -m pytest -v %
 nnoremap <leader>DT :CbDebugTest<CR>
 
-" Debug with DAP (headless mode for nvim-dap connection)
-command! CbDebugWebDap :!cd %:p:h && nix develop -c dlv debug ./cmd/web/ --headless --listen=:2345 --api-version=2 -- serve &
-nnoremap <leader>DD :CbDebugWebDap<CR>
-
-" Attach to running headless delve session
-command! CbDebugAttach :terminal dlv connect :2345
-nnoremap <leader>Da :CbDebugAttach<CR>
-
 " ============================================================================
-" NVIM-DAP CONFIGURATION (if you have nvim-dap installed)
+" LEGACY GO COMMANDS (for backward compatibility)
 " ============================================================================
-" Add this to your nvim-dap config for Go debugging:
-"
-" lua << EOF
-" local dap = require('dap')
-" dap.adapters.go = {
-"   type = 'server',
-"   port = '${port}',
-"   executable = {
-"     command = 'dlv',
-"     args = {'dap', '-l', '127.0.0.1:${port}'},
-"   },
-" }
-" dap.configurations.go = {
-"   {
-"     type = 'go',
-"     name = 'Debug Web Server',
-"     request = 'launch',
-"     program = '${workspaceFolder}/cmd/web/',
-"     args = {'serve'},
-"   },
-"   {
-"     type = 'go',
-"     name = 'Debug TUI',
-"     request = 'launch',
-"     program = '${workspaceFolder}',
-"   },
-"   {
-"     type = 'go',
-"     name = 'Debug Test',
-"     request = 'launch',
-"     mode = 'test',
-"     program = '${file}',
-"   },
-"   {
-"     type = 'go',
-"     name = 'Attach to Headless',
-"     request = 'attach',
-"     mode = 'remote',
-"     port = 2345,
-"   },
-" }
-" EOF
+
+" Start Go web server
+command! CbStartGo :!cd %:p:h && fuser -k 8080/tcp 2>/dev/null; sleep 1; nix develop -c go run ./cmd/web/ serve &
+nnoremap <leader>Ps :CbStartGo<CR>
+
+" Build Go web server binary
+command! CbBuildWebGo :!cd %:p:h && nix develop -c go build -o bin/kartoza-cloudbench-go ./cmd/web
+nnoremap <leader>Bw :CbBuildWebGo<CR>
+
+" Build Go TUI binary
+command! CbBuildTuiGo :!cd %:p:h && nix develop -c go build -o bin/kartoza-cloudbench-tui-go .
+nnoremap <leader>Bt :CbBuildTuiGo<CR>
+
+" Run Go tests
+command! CbTestGo :!cd %:p:h && nix develop -c go test -v ./...
+nnoremap <leader>Tg :CbTestGo<CR>
+
+" Run golangci-lint
+command! CbLintGo :!cd %:p:h && nix develop -c golangci-lint run
+nnoremap <leader>Lg :CbLintGo<CR>
+
+" Debug Go web server
+command! CbDebugWebGo :terminal cd %:p:h && nix develop -c dlv debug ./cmd/web/ -- serve
+nnoremap <leader>DW :CbDebugWebGo<CR>
 
 " ============================================================================
 " GIT SHORTCUTS
@@ -281,7 +290,17 @@ nnoremap <leader>xc :CbClaude<CR>
 " NAVIGATION SHORTCUTS
 " ============================================================================
 
-" Open key directories
+" Open key directories (Python)
+command! CbApps :edit %:p:h/apps/
+nnoremap <leader>na :CbApps<CR>
+
+command! CbCloud :edit %:p:h/cloudbench/
+nnoremap <leader>nC :CbCloud<CR>
+
+command! CbTuiDir :edit %:p:h/tui/
+nnoremap <leader>nt :CbTuiDir<CR>
+
+" Open key directories (Web)
 command! CbWeb :edit %:p:h/web/src/
 nnoremap <leader>nw :CbWeb<CR>
 
@@ -291,17 +310,12 @@ nnoremap <leader>nc :CbComponents<CR>
 command! CbStores :edit %:p:h/web/src/stores/
 nnoremap <leader>ns :CbStores<CR>
 
-command! CbApi :edit %:p:h/web/src/api/
-nnoremap <leader>na :CbApi<CR>
+command! CbApiTs :edit %:p:h/web/src/api/
+nnoremap <leader>nA :CbApiTs<CR>
 
-command! CbCmd :edit %:p:h/cmd/
-nnoremap <leader>nC :CbCmd<CR>
-
+" Legacy Go directories
 command! CbInternal :edit %:p:h/internal/
 nnoremap <leader>ni :CbInternal<CR>
-
-command! CbCore :edit %:p:h/core/
-nnoremap <leader>nO :CbCore<CR>
 
 " ============================================================================
 " TERMINAL SHORTCUTS
@@ -316,48 +330,45 @@ command! CbTermWeb :terminal cd %:p:h/web && nix develop
 nnoremap <leader>tw :CbTermWeb<CR>
 
 " ============================================================================
-" QUICKFIX / LOCATION LIST HELPERS
-" ============================================================================
-
-" Run build and capture errors to quickfix
-command! CbMake :cd %:p:h | make 2>&1 | cexpr system('cat') | copen
-nnoremap <leader>qm :CbMake<CR>
-
-" Run TypeScript check and capture errors
-command! CbTscQf :cd %:p:h/web | cexpr system('npx tsc --noEmit 2>&1') | copen
-nnoremap <leader>qt :CbTscQf<CR>
-
-" ============================================================================
 " HELP / INFO
 " ============================================================================
 
 command! CbHelp :echo "
 \Kartoza CloudBench Keybindings (Leader = <Space>)
 \
-\SERVER:
-\  <leader>ps  Start server
+\PYTHON/DJANGO SERVER:
+\  <leader>ps  Start Django server
 \  <leader>pq  Stop server
 \  <leader>pr  Restart server (rebuild frontend)
 \  <leader>p?  Check server status
 \  <leader>po  Open in browser
-\  <leader>pR  Full redeploy (clean + build + start)
+\  <leader>pU  Run with uvicorn (ASGI)
+\  <leader>pR  Full redeploy
+\  <leader>pT  Run Textual TUI
+\
+\DJANGO:
+\  <leader>pm  Run migrations
+\  <leader>pM  Make migrations
 \
 \BUILD:
 \  <leader>bf  Build frontend only
-\  <leader>bw  Build web server binary
-\  <leader>bt  Build TUI binary
+\  <leader>bs  Collect static files
 \  <leader>ba  Build all
 \  <leader>bc  Clean build artifacts
 \  <leader>bT  TypeScript type check
 \
-\TEST:
+\TEST (PYTEST):
 \  <leader>ta  Run all tests
-\  <leader>tp  Run tests in current package
+\  <leader>tf  Run tests for current file
 \  <leader>tc  Run test under cursor
 \  <leader>tC  Run tests with coverage
 \
-\LINT:
-\  <leader>lg  Run golangci-lint
+\LINT/FORMAT:
+\  <leader>lr  Run ruff
+\  <leader>lm  Run mypy
+\  <leader>la  Run all linters
+\  <leader>fb  Format with black
+\  <leader>ff  Format current file
 \  <leader>lf  Run eslint on frontend
 \
 \DOCKER (Test Containers):
@@ -365,15 +376,19 @@ command! CbHelp :echo "
 \  <leader>dps Start PostGIS      <leader>dpq Stop PostGIS
 \  <leader>dms Start MinIO        <leader>dmq Stop MinIO
 \  <leader>das Start all          <leader>daq Stop all
-\  <leader>da? Status all         <leader>dgl/dpl/dml Logs
-\  <leader>dpP PostGIS psql       <leader>dmC MinIO console
+\  <leader>da? Status all
 \
-\DEBUG:
-\  <leader>Dw  Debug web server (terminal)
-\  <leader>Dt  Debug TUI (terminal)
-\  <leader>DT  Debug current test file
-\  <leader>DD  Start DAP server (headless)
-\  <leader>Da  Attach to headless debugger
+\DEBUG (debugpy):
+\  <leader>Dw  Debug Django server
+\  <leader>Dt  Debug TUI
+\  <leader>DT  Debug current test
+\
+\LEGACY GO:
+\  <leader>Ps  Start Go server
+\  <leader>Bw  Build Go web
+\  <leader>Bt  Build Go TUI
+\  <leader>Tg  Run Go tests
+\  <leader>Lg  Run golangci-lint
 \
 \GIT:
 \  <leader>gs  Git status
@@ -381,23 +396,22 @@ command! CbHelp :echo "
 \  <leader>gl  Git log
 \
 \DOCS:
-\  <leader>xd  Serve docs locally
+\  <leader>xd  Serve docs
 \  <leader>xD  Build docs
 \  <leader>xs  Open SPECIFICATION.md
 \  <leader>xc  Open CLAUDE.md
 \
 \NAVIGATE:
+\  <leader>na  apps/
+\  <leader>nC  cloudbench/
+\  <leader>nt  tui/
 \  <leader>nw  web/src/
 \  <leader>nc  web/src/components/
-\  <leader>ns  web/src/stores/
-\  <leader>na  web/src/api/
-\  <leader>nC  cmd/
-\  <leader>ni  internal/
-\  <leader>nO  core/
+\  <leader>ni  internal/ (Go)
 \
 \TERMINAL:
-\  <leader>tt  Terminal in project root (nix develop)
-\  <leader>tw  Terminal in web/ (nix develop)
+\  <leader>tt  Terminal in project root
+\  <leader>tw  Terminal in web/
 \"
 nnoremap <leader>ph :CbHelp<CR>
 
@@ -405,13 +419,13 @@ nnoremap <leader>ph :CbHelp<CR>
 " AUTO COMMANDS
 " ============================================================================
 
-" Auto-format Go files on save (if you have gofmt or goimports)
-augroup cloudbench_go
+" Auto-format Python files on save
+augroup cloudbench_python
   autocmd!
-  autocmd BufWritePre *.go silent! !goimports -w %
+  autocmd BufWritePre *.py silent! !black % 2>/dev/null
 augroup END
 
-" Auto-format TypeScript/TSX on save (if you have prettier)
+" Auto-format TypeScript/TSX on save
 augroup cloudbench_ts
   autocmd!
   autocmd BufWritePre *.ts,*.tsx silent! !npx prettier --write % 2>/dev/null
@@ -420,15 +434,10 @@ augroup END
 " Set filetype specific settings
 augroup cloudbench_filetypes
   autocmd!
-  autocmd FileType go setlocal tabstop=4 shiftwidth=4 noexpandtab
+  autocmd FileType python setlocal tabstop=4 shiftwidth=4 expandtab
   autocmd FileType typescript,typescriptreact setlocal tabstop=2 shiftwidth=2 expandtab
   autocmd FileType json setlocal tabstop=2 shiftwidth=2 expandtab
+  autocmd FileType go setlocal tabstop=4 shiftwidth=4 noexpandtab
 augroup END
-
-" ============================================================================
-" STATUS LINE INFO (optional)
-" ============================================================================
-" If you want project info in your statusline, you can use:
-" let g:cloudbench_project = 'Kartoza CloudBench'
 
 echo "Kartoza CloudBench config loaded. Type :CbHelp or <leader>ph for keybindings."

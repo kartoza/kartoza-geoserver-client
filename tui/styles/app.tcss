@@ -1,0 +1,114 @@
+/* Kartoza CloudBench TUI Styles */
+
+/* Color scheme based on Kartoza branding */
+$primary: #1a73e8;
+$primary-darken-1: #1557b0;
+$primary-lighten-1: #4d94ff;
+$secondary: #34a853;
+$success: #34a853;
+$warning: #fbbc04;
+$error: #ea4335;
+$surface: #1e1e1e;
+$background: #121212;
+$text: #e0e0e0;
+$text-muted: #888888;
+
+/* Global styles */
+Screen {
+    background: $background;
+}
+
+/* Header styling */
+Header {
+    background: $primary;
+    color: white;
+    text-style: bold;
+}
+
+/* Footer styling */
+Footer {
+    background: $surface;
+}
+
+/* Sidebar */
+#sidebar {
+    width: 30;
+    background: $surface;
+    border-right: solid $primary;
+}
+
+#sidebar Tree {
+    padding: 1;
+}
+
+/* Main content */
+#main-content {
+    padding: 1;
+}
+
+/* Cards */
+.card {
+    background: $surface;
+    border: solid $primary;
+    padding: 1;
+    margin: 1;
+}
+
+/* Buttons */
+Button {
+    margin: 0 1;
+}
+
+Button.-primary {
+    background: $primary;
+}
+
+Button.-success {
+    background: $success;
+}
+
+Button.-error {
+    background: $error;
+}
+
+/* Inputs */
+Input {
+    background: $surface;
+    border: solid $text-muted;
+}
+
+Input:focus {
+    border: solid $primary;
+}
+
+/* Tables */
+DataTable {
+    background: $surface;
+}
+
+DataTable > .datatable--cursor {
+    background: $primary-darken-1;
+}
+
+/* Tree nodes */
+Tree > .tree--cursor {
+    background: $primary-darken-1;
+}
+
+/* Status indicators */
+.status-ok {
+    color: $success;
+}
+
+.status-warning {
+    color: $warning;
+}
+
+.status-error {
+    color: $error;
+}
+
+/* Hidden elements */
+.hidden {
+    display: none;
+}

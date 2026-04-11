@@ -75,67 +75,103 @@ Kartoza CloudBench is a unified platform for GeoServer and PostgreSQL management
 
 ## Architecture
 
-### Technology Stack
+### Technology Stack (v0.3.0 - Python/Django)
 
-- **Language**: Go 1.23+
-- **TUI Framework**: Bubble Tea (Elm-style architecture)
-- **TUI Styling**: Lip Gloss
-- **TUI Animations**: Harmonica (spring physics)
-- **Web UI Framework**: React with TypeScript
-- **Web UI Components**: Chakra UI
+As of version 0.3.0, the backend has been migrated from Go to Python/Django:
+
+- **Backend Language**: Python 3.12+
+- **Web Framework**: Django 5.0+ with Django REST Framework
+- **TUI Framework**: Textual (Python)
+- **HTTP Client**: httpx (async support)
+- **Data Validation**: Pydantic
+- **S3 Client**: boto3
+- **Analytics**: DuckDB (for Parquet/GeoParquet queries)
+- **ASGI Server**: uvicorn
+- **Web UI Framework**: React 18 with TypeScript (unchanged)
+- **Web UI Components**: Chakra UI (unchanged)
 - **Web UI Animations**: Framer Motion (spring physics)
 - **Map Viewer**: MapLibre GL JS
 - **3D Globe Viewer**: Cesium.js
 - **SQL Editor**: CodeMirror 6
 
-### Package Structure
+### Package Structure (Python/Django)
 
 ```
-internal/
+kartoza-cloudbench/
+├── manage.py                    # Django CLI entry point
+├── pyproject.toml               # Python project configuration
+├── cloudbench/                  # Django project
+│   ├── __init__.py
+│   ├── asgi.py                  # ASGI application
+│   ├── wsgi.py                  # WSGI application
+│   ├── urls.py                  # Root URL configuration
+│   └── settings/
+│       ├── base.py              # Base settings
+│       ├── development.py       # Development settings
+│       └── production.py        # Production settings
+├── apps/                        # Django applications
+│   ├── core/                    # Config, middleware, utilities
+│   │   ├── config.py            # JSON config manager
+│   │   ├── middleware.py        # CORS + COOP/COEP
+│   │   ├── managers.py          # Thread-safe client caching
+│   │   └── exceptions.py        # Custom exceptions
+│   ├── connections/             # GeoServer connection CRUD
+│   ├── geoserver/               # GeoServer REST API proxy
+│   │   ├── client.py            # GeoServer REST client
+│   │   └── views.py             # API endpoints
+│   ├── gwc/                     # GeoWebCache management
+│   ├── postgres/                # PostgreSQL/PostGIS + pg_service.conf
+│   ├── upload/                  # Chunked file uploads
+│   ├── s3/                      # S3 storage + DuckDB queries
+│   ├── ai/                      # AI query engine (Ollama)
+│   ├── query/                   # Visual query designer
+│   ├── bridge/                  # PostgreSQL-GeoServer bridge
+│   ├── sqlview/                 # SQL View layers
+│   ├── sync/                    # Server synchronization
+│   ├── dashboard/               # Monitoring dashboard
+│   ├── search/                  # Universal search
+│   ├── terria/                  # 3D viewer integration
+│   ├── qfieldcloud/             # QFieldCloud integration
+│   ├── mergin/                  # Mergin Maps integration
+│   ├── geonode/                 # GeoNode integration
+│   ├── iceberg/                 # Apache Iceberg integration
+│   └── qgis/                    # QGIS project management
+├── tui/                         # Textual TUI application
+│   ├── __main__.py              # CLI entry point
+│   ├── app.py                   # Main Textual App
+│   ├── screens/                 # TUI screens
+│   │   ├── home.py              # Dashboard/home screen
+│   │   ├── connections.py       # Connection management
+│   │   ├── geoserver.py         # GeoServer tree browser
+│   │   ├── postgres.py          # PostgreSQL browser
+│   │   ├── s3.py                # S3 storage browser
+│   │   └── settings.py          # Settings screen
+│   ├── widgets/                 # Custom widgets
+│   │   ├── tree.py              # Resource tree widget
+│   │   └── progress.py          # Progress indicators
+│   └── styles/                  # Textual CSS styling
+│       └── app.tcss
+├── static/                      # Built React frontend
+├── tests/                       # Pytest test suite
+└── web/                         # React frontend (unchanged)
+    ├── src/
+    │   ├── api/                 # TypeScript API client
+    │   ├── components/          # React components
+    │   ├── stores/              # Zustand state management
+    │   └── utils/               # Animation utilities
+    └── package.json
+```
+
+### Legacy Go Architecture (v0.2.x)
+
+The legacy Go implementation remains available for reference:
+
+```
+internal/                        # Go packages (legacy)
 ├── api/           # GeoServer REST API client
 ├── config/        # Configuration management
-├── gwc/           # GeoWebCache integration
-├── integration/   # Cross-system operations
-│   ├── bridge.go         # PostgreSQL → GeoServer bridge
-│   └── sqlview.go        # SQL View layer publishing
-├── llm/           # LLM integration
-│   ├── engine.go         # Query generation
-│   ├── executor.go       # Safe query execution
-│   ├── ollama.go         # Ollama client
-│   └── types.go          # Data types
-├── models/        # Data models (TreeNode, LocalFile, etc.)
-├── ogr2ogr/       # Data import via ogr2ogr/raster2pgsql
-├── postgres/      # PostgreSQL integration
-│   ├── service.go        # pg_service.conf parsing
-│   ├── client.go         # Database operations
-│   └── schema.go         # Schema harvesting
-├── preview/       # Browser-based layer preview server
-├── query/         # Visual query builder
-├── s3client/      # S3-compatible storage client
-├── cloudnative/   # Cloud-native format conversion (COG, COPC, GeoParquet)
-├── storage/       # File storage management
-├── sync/          # Server synchronization
-├── terria/        # Terria catalog export
-├── tui/           # Terminal UI components
-│   ├── app.go            # Main application state
-│   ├── components/       # Reusable UI components
-│   ├── screens/          # Full-screen views
-│   └── styles/           # Style definitions
-├── verify/        # Upload verification (WFS-based)
-└── webserver/     # HTTP handlers (60+ endpoints)
-    ├── handlers_*.go     # API handlers by domain
-    └── static/           # Built React frontend
-
-web/
-├── src/
-│   ├── api/              # TypeScript API client
-│   ├── components/       # React components
-│   │   ├── dialogs/      # Modal dialogs
-│   │   └── *.tsx         # Main components
-│   ├── stores/           # Zustand state management
-│   ├── types/            # TypeScript definitions
-│   └── utils/            # Animation utilities
-└── package.json          # npm dependencies
+├── tui/           # Bubble Tea TUI
+└── webserver/     # HTTP handlers
 ```
 
 ### Application State

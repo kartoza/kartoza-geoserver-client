@@ -1,0 +1,91 @@
+site_name: Kartoza CloudBench
+site_description: Cloud-native geospatial data management platform
+site_author: Kartoza
+site_url: https://kartoza.github.io/kartoza-cloudbench/
+
+repo_name: kartoza/kartoza-cloudbench
+repo_url: https://github.com/kartoza/kartoza-cloudbench
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - tables
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+  - User Guide:
+    - Web UI: user-guide/web-ui.md
+    - TUI: user-guide/tui.md
+    - GeoServer Management: user-guide/geoserver.md
+    - File Uploads: user-guide/uploads.md
+    - Layer Preview: user-guide/preview.md
+  - Administrator Guide:
+    - Deployment: admin-guide/deployment.md
+    - Docker: admin-guide/docker.md
+    - Environment Variables: admin-guide/environment.md
+  - Developer Guide:
+    - Architecture: dev-guide/architecture.md
+    - API Reference: dev-guide/api.md
+    - Contributing: dev-guide/contributing.md
+  - About:
+    - License: about/license.md
+    - Changelog: about/changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/kartoza/kartoza-cloudbench
+    - icon: fontawesome/solid/globe
+      link: https://kartoza.com
+
+copyright: Made with 💗 by <a href="https://kartoza.com">Kartoza</a>

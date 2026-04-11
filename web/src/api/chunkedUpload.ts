@@ -1,19 +1,30 @@
 import { API_BASE } from './common'
 import type { UploadResult } from '../types'
 
+// Helper to get CSRF token for XHR requests
+function getCSRFToken(): string {
+  const match = document.cookie.match(/csrftoken=([^;]+)/)
+  if (match) return match[1]
+  return (window as any).__csrfToken || ''
+}
+
 export const CHUNK_SIZE = 5 * 1024 * 1024
 
 export async function initUploadSession(
   connId: string,
   workspace: string,
   filename: string,
-  totalSize: number,
+  fileSize: number,
   chunkSize = CHUNK_SIZE,
 ): Promise<{ sessionId: string; chunkSize: number; totalChunks: number }> {
   const res = await fetch(`${API_BASE}/upload/init`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ connId, workspace, filename, totalSize, chunkSize }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ connectionId: connId, workspace, filename, fileSize, chunkSize }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Unknown error' }))
@@ -36,6 +47,8 @@ export async function uploadChunk(
 
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `${API_BASE}/upload/chunk`)
+    xhr.setRequestHeader('X-CSRFToken', getCSRFToken())
+    xhr.withCredentials = true
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
@@ -70,7 +83,11 @@ export async function uploadChunk(
 export async function completeUpload(sessionId: string): Promise<UploadResult> {
   const res = await fetch(`${API_BASE}/upload/complete`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    credentials: 'include',
     body: JSON.stringify({ sessionId }),
   })
   if (!res.ok) {
@@ -83,6 +100,10 @@ export async function completeUpload(sessionId: string): Promise<UploadResult> {
 export async function cancelUpload(sessionId: string): Promise<void> {
   await fetch(`${API_BASE}/upload/session/${encodeURIComponent(sessionId)}`, {
     method: 'DELETE',
+    headers: {
+      'X-CSRFToken': getCSRFToken(),
+    },
+    credentials: 'include',
   })
 }
 

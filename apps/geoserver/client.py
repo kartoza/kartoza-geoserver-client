@@ -851,12 +851,26 @@ class GeoServerClient:
             layer: Layer name
 
         Returns:
-            Dictionary with defaultStyle and styles list
+            Dictionary with defaultStyle (string) and additionalStyles (list of strings)
         """
         layer_data = self.get_layer(workspace, layer)
+
+        # Extract default style name (GeoServer returns {name, href} object)
+        default_style_obj = layer_data.get("defaultStyle", {})
+        default_style = default_style_obj.get("name", "") if isinstance(default_style_obj, dict) else ""
+
+        # Extract additional style names
+        styles_obj = layer_data.get("styles", {})
+        style_list = styles_obj.get("style", []) if isinstance(styles_obj, dict) else []
+        additional_styles = [
+            s.get("name", "") if isinstance(s, dict) else s
+            for s in style_list
+            if s
+        ]
+
         return {
-            "defaultStyle": layer_data.get("defaultStyle", {}),
-            "styles": layer_data.get("styles", {}).get("style", []),
+            "defaultStyle": default_style,
+            "additionalStyles": additional_styles,
         }
 
     def update_layer_styles(

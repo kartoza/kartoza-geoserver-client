@@ -1,21 +1,18 @@
-# Kartoza GeoServer Client
+# Kartoza CloudBench
 
-A Midnight Commander-style TUI (Terminal User Interface) for managing GeoServer instances. Browse local geospatial files and upload them to GeoServer with ease.
+A comprehensive cloud-native geospatial data management platform with TUI (Terminal User Interface) and Web UI for managing GeoServer, PostgreSQL/PostGIS, S3 storage, and more.
 
-![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)
+![Python Version](https://img.shields.io/badge/Python-3.12+-3776ab?style=flat&logo=python)
+![Django](https://img.shields.io/badge/Django-5.1+-092E20?style=flat&logo=django)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 ## Features
 
 ### TUI (Terminal User Interface)
-- **Dual-panel interface** - Local filesystem on the left, GeoServer explorer on the right
+- **Textual-based interface** - Modern Python TUI with rich widgets
 - **Connection manager** - Store and manage multiple GeoServer connections with credentials
-- **Geospatial file detection** - Automatically identifies Shapefiles, GeoPackage, GeoTIFF, GeoJSON, SLD, and CSS files
 - **GeoServer hierarchy browser** - Navigate workspaces, data stores, coverage stores, layers, styles, and layer groups
-- **Upload support** - Upload local files to GeoServer and publish as services with progress tracking
 - **CRUD operations** - Create, edit, and delete workspaces, data stores, and coverage stores
-- **Layer preview** - Built-in MapLibre web viewer with WMS/WFS support, attribute viewing, and metadata display
-- **Animated dialogs** - Smooth spring-based animations using Harmonica physics
 - **Vim-style navigation** - Use familiar j/k keys for navigation
 
 ### Web UI
@@ -23,218 +20,131 @@ A Midnight Commander-style TUI (Terminal User Interface) for managing GeoServer 
 - **Tree browser** - Hierarchical view of all GeoServer resources
 - **Layer metadata editing** - Comprehensive metadata management including title, abstract, keywords, and attribution
 - **GeoWebCache management** - Seed, reseed, and truncate cached tiles with real-time progress
-- **Map preview** - Interactive map preview with WMS/WMTS support
-- **Server synchronization** - Replicate resources between GeoServer instances with animated UI
+- **Map preview** - Interactive map preview with WMS/WMTS support using MapLibre GL
+- **Server synchronization** - Replicate resources between GeoServer instances
+- **Chunked file upload** - Upload large geospatial files with progress tracking
+- **S3 Storage integration** - Browse and manage cloud-native geospatial data
+- **PostgreSQL/PostGIS** - Direct database connections via pg_service.conf
+- **QGIS Projects** - Manage and preview QGIS Server projects
+- **Terria/Cesium 3D** - 3D globe visualization support
 
 ## Installation
 
 ### Using Nix (recommended)
 
 ```bash
-nix run github:kartoza/kartoza-geoserver-client
+# Enter development shell
+nix develop
+
+# Run the web server
+python manage.py runserver 8080
+
+# Run the TUI
+python -m tui
 ```
 
 ### From source
 
 ```bash
-git clone https://github.com/kartoza/kartoza-geoserver-client.git
-cd kartoza-geoserver-client
-go build -o geoserver-client .
-./geoserver-client
+git clone https://github.com/kartoza/kartoza-cloudbench.git
+cd kartoza-cloudbench
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -e .
+
+# Run database migrations
+python manage.py migrate
+
+# Build frontend
+cd web && npm install && npm run build && cd ..
+
+# Run the web server
+python manage.py runserver 8080
 ```
 
 ### Development
 
 ```bash
-nix develop  # Enter development shell
-go run .     # Run the TUI application
+nix develop  # Enter development shell with all dependencies
+
+# Run Django development server
+python manage.py runserver 8080
+
+# Run TUI
+python -m tui
+
+# Run tests
+pytest
+
+# Lint code
+ruff check .
 ```
 
-### Web UI
+## Quick Start
 
-```bash
-nix develop  # Enter development shell
-go run . web # Run the web server on port 8080
+1. **Start the server**:
+   ```bash
+   python manage.py runserver 8080
+   ```
+
+2. **Open the web UI**: Visit http://localhost:8080
+
+3. **Add a GeoServer connection**: Click the + button next to "GeoServer Connections"
+
+4. **Browse and manage**: Navigate workspaces, upload data, preview layers
+
+## Architecture
+
 ```
-
-Or visit http://localhost:8080 after starting the web server.
-
-## Usage
-
-### Keyboard Shortcuts
-
-#### Global
-| Key | Action |
-|-----|--------|
-| `Tab` | Switch between panels |
-| `?` / `F1` | Toggle help |
-| `q` / `Ctrl+C` | Quit |
-
-#### Navigation
-| Key | Action |
-|-----|--------|
-| `↑` / `k` | Move up |
-| `↓` / `j` | Move down |
-| `Enter` / `l` | Open / Expand |
-| `Backspace` / `h` | Go back / Collapse |
-| `PgUp` / `PgDn` | Page up / down |
-| `Home` / `End` | Go to start / end |
-
-#### Actions
-| Key | Action |
-|-----|--------|
-| `Space` | Select file |
-| `i` | View resource information |
-| `c` | Open connection manager |
-| `u` | Upload selected files |
-| `r` | Refresh current view |
-
-#### Connection Manager
-| Key | Action |
-|-----|--------|
-| `a` | Add new connection |
-| `e` | Edit connection |
-| `d` | Delete connection |
-| `t` | Test connection |
-| `Enter` | Connect to selected |
-
-#### GeoServer Tree (CRUD Operations)
-| Key | Action |
-|-----|--------|
-| `n` | Create new item (workspace, store) |
-| `e` | Edit/rename selected item |
-| `d` | Delete selected item |
-| `o` | Preview layer in browser |
-
-#### Workspace Creation/Edit Wizard
-When creating or editing a workspace, a wizard provides access to:
-- **Basic Info** - Workspace name, default workspace option, isolated workspace option
-- **Services** - Toggle which OGC services are enabled for this workspace (WMTS, WMS, WCS, WPS, WFS)
-- **Settings** - Enable/disable workspace-specific settings
-
-#### Layer Edit Wizard
-When editing a layer (press `e` on a layer), you can configure:
-- **Enabled** - Whether the layer is enabled for service requests
-- **Advertised** - Whether the layer appears in GetCapabilities documents
-- **Queryable** - Whether the layer supports GetFeatureInfo (vector layers only)
-
-#### Store Edit Wizard
-When editing a data store or coverage store, you can configure:
-- **Name** - The store name
-- **Enabled** - Whether the store is enabled
-- **Description** - Optional description
-
-These settings match the options available in the GeoServer web admin interface.
-
-#### Store Creation Wizard
-When creating a data store or coverage store, a wizard guides you through:
-1. **Type Selection** - Choose the store type (PostGIS, Shapefile Directory, GeoPackage, etc.)
-2. **Configuration** - Enter the required connection parameters for your chosen type
-
-Supported Data Store Types:
-- **PostGIS** - Connect to PostgreSQL/PostGIS databases
-- **Directory of Shapefiles** - Reference a folder containing shapefiles
-- **GeoPackage** - Connect to GeoPackage files
-- **Web Feature Service (WFS)** - Connect to external WFS services
-
-Supported Coverage Store Types (Raster):
-- **GeoTIFF** - Single GeoTIFF raster file
-- **World Image** - PNG/JPEG/GIF with world file (.pgw, .jgw, .gfw)
-- **Image Mosaic** - Directory of images forming a mosaic
-- **Image Pyramid** - Multi-resolution image pyramid
-- **ArcGrid** - ESRI ASCII Grid format (.asc)
-- **GeoPackage (Raster)** - Raster tiles in GeoPackage format
-
-#### Form Editing (vim-style)
-| Key | Action |
-|-----|--------|
-| `j` / `k` | Navigate between fields |
-| `Enter` | Edit field / Accept value |
-| `Esc` | Cancel edit / Go back |
-| `Ctrl+S` | Save form |
-
-#### Layer Preview
-Press `o` on any layer in the GeoServer tree to open an interactive map preview in your browser. The preview includes:
-- **MapLibre GL** - Hardware-accelerated WebGL map rendering with OpenStreetMap basemap
-- **WMS layer overlay** - Displays the layer via GeoServer's WMS service
-- **Feature query** - Click on vector layers to view feature attributes
-- **Metadata panel** - View layer details, workspace, and service endpoints
-- **Attributes table** - Browse feature attributes for vector layers
-
-### Web UI Features
-
-#### Server Synchronization
-Replicate GeoServer configurations between instances. Access via Settings (gear icon) > "Sync Server(s)":
-
-1. **Select Source** - Choose the source GeoServer (read-only) from the left panel
-2. **Add Destinations** - Drag or select destination servers to the right panel
-3. **Configure Options** - Select which resources to sync:
-   - Workspaces
-   - Data Stores
-   - Coverage Stores
-   - Layers
-   - Styles
-   - Layer Groups
-4. **Start Sync** - Click the sync button to begin replication
-5. **Monitor Progress** - Watch real-time progress with animated indicators
-6. **Save Configuration** - Save sync setups for easy reloading
-
-Features:
-- **Animated UI** - Visual feedback with pulsing icons and flowing arrows
-- **Real-time progress** - Per-destination progress bars and activity logs
-- **Stop controls** - Stop individual syncs or all at once
-- **Additive sync** - Only adds or updates missing resources (non-destructive)
-
-#### GeoWebCache Management
-Manage tile caching for optimal performance:
-- **Seed** - Pre-generate cached tiles for faster access
-- **Reseed** - Regenerate existing cached tiles
-- **Truncate** - Clear cached tiles to free storage
-- **Progress monitoring** - Track seeding operations in real-time
-
-#### Layer Metadata
-Edit comprehensive layer metadata:
-- Title, abstract, and keywords
-- Attribution information
-- Coordinate reference systems
-- Bounding boxes
-- Service endpoint configuration
+kartoza-cloudbench/
+├── apps/                    # Django applications
+│   ├── geoserver/          # GeoServer REST API client
+│   ├── postgres/           # PostgreSQL/PostGIS integration
+│   ├── s3/                 # S3/MinIO storage
+│   ├── upload/             # Chunked file uploads
+│   ├── preview/            # Layer preview sessions
+│   ├── gwc/                # GeoWebCache management
+│   ├── sync/               # Server synchronization
+│   └── ...
+├── cloudbench/             # Django project settings
+├── tui/                    # Textual TUI application
+├── web/                    # React frontend
+│   └── src/
+│       ├── api/            # API client modules
+│       ├── components/     # React components
+│       └── stores/         # Zustand state stores
+└── static/                 # Compiled frontend assets
+```
 
 ## Configuration
 
-Configuration is stored in `~/.config/kartoza-geoserver-client/config.json`:
+### Environment Variables
 
-```json
-{
-  "connections": [
-    {
-      "id": "uuid",
-      "name": "My GeoServer",
-      "url": "https://geoserver.example.com/geoserver",
-      "username": "admin",
-      "password": "geoserver"
-    }
-  ],
-  "active_connection": "uuid",
-  "last_local_path": "/home/user/geodata",
-  "sync_configs": [
-    {
-      "id": "sync-uuid",
-      "name": "Production to Staging",
-      "source_id": "uuid",
-      "destination_ids": ["dest-uuid-1", "dest-uuid-2"],
-      "options": {
-        "workspaces": true,
-        "datastores": true,
-        "coveragestores": true,
-        "layers": true,
-        "styles": true,
-        "layergroups": true
-      },
-      "created_at": "2024-01-15T10:30:00Z"
-    }
-  ]
-}
+```bash
+# Django settings
+SECRET_KEY=your-secret-key
+DEBUG=true
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Database (optional - defaults to SQLite)
+DATABASE_URL=postgres://user:pass@localhost/cloudbench
+```
+
+### PostgreSQL Services
+
+PostgreSQL connections are configured via `~/.pg_service.conf`:
+
+```ini
+[mydb]
+host=localhost
+port=5432
+dbname=geodata
+user=postgres
+password=secret
 ```
 
 ## Supported File Types
@@ -248,14 +158,18 @@ Configuration is stored in `~/.config/kartoza-geoserver-client/config.json`:
 | SLD Style | `.sld` | Styles |
 | CSS Style | `.css` | Styles |
 
-## GeoServer REST API
+## API Endpoints
 
-This client uses the GeoServer REST API for all operations. Ensure your GeoServer instance has the REST API enabled and your user has appropriate permissions.
+The REST API is available under `/api/`:
 
-### Required Permissions
-
-- Read access to workspaces, stores, layers, and styles
-- Write access for uploading data and creating resources
+- `/api/connections` - GeoServer connections
+- `/api/workspaces/<conn_id>` - Workspaces
+- `/api/datastores/<conn_id>/<workspace>` - Data stores
+- `/api/layers/<conn_id>/<workspace>` - Layers
+- `/api/styles/<conn_id>/<workspace>` - Styles
+- `/api/upload/init` - Initialize chunked upload
+- `/api/preview/` - Start layer preview session
+- `/api/pg/services` - PostgreSQL services
 
 ## Contributing
 
@@ -265,10 +179,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+---
 
-- Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) - A powerful TUI framework
-- Styled with [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Style definitions for terminal apps
-- Animated with [Harmonica](https://github.com/charmbracelet/harmonica) - Physics-based animations
-- Map preview with [MapLibre GL JS](https://maplibre.org/) - Open-source WebGL map library
-- Inspired by [Midnight Commander](https://midnight-commander.org/)
+Made with 💗 by [Kartoza](https://kartoza.com) | [Donate](https://github.com/sponsors/kartoza) | [GitHub](https://github.com/kartoza/kartoza-cloudbench)

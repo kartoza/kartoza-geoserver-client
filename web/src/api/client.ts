@@ -116,9 +116,14 @@ export async function uploadFile(
 // ============================================================================
 
 export async function startPreview(request: PreviewRequest): Promise<{ url: string }> {
-  const response = await fetch(`${API_BASE}/preview`, {
+  const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
+  const response = await fetch(`${API_BASE}/preview/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken,
+    },
+    credentials: 'include',
     body: JSON.stringify(request),
   })
   return handleResponse<{ url: string }>(response)

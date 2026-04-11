@@ -276,20 +276,20 @@ export default function MapPreview({
       style: {
         version: 8,
         sources: {
-          'osm': {
+          'basemap': {
             type: 'raster',
             tiles: [
-              'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+              'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
             ],
             tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
+            attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           },
         },
         layers: [
           {
-            id: 'osm-tiles',
+            id: 'basemap-tiles',
             type: 'raster',
-            source: 'osm',
+            source: 'basemap',
             minzoom: 0,
             maxzoom: 19,
           },

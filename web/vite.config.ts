@@ -5,6 +5,7 @@ import cesium from 'vite-plugin-cesium'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), cesium()],
+  base: process.env.VITE_BASE_URL ?? '',
   build: {
     outDir: '../static',
     emptyOutDir: true,

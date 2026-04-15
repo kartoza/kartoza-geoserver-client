@@ -2,7 +2,7 @@
  * Common API utilities and base configuration
  */
 
-export const API_BASE = '/api'
+export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
 
 export async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {

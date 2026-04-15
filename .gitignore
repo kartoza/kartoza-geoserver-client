@@ -41,6 +41,12 @@ crash.log
 .DS_Store
 Thumbs.db
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # Node.js
 node_modules/
 web/node_modules/

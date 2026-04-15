@@ -1,5 +1,5 @@
 import { Box, Flex, useColorModeValue } from '@chakra-ui/react'
-import { ReactNode, useCallback, useRef, useState, useMemo } from 'react'
+import { ReactNode, useCallback, useRef, useState } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import StatusBar from './StatusBar'
@@ -19,7 +19,6 @@ export default function Layout({ children, onSearchClick, onHelpClick }: LayoutP
   const resizeHandleColor = useColorModeValue('gray.300', 'gray.600')
   const resizeHandleHoverColor = useColorModeValue('kartoza.400', 'kartoza.500')
 
-  const isIframe = useMemo(() => window.self !== window.top, [])
   const [isResizing, setIsResizing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -51,7 +50,7 @@ export default function Layout({ children, onSearchClick, onHelpClick }: LayoutP
 
   return (
     <Flex direction="column" h="100vh" bg={bgColor}>
-      {!isIframe && <Header onSearchClick={onSearchClick} onHelpClick={onHelpClick} />}
+      <Header onSearchClick={onSearchClick} onHelpClick={onHelpClick} />
       <Flex flex="1" overflow="hidden" ref={containerRef}>
         <Box
           w={`${sidebarWidth}px`}

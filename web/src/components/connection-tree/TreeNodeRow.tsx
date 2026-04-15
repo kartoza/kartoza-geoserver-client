@@ -75,7 +75,7 @@ export function TreeNodeRow({
       align="center"
       py={2}
       px={2}
-      ml={level * 4}
+      ml={(level-1) * 4}
       cursor="pointer"
       bg={bgColor}
       borderLeft={isSelected ? '3px solid' : '3px solid transparent'}

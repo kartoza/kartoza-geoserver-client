@@ -11,6 +11,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    allowedHosts: ['webpack_cloudbench', 'localhost'],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

@@ -17,7 +17,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.config import config_manager, get_cache_dir
+from apps.core.config import get_config, get_cache_dir
 
 from . import schema
 from .service import (
@@ -40,6 +40,7 @@ class PGServiceListView(APIView):
         services = list_services()
 
         # Include state from config
+        config_manager = get_config(request.user.id)
         config = config_manager.config
         state_map = {s.name: s.is_parsed for s in config.pg_services}
 

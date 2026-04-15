@@ -85,7 +85,7 @@ class TerriaConnectionCatalogView(APIView):
         Returns a Terria catalog JSON with all workspaces and layers.
         """
         try:
-            config = get_config()
+            config = get_config(request.user.id)
             conn = config.get_connection(conn_id)
             if not conn:
                 return Response(
@@ -150,7 +150,7 @@ class TerriaWorkspaceCatalogView(APIView):
     def get(self, request, conn_id, workspace):
         """Export all layers from a workspace."""
         try:
-            config = get_config()
+            config = get_config(request.user.id)
             conn = config.get_connection(conn_id)
             if not conn:
                 return Response(
@@ -192,7 +192,7 @@ class TerriaLayerCatalogView(APIView):
     def get(self, request, conn_id, workspace, layer):
         """Export a single layer."""
         try:
-            config = get_config()
+            config = get_config(request.user.id)
             conn = config.get_connection(conn_id)
             if not conn:
                 return Response(
@@ -276,7 +276,7 @@ class TerriaInitView(APIView):
 
     def get(self, request):
         """Get Terria init JSON."""
-        config = get_config()
+        config = get_config(request.user.id)
         connections = config.list_connections()
 
         # Build init config with all connections as catalog sources

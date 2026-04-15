@@ -251,3 +251,5 @@ LOGGING = {
         },
     },
 }
+
+CLOUDBENCH_MUST_AUTHENTICATED = False

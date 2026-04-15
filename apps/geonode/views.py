@@ -22,7 +22,7 @@ class GeoNodeConnectionListView(APIView):
 
     def get(self, request):
         """List all GeoNode connections."""
-        config = get_config()
+        config = get_config(request.user.id)
         connections = config.list_geonode_connections()
         return Response([
             {
@@ -46,7 +46,7 @@ class GeoNodeConnectionListView(APIView):
             api_key=data.get("apiKey", ""),
         )
 
-        config = get_config()
+        config = get_config(request.user.id)
         config.add_geonode_connection(conn)
 
         return Response(
@@ -71,6 +71,7 @@ class GeoNodeConnectionTestView(APIView):
             username=data.get("username"),
             password=data.get("password"),
             api_key=data.get("apiKey"),
+            user_id=str(request.user.id),
         )
 
         success, message = client.test_connection()
@@ -88,7 +89,7 @@ class GeoNodeConnectionDetailView(APIView):
 
     def get(self, request, conn_id):
         """Get connection details."""
-        config = get_config()
+        config = get_config(request.user.id)
         conn = config.get_geonode_connection(conn_id)
         if not conn:
             return Response(
@@ -107,7 +108,7 @@ class GeoNodeConnectionDetailView(APIView):
 
     def put(self, request, conn_id):
         """Update a connection."""
-        config = get_config()
+        config = get_config(request.user.id)
         conn = config.get_geonode_connection(conn_id)
         if not conn:
             return Response(
@@ -132,7 +133,7 @@ class GeoNodeConnectionDetailView(APIView):
 
     def delete(self, request, conn_id):
         """Delete a connection."""
-        config = get_config()
+        config = get_config(request.user.id)
         if not config.delete_geonode_connection(conn_id):
             return Response(
                 {"error": "Connection not found"},

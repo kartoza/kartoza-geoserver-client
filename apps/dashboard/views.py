@@ -25,7 +25,7 @@ class DashboardView(APIView):
         """Get dashboard summary with server status."""
         import time
 
-        config = get_config()
+        config = get_config(request.user.id)
         servers = []
         online_count = 0
         offline_count = 0
@@ -137,7 +137,7 @@ class DashboardConnectionsView(APIView):
 
     def get(self, request):
         """Get status of all connections."""
-        config = get_config()
+        config = get_config(request.user.id)
         connections = []
 
         # Check GeoServer connections

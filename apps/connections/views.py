@@ -7,8 +7,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.config import Connection, config_manager
+from apps.core.config import Connection
 from apps.core.managers import client_manager
+from apps.core.config import get_config
 
 from .serializers import ConnectionResponseSerializer, ConnectionSerializer
 
@@ -65,6 +66,7 @@ class ConnectionListView(APIView):
 
     def get(self, request):
         """List all GeoServer connections."""
+        config_manager = get_config(request.user.id)
         connections = config_manager.config.connections
         serializer = ConnectionResponseSerializer(connections, many=True)
         return Response(serializer.data)
@@ -72,6 +74,7 @@ class ConnectionListView(APIView):
     def post(self, request):
         """Create a new GeoServer connection."""
         serializer = ConnectionSerializer(data=request.data)
+        config_manager = get_config(request.user.id)
         if serializer.is_valid():
             conn = serializer.create(serializer.validated_data)
             config_manager.add_connection(conn)
@@ -121,6 +124,7 @@ class ConnectionDetailView(APIView):
 
     def get(self, request, conn_id):
         """Get a specific connection by ID."""
+        config_manager = get_config(request.user.id)
         conn = config_manager.get_connection(conn_id)
         if not conn:
             return Response(
@@ -132,6 +136,7 @@ class ConnectionDetailView(APIView):
 
     def put(self, request, conn_id):
         """Update a connection."""
+        config_manager = get_config(request.user.id)
         conn = config_manager.get_connection(conn_id)
         if not conn:
             return Response(
@@ -153,6 +158,7 @@ class ConnectionDetailView(APIView):
 
     def delete(self, request, conn_id):
         """Delete a connection."""
+        config_manager = get_config(request.user.id)
         conn = config_manager.get_connection(conn_id)
         if not conn:
             return Response(
@@ -170,6 +176,7 @@ class ConnectionTestExistingView(APIView):
 
     def post(self, request, conn_id):
         """Test an existing connection."""
+        config_manager = get_config(request.user.id)
         conn = config_manager.get_connection(conn_id)
         if not conn:
             return Response(
@@ -194,6 +201,7 @@ class ConnectionInfoView(APIView):
 
     def get(self, request, conn_id):
         """Get GeoServer server information."""
+        config_manager = get_config(request.user.id)
         conn = config_manager.get_connection(conn_id)
         if not conn:
             return Response(

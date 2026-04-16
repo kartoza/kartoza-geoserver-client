@@ -73,20 +73,23 @@ class ConfigManager:
         """Get the path to the config file."""
         return get_cloudbench_config_path(CONFIG_FILE, self._user_id)
 
+    def post_process_config(self, config: Config) -> Config:
+        """Post process config."""
+        return config
+
     def _load(self) -> Config:
         """Load configuration from disk with file locking."""
         path = self._config_path()
-
-        if not os.path.exists(path):
-            return Config()
 
         try:
             with file_lock(path, exclusive=False):
                 with open(path) as f:
                     data = json.load(f)
-            return Config.model_validate(data)
-        except (json.JSONDecodeError, ValueError):
-            return Config()
+            config = Config.model_validate(data)
+        except (json.JSONDecodeError, ValueError, IOError):
+            config = Config()
+
+        return self.post_process_config(config)
 
     # Connection management methods
     def get_connection(self, conn_id: str) -> Connection | None:

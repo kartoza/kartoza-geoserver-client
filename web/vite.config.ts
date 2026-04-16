@@ -9,6 +9,7 @@ export default defineConfig({
   build: {
     outDir: '../static',
     emptyOutDir: true,
+    assetsDir: 'cloudbench',
   },
   server: {
     allowedHosts: ['webpack_cloudbench', 'localhost'],

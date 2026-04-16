@@ -11,10 +11,6 @@ import { IcebergRootNode } from './IcebergRootNode'
 import { QFieldCloudRootNode } from './QFieldCloudRootNode'
 import { MerginMapsRootNode } from './MerginMapsRootNode'
 
-interface CloudBenchRootNodeProps {
-  connections: { id: string; name: string; url: string }[]
-}
-
 const PROVIDER_NODE_IDS: Record<string, string> = {
   geoserver: 'geoserver',
   postgres: 'postgresql',
@@ -26,7 +22,7 @@ const PROVIDER_NODE_IDS: Record<string, string> = {
   mergin: 'merginmaps-root',
 }
 
-export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
+export function CloudBenchRootNode() {
   const nodeId = 'cloudbench-root'
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
@@ -64,7 +60,7 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
       <>
         {/* GeoServer Section */}
         {(isProviderEnabled('geoserver')) && (
-          <GeoServerRootNode connections={connections}/>
+          <GeoServerRootNode />
         )}
         {/* PostgreSQL Section */}
         {(isProviderEnabled('postgres')) && (

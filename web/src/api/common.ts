@@ -2,7 +2,9 @@
  * Common API utilities and base configuration
  */
 
-export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
+import { getApiBase } from '../config/env'
+
+export const API_BASE = getApiBase()
 
 // Patch fetch to inject auth token from localStorage on every request
 const _originalFetch = window.fetch.bind(window)

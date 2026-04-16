@@ -5,6 +5,8 @@ import { useTreeStore } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
 import type { TreeNode } from '../../../types'
 import * as api from '../../../api'
+import { getCreatePostGISUrl } from '../../../config/env'
+import { openWindowWithCallback } from '../../../utils/openWindowWithCallback'
 import { TreeNodeRow } from '../TreeNodeRow'
 import { PGServiceNode } from './PGServiceNode'
 
@@ -17,7 +19,7 @@ export function PostgreSQLRootNode() {
   const showHiddenPGServices = useUIStore((state) => state.settings.showHiddenPGServices)
 
   // Fetch PostgreSQL services
-  const { data: pgServices, isLoading } = useQuery({
+  const { data: pgServices, isLoading, refetch } = useQuery({
     queryKey: ['pgservices'],
     queryFn: () => api.getPGServices(),
     staleTime: 30000,
@@ -52,7 +54,12 @@ export function PostgreSQLRootNode() {
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation()
-    openDialog('pgdashboard', { mode: 'create' })
+    const createUrl = getCreatePostGISUrl()
+    if (createUrl) {
+      openWindowWithCallback(createUrl, () => refetch())
+    } else {
+      openDialog('pgdashboard', { mode: 'create' })
+    }
   }
 
   return (
@@ -72,7 +79,7 @@ export function PostgreSQLRootNode() {
           {!filteredPGServices || filteredPGServices.length === 0 ? (
             <Box px={2} py={3} ml={2 * 4}>
               <Text color="gray.500" fontSize="sm">
-                No PostgreSQL services. Click + to add one.
+                No PostgreSQL connections found.
               </Text>
             </Box>
           ) : (

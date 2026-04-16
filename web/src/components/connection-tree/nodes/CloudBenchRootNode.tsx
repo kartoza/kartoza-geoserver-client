@@ -15,10 +15,22 @@ interface CloudBenchRootNodeProps {
   connections: { id: string; name: string; url: string }[]
 }
 
+const PROVIDER_NODE_IDS: Record<string, string> = {
+  geoserver: 'geoserver',
+  postgres: 'postgresql',
+  s3: 's3storage-root',
+  iceberg: 'iceberg-root',
+  qgis: 'qgisprojects-root',
+  geonode: 'geonode-root',
+  qfieldcloud: 'qfieldcloud-root',
+  mergin: 'merginmaps-root',
+}
+
 export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
   const nodeId = 'cloudbench-root'
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
+  const expandNode = useTreeStore((state) => state.expandNode)
 
   // Provider enablement
   const fetchProviders = useProvidersStore((state) => state.fetchProviders)
@@ -30,6 +42,16 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
     fetchProviders()
   }, [fetchProviders])
 
+  // Auto-expand all provider nodes once providers are loaded
+  useEffect(() => {
+    providers
+      .filter((p) => p.enabled)
+      .forEach((p) => {
+        const nodeId = PROVIDER_NODE_IDS[p.id]
+        if (nodeId) expandNode(nodeId)
+      })
+  }, [providers]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-expand root on mount
   useEffect(() => {
     if (!isExpanded) {
@@ -37,43 +59,40 @@ export function CloudBenchRootNode({ connections }: CloudBenchRootNodeProps) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // If providers haven't loaded yet, show all (graceful degradation)
-  const showAll = providers.length === 0
-
   return (
     <Box>
       <>
         {/* GeoServer Section */}
-        {(showAll || isProviderEnabled('geoserver')) && (
-          <GeoServerRootNode connections={connections} />
+        {(isProviderEnabled('geoserver')) && (
+          <GeoServerRootNode connections={connections}/>
         )}
         {/* PostgreSQL Section */}
-        {(showAll || isProviderEnabled('postgres')) && (
-          <PostgreSQLRootNode />
+        {(isProviderEnabled('postgres')) && (
+          <PostgreSQLRootNode/>
         )}
         {/* S3 Storage Section */}
-        {(showAll || isProviderEnabled('s3')) && (
-          <S3StorageRootNode />
+        {(isProviderEnabled('s3')) && (
+          <S3StorageRootNode/>
         )}
         {/* Apache Iceberg Section */}
-        {(showAll || isProviderEnabled('iceberg')) && (
-          <IcebergRootNode />
+        {(isProviderEnabled('iceberg')) && (
+          <IcebergRootNode/>
         )}
         {/* QGIS Projects Section */}
-        {(showAll || isProviderEnabled('qgis')) && (
-          <QGISProjectsRootNode />
+        {(isProviderEnabled('qgis')) && (
+          <QGISProjectsRootNode/>
         )}
         {/* GeoNode Section */}
-        {(showAll || isProviderEnabled('geonode')) && (
-          <GeoNodeRootNode />
+        {(isProviderEnabled('geonode')) && (
+          <GeoNodeRootNode/>
         )}
         {/* QFieldCloud Section */}
-        {(showAll || isProviderEnabled('qfieldcloud')) && (
-          <QFieldCloudRootNode />
+        {(isProviderEnabled('qfieldcloud')) && (
+          <QFieldCloudRootNode/>
         )}
         {/* Mergin Maps Section */}
-        {(showAll || isProviderEnabled('mergin')) && (
-          <MerginMapsRootNode />
+        {(isProviderEnabled('mergin')) && (
+          <MerginMapsRootNode/>
         )}
       </>
     </Box>

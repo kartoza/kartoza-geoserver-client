@@ -228,7 +228,7 @@ export const useUIStore = create<UIState>((set) => ({
   errorMessage: null,
   successMessage: null,
   isLoading: false,
-  sidebarWidth: 420,
+  sidebarWidth: 320,
   settings: loadSettings(),
 
   openDialog: (type, data) => {

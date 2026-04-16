@@ -3,7 +3,6 @@
 Provides a comprehensive Python client for the GeoServer REST API.
 """
 
-import threading
 from typing import Any
 from xml.etree import ElementTree as ET
 
@@ -11,7 +10,7 @@ import httpx
 
 from apps.core.config import Connection
 from apps.core.exceptions import GeoServerError
-from apps.core.managers import client_manager
+from apps.core.managers import make_client
 
 
 class GeoServerClient:
@@ -24,8 +23,7 @@ class GeoServerClient:
             connection: GeoServer connection configuration
         """
         self.connection = connection
-        self._client = client_manager.get_client(
-            connection.id,
+        self._client = make_client(
             connection.url,
             connection.username,
             connection.password,
@@ -1073,22 +1071,13 @@ class GeoServerClient:
 
 
 class GeoServerClientManager:
-    """Thread-safe manager for GeoServer clients."""
+    """Manager for GeoServer clients, scoped per user."""
 
-    _instance: "GeoServerClientManager | None" = None
-    _lock = threading.RLock()
-
-    def __new__(cls) -> "GeoServerClientManager":
-        """Ensure singleton instance."""
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._clients: dict[str, GeoServerClient] = {}
-        return cls._instance
+    def __init__(self, user_id: str = "default") -> None:
+        self._user_id = user_id
 
     def get_client(self, connection_id: str) -> GeoServerClient:
-        """Get or create a GeoServer client.
+        """Get a GeoServer client for the given connection.
 
         Args:
             connection_id: Connection ID
@@ -1099,36 +1088,21 @@ class GeoServerClientManager:
         Raises:
             ValueError: If connection not found
         """
-        with self._lock:
-            if connection_id in self._clients:
-                return self._clients[connection_id]
+        from apps.core.config import get_config
 
-            from apps.core.config import config_manager
+        conn = get_config(self._user_id).get_connection(connection_id)
+        if not conn:
+            raise ValueError(f"GeoServer connection not found: {connection_id}")
 
-            conn = config_manager.get_connection(connection_id)
-            if not conn:
-                raise ValueError(f"GeoServer connection not found: {connection_id}")
-
-            client = GeoServerClient(conn)
-            self._clients[connection_id] = client
-            return client
-
-    def remove_client(self, connection_id: str) -> None:
-        """Remove a cached client."""
-        with self._lock:
-            self._clients.pop(connection_id, None)
-
-    def clear_all(self) -> None:
-        """Clear all cached clients."""
-        with self._lock:
-            self._clients.clear()
+        return GeoServerClient(conn)
 
 
-def get_geoserver_client(conn_id: str) -> GeoServerClient:
+def get_geoserver_client(conn_id: str, user_id: str = "default") -> GeoServerClient:
     """Get a GeoServer client for a connection.
 
     Args:
         conn_id: Connection ID
+        user_id: User ID for config scoping
 
     Returns:
         GeoServerClient instance
@@ -1136,5 +1110,5 @@ def get_geoserver_client(conn_id: str) -> GeoServerClient:
     Raises:
         GeoServerError: If connection not found
     """
-    manager = GeoServerClientManager()
+    manager = GeoServerClientManager(user_id)
     return manager.get_client(conn_id)

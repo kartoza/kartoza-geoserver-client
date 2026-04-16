@@ -7,9 +7,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.config import Connection
-from apps.core.managers import client_manager
-from apps.core.config import get_config
+from apps.core.config import Connection, get_config
+from apps.core.managers import make_client
 
 from .serializers import ConnectionResponseSerializer, ConnectionSerializer
 
@@ -148,9 +147,6 @@ class ConnectionDetailView(APIView):
             updated_conn = serializer.update(conn, serializer.validated_data)
             config_manager.update_connection(updated_conn)
 
-            # Remove cached client so it gets recreated with new credentials
-            client_manager.remove_client(conn_id)
-
             response_serializer = ConnectionResponseSerializer(updated_conn)
             return Response(response_serializer.data)
 
@@ -166,7 +162,6 @@ class ConnectionDetailView(APIView):
             )
 
         config_manager.remove_connection(conn_id)
-        client_manager.remove_client(conn_id)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -209,9 +204,7 @@ class ConnectionInfoView(APIView):
             )
 
         try:
-            client = client_manager.get_client(
-                conn_id, conn.url, conn.username, conn.password
-            )
+            client = make_client(conn.url, conn.username, conn.password)
 
             # Get server version
             version_response = client.get("/rest/about/version.json")

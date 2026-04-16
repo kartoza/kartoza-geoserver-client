@@ -8,7 +8,7 @@ import { TreeNodeRow } from '../TreeNodeRow'
 import { WorkspaceNode } from './WorkspaceNode'
 import type { ConnectionNodeProps } from '../types'
 
-export function ConnectionNode({ connectionId, name, url }: ConnectionNodeProps) {
+export function ConnectionNode({ connectionId, name, url, ableToEdit = true, ableToDelete = true }: ConnectionNodeProps) {
   const nodeId = generateNodeId('connection', connectionId)
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
@@ -71,6 +71,8 @@ export function ConnectionNode({ connectionId, name, url }: ConnectionNodeProps)
         onOpenAdmin={handleOpenAdmin}
         level={2}
         count={workspaces?.length}
+        ableToEdit={ableToEdit}
+        ableToDelete={ableToDelete}
       />
       {isExpanded && workspaces && workspaces.map((ws) => (
         <WorkspaceNode

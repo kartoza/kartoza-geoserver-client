@@ -1,10 +1,9 @@
 import { useEffect } from 'react'
 import { Box, Text } from '@chakra-ui/react'
-import { useQuery } from '@tanstack/react-query'
 import { useTreeStore } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
-import type { TreeNode } from '../../../types'
-import { getConnections } from '../../../api/connection'
+import { useConnectionStore } from '../../../stores/connectionStore'
+import type { Connection, TreeNode } from '../../../types'
 import { getCreateGeoServerUrl } from '../../../config/env'
 import { openWindowWithCallback } from '../../../utils/openWindowWithCallback'
 import { TreeNodeRow } from '../TreeNodeRow'
@@ -17,12 +16,11 @@ export function GeoServerRootNode() {
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const openDialog = useUIStore((state) => state.openDialog)
+  const createUrl = getCreateGeoServerUrl()
 
-  const { data: connections, isLoading, refetch } = useQuery({
-    queryKey: ['geoserverconnections'],
-    queryFn: () => getConnections(),
-    staleTime: 30000,
-  })
+  const connections = useConnectionStore((state) => state.connections)
+  const isLoading = useConnectionStore((state) => state.isLoading)
+  const fetchConnections = useConnectionStore((state) => state.fetchConnections)
 
   // Auto-expand GeoServer section on mount
   useEffect(() => {
@@ -46,11 +44,9 @@ export function GeoServerRootNode() {
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const createUrl = getCreateGeoServerUrl()
     if (createUrl) {
       openWindowWithCallback(createUrl, () => {
-        console.log("REFETCH")
-        refetch()
+        void fetchConnections()
       })
     } else {
       openDialog('connection', { mode: 'create' })
@@ -78,12 +74,13 @@ export function GeoServerRootNode() {
               </Text>
             </Box>
           ) : (
-            connections.map((conn) => (
+            connections.map((conn: Connection) => (
               <ConnectionNode
                 key={conn.id}
                 connectionId={conn.id}
                 name={conn.name}
                 url={conn.url}
+                ableToDelete={!createUrl}
               />
             ))
           )}

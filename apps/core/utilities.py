@@ -17,7 +17,9 @@ CACHE_DIR = "cache"
 def get_data_folder(user_id: str = "default") -> str:
     """Build a data folder path for the given user."""
 
-    if settings.CLOUDBENCH_MUST_AUTHENTICATED and user_id == "default":
+    if settings.CLOUDBENCH_MUST_AUTHENTICATED and user_id in [
+        "default", None, "None"
+    ]:
         raise ValueError("User ID is required for authenticated access.")
 
     return os.environ.get("CLOUDBENCH_DATA_FOLDER") or os.path.join(

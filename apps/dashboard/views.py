@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.config import get_config
-from apps.geoserver.client import GeoServerClientManager
+from apps.geoserver.client import get_geoserver_client
 
 
 class DashboardView(APIView):
@@ -55,8 +55,7 @@ class DashboardView(APIView):
             }
 
             try:
-                manager = GeoServerClientManager()
-                client = manager.get_client(conn.id)
+                client = get_geoserver_client(conn.id, str(request.user.id))
 
                 # Get workspace count as connectivity check
                 workspaces = client.list_workspaces()
@@ -143,8 +142,7 @@ class DashboardConnectionsView(APIView):
         # Check GeoServer connections
         for conn in config.list_connections():
             try:
-                manager = GeoServerClientManager()
-                client = manager.get_client(conn.id)
+                client = get_geoserver_client(conn.id, str(request.user.id))
                 # Try to get version as health check
                 about = client.get_about()
                 connections.append({
@@ -187,8 +185,7 @@ class DashboardGeoServerView(APIView):
     def get(self, request, conn_id):
         """Get GeoServer statistics."""
         try:
-            manager = GeoServerClientManager()
-            client = manager.get_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
 
             # Get counts
             workspaces = client.list_workspaces()

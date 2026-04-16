@@ -173,7 +173,7 @@ class PreviewLayerView(APIView):
 
         try:
             # Get the GeoServer URL from the connection
-            client = get_geoserver_client(session.conn_id)
+            client = get_geoserver_client(session.conn_id, str(request.user.id))
             geoserver_url = client.connection.url.rstrip("/")
 
             return Response({
@@ -210,7 +210,7 @@ class PreviewMetadataView(APIView):
             )
 
         try:
-            client = get_geoserver_client(session.conn_id)
+            client = get_geoserver_client(session.conn_id, str(request.user.id))
 
             # Use the client's get_layer_metadata method
             layer_meta = client.get_layer_metadata(session.workspace, session.layer_name)

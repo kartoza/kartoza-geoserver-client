@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.config import QGISProject, get_config, get_qgis_projects_dir
-from apps.geoserver.client import GeoServerClientManager
+from apps.geoserver.client import get_geoserver_client
 
 
 class QGISProjectListView(APIView):
@@ -174,8 +174,7 @@ class SQLViewPublishView(APIView):
             )
 
         try:
-            manager = GeoServerClientManager()
-            client = manager.get_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
 
             # Create SQL view feature type
             feature_type = {

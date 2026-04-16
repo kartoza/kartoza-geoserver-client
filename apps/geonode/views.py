@@ -8,13 +8,16 @@ Provides endpoints for:
 
 import uuid
 
+import httpx
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.config import GeoNodeConnection, get_config
-
-from .client import GeoNodeClient, GeoNodeClientManager, get_geonode_client
+from .client import GeoNodeClient, get_geonode_client
+from .utilities import (
+    RESOURCE_TYPE_DETAIL_REQUEST_MAP, RESOURCE_TYPE_LIST_REQUEST_MAP
+)
 
 
 class GeoNodeConnectionListView(APIView):
@@ -71,7 +74,6 @@ class GeoNodeConnectionTestView(APIView):
             username=data.get("username"),
             password=data.get("password"),
             api_key=data.get("apiKey"),
-            user_id=str(request.user.id),
         )
 
         success, message = client.test_connection()
@@ -127,8 +129,6 @@ class GeoNodeConnectionDetailView(APIView):
 
         config.update_geonode_connection(conn)
 
-        GeoNodeClientManager().remove_client(conn_id)
-
         return Response({"status": "updated"})
 
     def delete(self, request, conn_id):
@@ -140,15 +140,13 @@ class GeoNodeConnectionDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        GeoNodeClientManager().remove_client(conn_id)
-
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class GeoNodeLayerListView(APIView):
+class GeoNodeResourceListView(APIView):
     """List layers for a connection."""
 
-    def get(self, request, conn_id):
+    def get(self, request, conn_id, resource_type):
         """List all layers."""
         page = int(request.query_params.get("page", 1))
         page_size = int(request.query_params.get("pageSize", 20))
@@ -156,8 +154,9 @@ class GeoNodeLayerListView(APIView):
         owner = request.query_params.get("owner")
 
         try:
-            client = get_geonode_client(conn_id)
-            result = client.list_layers(
+            client = get_geonode_client(conn_id, str(request.user.id))
+            result = client.list_resources(
+                resource_type=resource_type,
                 page=page,
                 page_size=page_size,
                 category=category,
@@ -176,83 +175,31 @@ class GeoNodeLayerListView(APIView):
             )
 
 
-class GeoNodeLayerDetailView(APIView):
+class GeoNodeResourceDetailView(APIView):
     """Get layer details."""
 
-    def get(self, request, conn_id, layer_id):
+    def get(self, request, conn_id, resource_type, resource_id):
         """Get layer information."""
+        resource_type = RESOURCE_TYPE_DETAIL_REQUEST_MAP.get(
+            resource_type, resource_type
+        )
         try:
-            client = get_geonode_client(conn_id)
-            layer = client.get_layer(int(layer_id))
-
-            if not layer:
+            client = get_geonode_client(conn_id, str(request.user.id))
+            resource = client.get_resource(
+                resource_type, int(resource_id)
+            )
+            return Response(
+                {resource_type.rstrip("s"): resource.to_dict()}
+            )
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
                 return Response(
-                    {"error": "Layer not found"},
+                    {"error": "Resource not found"},
                     status=status.HTTP_404_NOT_FOUND,
                 )
-
-            return Response({"layer": layer.to_dict()})
-        except ValueError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        except Exception as e:
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-
-class GeoNodeMapListView(APIView):
-    """List maps for a connection."""
-
-    def get(self, request, conn_id):
-        """List all maps."""
-        page = int(request.query_params.get("page", 1))
-        page_size = int(request.query_params.get("pageSize", 20))
-        owner = request.query_params.get("owner")
-
-        try:
-            client = get_geonode_client(conn_id)
-            result = client.list_maps(
-                page=page,
-                page_size=page_size,
-                owner=owner,
-            )
-            return Response(result)
-        except ValueError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-
-class GeoNodeMapDetailView(APIView):
-    """Get map details."""
-
-    def get(self, request, conn_id, map_id):
-        """Get map information."""
-        try:
-            client = get_geonode_client(conn_id)
-            map_obj = client.get_map(int(map_id))
-
-            if not map_obj:
-                return Response(
-                    {"error": "Map not found"},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-
-            return Response({"map": map_obj.to_dict()})
-        except ValueError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_404_NOT_FOUND,
             )
         except Exception as e:
             return Response(
@@ -267,7 +214,7 @@ class GeoNodeCategoryListView(APIView):
     def get(self, request, conn_id):
         """List all categories."""
         try:
-            client = get_geonode_client(conn_id)
+            client = get_geonode_client(conn_id, str(request.user.id))
             categories = client.list_categories()
             return Response({"categories": categories})
         except ValueError as e:

@@ -207,7 +207,7 @@ class SyncStartView(APIView):
         def run_sync():
             try:
                 job_manager.update_job(job.id, status="running")
-                service = get_sync_service()
+                service = get_sync_service(str(request.user.id))
                 results = service.run_sync(sync_config, job.id)
                 job_manager.update_job(
                     job.id,

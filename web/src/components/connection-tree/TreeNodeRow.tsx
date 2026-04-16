@@ -57,6 +57,8 @@ export function TreeNodeRow({
   level,
   isLeaf,
   count,
+  ableToEdit = true,
+  ableToDelete = true,
 }: TreeNodeRowProps) {
   const bgColor = useColorModeValue(
     isSelected ? 'kartoza.50' : 'transparent',
@@ -295,7 +297,7 @@ export function TreeNodeRow({
             />
           </Tooltip>
         )}
-        {onEdit && (
+        {onEdit && ableToEdit && (
           <Tooltip label="Edit" fontSize="xs">
             <IconButton
               aria-label="Edit"
@@ -308,7 +310,7 @@ export function TreeNodeRow({
             />
           </Tooltip>
         )}
-        {onDelete && (
+        {onDelete && ableToDelete && (
           <Tooltip label="Delete" fontSize="xs">
             <IconButton
               aria-label="Delete"

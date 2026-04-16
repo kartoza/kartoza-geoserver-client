@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.config import get_config
-from apps.geoserver.client import GeoServerClientManager
+from apps.geoserver.client import get_geoserver_client
 
 
 def generate_terria_item(
@@ -93,8 +93,7 @@ class TerriaConnectionCatalogView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            manager = GeoServerClientManager()
-            client = manager.get_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
 
             # Get all workspaces and their layers
             workspaces = client.list_workspaces()
@@ -158,8 +157,7 @@ class TerriaWorkspaceCatalogView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            manager = GeoServerClientManager()
-            client = manager.get_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
 
             layers = client.list_layers(workspace)
             items = [
@@ -200,8 +198,7 @@ class TerriaLayerCatalogView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            manager = GeoServerClientManager()
-            client = manager.get_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
 
             layer_info = client.get_layer(workspace, layer)
             if not layer_info:

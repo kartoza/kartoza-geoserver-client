@@ -377,8 +377,9 @@ class ConfigManager:
         self.config.iceberg_connections.append(conn)
         self.save()
 
-    def update_iceberg_connection(self,
-                                  conn: IcebergCatalogConnection) -> bool:
+    def update_iceberg_connection(
+            self, conn: IcebergCatalogConnection
+    ) -> bool:
         """Update an existing Iceberg connection."""
         for i, existing in enumerate(self.config.iceberg_connections):
             if existing.id == conn.id:

@@ -16,7 +16,7 @@ class DataStoreListView(APIView):
     def get(self, request, conn_id, workspace):
         """List all data stores."""
         try:
-            client = get_geoserver_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
             datastores = client.list_datastores(workspace)
             return Response(datastores)
         except GeoServerError:
@@ -25,7 +25,7 @@ class DataStoreListView(APIView):
     def post(self, request, conn_id, workspace):
         """Create a new data store."""
         try:
-            client = get_geoserver_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
             name = request.data.get("name")
             connection_params = request.data.get("connectionParameters", {})
             description = request.data.get("description", "")
@@ -60,7 +60,7 @@ class DataStoreDetailView(APIView):
     def get(self, request, conn_id, workspace, store):
         """Get data store details."""
         try:
-            client = get_geoserver_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
             ds = client.get_datastore(workspace, store)
             return Response({"dataStore": ds})
         except GeoServerError as e:
@@ -69,7 +69,7 @@ class DataStoreDetailView(APIView):
     def put(self, request, conn_id, workspace, store):
         """Update a data store."""
         try:
-            client = get_geoserver_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
             # For updates, we need to rebuild connection parameters
             connection_params = request.data.get("connectionParameters")
             description = request.data.get("description")
@@ -97,7 +97,7 @@ class DataStoreDetailView(APIView):
     def delete(self, request, conn_id, workspace, store):
         """Delete a data store."""
         try:
-            client = get_geoserver_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
             recurse = get_recurse_param(request)
             client.delete_datastore(workspace, store, recurse=recurse)
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -111,7 +111,7 @@ class DataStoreAvailableView(APIView):
     def get(self, request, conn_id, workspace, store):
         """List available feature types."""
         try:
-            client = get_geoserver_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
             available = client.list_available_featuretypes(workspace, store)
             return Response(available)
         except GeoServerError:

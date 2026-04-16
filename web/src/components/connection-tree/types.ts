@@ -4,6 +4,8 @@ export interface ConnectionNodeProps {
   connectionId: string
   name: string
   url: string
+  ableToEdit?: boolean
+  ableToDelete?: boolean
 }
 
 export interface WorkspaceNodeProps {
@@ -97,6 +99,8 @@ export interface TreeNodeRowProps {
   onAdd?: (e: React.MouseEvent) => void
   onEdit?: (e: React.MouseEvent) => void
   onDelete?: (e: React.MouseEvent) => void
+  ableToEdit?: boolean
+  ableToDelete?: boolean
   onPreview?: (e: React.MouseEvent) => void
   onTerria?: (e: React.MouseEvent) => void
   onOpenAdmin?: (e: React.MouseEvent) => void

@@ -6,199 +6,27 @@ Uses XDG Base Directory specification for config file location.
 
 import json
 import os
-import shutil
-import uuid
-from datetime import datetime
 from pathlib import Path
-from typing import Any, TypeVar
 
-from pydantic import BaseModel, Field
-
-from .utilities import file_lock, get_xdg_data_path, get_xdg_cache_path
-
-T = TypeVar("T", bound=BaseModel)
+from .utilities import (
+    file_lock, get_cloudbench_data_path, get_cloudbench_cache_path
+)
 
 # Config directory names
-OLD_CONFIG_DIR = "kartoza-geoserver-client"  # For migration
 CONFIG_FILE = "config.json"
 
-from .utilities import get_xdg_config_path  # noqa: E402
+from .utilities import get_cloudbench_config_path  # noqa: E402
+from .models import (
+    Config,
+    Connection,
+    GeoNodeConnection,
+    QGISProject, SyncOptions,
 
+    SyncConfiguration, PGServiceState, S3Connection, QFieldCloudConnection,
+    MerginMapsConnection, IcebergCatalogConnection
+)
 
-class Connection(BaseModel):
-    """GeoServer connection configuration."""
-
-    id: str = Field(
-        default_factory=lambda: f"conn_{datetime.now().strftime('%Y%m%d%H%M%S')}")
-    name: str
-    url: str
-    username: str
-    password: str
-    is_active: bool = False
-
-
-class SyncOptions(BaseModel):
-    """Sync configuration options."""
-
-    workspaces: bool = True
-    datastores: bool = True
-    coveragestores: bool = True
-    layers: bool = True
-    styles: bool = True
-    layergroups: bool = True
-    workspace_filter: list[str] = Field(default_factory=list)
-    datastore_strategy: str = "skip"  # "skip", "same_connection", "geopackage_copy"
-
-
-class SyncConfiguration(BaseModel):
-    """Saved sync configuration."""
-
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    source_id: str
-    destination_ids: list[str] = Field(default_factory=list)
-    options: SyncOptions = Field(default_factory=SyncOptions)
-    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
-    last_synced_at: str | None = None
-
-
-class PGServiceState(BaseModel):
-    """PostgreSQL service state tracking."""
-
-    name: str
-    is_parsed: bool = False
-
-
-class S3Connection(BaseModel):
-    """S3-compatible storage connection configuration."""
-
-    id: str = Field(
-        default_factory=lambda: f"s3_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    )
-    name: str
-    endpoint: str
-    access_key: str
-    secret_key: str
-    region: str = ""
-    use_ssl: bool = False
-    path_style: bool = True  # True for MinIO, False for AWS S3
-    is_active: bool = False
-
-
-class QGISProject(BaseModel):
-    """QGIS project file tracking."""
-
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    path: str
-    title: str = ""
-    lastModified: str = ""
-    size: int = 0
-
-
-class GeoNodeConnection(BaseModel):
-    """GeoNode instance connection configuration."""
-
-    id: str = Field(
-        default_factory=lambda: f"geonode_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    )
-    name: str
-    url: str
-    username: str = ""
-    password: str = ""
-    api_key: str = ""
-    is_active: bool = False
-
-
-class QFieldCloudConnection(BaseModel):
-    """QFieldCloud instance connection configuration."""
-
-    id: str = Field(
-        default_factory=lambda: f"qfieldcloud_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    )
-    name: str
-    url: str = "https://app.qfield.cloud"
-    username: str = ""
-    password: str = ""
-    token: str = ""
-    is_active: bool = False
-
-
-class MerginMapsConnection(BaseModel):
-    """Mergin Maps server connection configuration."""
-
-    id: str = Field(
-        default_factory=lambda: f"mergin_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    )
-    name: str
-    url: str = "https://app.merginmaps.com"
-    username: str
-    password: str = ""
-    token: str = ""
-    is_active: bool = False
-
-
-class IcebergCatalogConnection(BaseModel):
-    """Apache Iceberg REST Catalog connection."""
-
-    id: str = Field(
-        default_factory=lambda: f"iceberg_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    )
-    name: str
-    url: str
-    warehouse: str = ""
-    token: str = ""
-    client_id: str = ""
-    client_secret: str = ""
-    prefix: str = ""
-    s3_endpoint: str = ""
-    access_key: str = ""
-    secret_key: str = ""
-    region: str = ""
-    jupyter_url: str = ""
-    is_active: bool = False
-
-
-class SavedQuery(BaseModel):
-    """Saved visual query definition."""
-
-    name: str
-    service_name: str
-    definition: dict[str, Any] = Field(default_factory=dict)
-    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
-    updated_at: str | None = None
-
-
-class Config(BaseModel):
-    """Main application configuration."""
-
-    connections: list[Connection] = Field(default_factory=list)
-    active_connection: str = ""
-    last_local_path: str = Field(default_factory=lambda: str(Path.home()))
-    theme: str = "default"
-    sync_configs: list[SyncConfiguration] = Field(default_factory=list)
-    ping_interval_secs: int = 60
-    pg_services: list[PGServiceState] = Field(default_factory=list)
-    saved_queries: list[SavedQuery] = Field(default_factory=list)
-    s3_connections: list[S3Connection] = Field(default_factory=list)
-    qgis_projects: list[QGISProject] = Field(default_factory=list)
-    geonode_connections: list[GeoNodeConnection] = Field(default_factory=list)
-    qfieldcloud_connections: list[QFieldCloudConnection] = Field(
-        default_factory=list
-    )
-    iceberg_connections: list[IcebergCatalogConnection] = Field(
-        default_factory=list
-    )
-    merginmaps_connections: list[MerginMapsConnection] = Field(
-        default_factory=list
-    )
-
-    class Config:
-        """Pydantic configuration."""
-
-        # Allow extra fields for forward compatibility
-        extra = "allow"
-
+__all__ = ["QGISProject", "SyncOptions"]
 
 # Type aliases for cleaner imports in views
 IcebergConnection = IcebergCatalogConnection
@@ -243,22 +71,10 @@ class ConfigManager:
 
     def _config_path(self) -> str:
         """Get the path to the config file."""
-        return get_xdg_config_path(CONFIG_FILE, self._user_id)
-
-    def _migrate_old_config(self) -> None:
-        """Migrate config from old kartoza-geoserver-client directory."""
-        home = str(Path.home())
-        old_path = os.path.join(home, ".config", OLD_CONFIG_DIR, CONFIG_FILE)
-        new_path = self._config_path()
-
-        # Check if old config exists and new doesn't
-        if os.path.exists(old_path) and not os.path.exists(new_path):
-            os.makedirs(os.path.dirname(new_path), exist_ok=True)
-            shutil.copy2(old_path, new_path)
+        return get_cloudbench_config_path(CONFIG_FILE, self._user_id)
 
     def _load(self) -> Config:
         """Load configuration from disk with file locking."""
-        self._migrate_old_config()
         path = self._config_path()
 
         if not os.path.exists(path):
@@ -591,12 +407,13 @@ def get_config(user_id: "str | int" = "default") -> ConfigManager:
     """Get a ConfigManager for the given user."""
     return ConfigManager(str(user_id))
 
+
 def get_qgis_projects_dir(user_id: "str | int" = "default") -> Path:
     """Get the directory for storing uploaded QGIS projects.
 
     Uses XDG_DATA_HOME/kartoza-cloudbench/qgis-projects/
     """
-    return get_xdg_data_path("qgis-projects", user_id)
+    return get_cloudbench_data_path("qgis-projects", user_id)
 
 
 def get_cache_dir(user_id: "str | int" = "default") -> Path:
@@ -604,4 +421,4 @@ def get_cache_dir(user_id: "str | int" = "default") -> Path:
 
     Uses XDG_CACHE_HOME/kartoza-cloudbench/
     """
-    return get_xdg_cache_path("", user_id)
+    return get_cloudbench_cache_path("", user_id)

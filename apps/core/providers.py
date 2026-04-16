@@ -10,32 +10,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from .models import ProvidersConfig, ProviderConfig
 from .utilities import file_lock
 
 # Provider configuration file name
 PROVIDERS_FILE = "providers.json"
-
-
-class ProviderConfig(BaseModel):
-    """Configuration for a single provider type."""
-
-    id: str
-    name: str
-    description: str
-    enabled: bool = True
-    experimental: bool = False
-
-
-class ProvidersConfig(BaseModel):
-    """Main providers configuration."""
-
-    providers: list[ProviderConfig] = Field(default_factory=list)
-
-    class Config:
-        """Pydantic configuration."""
-
-        extra = "allow"
-
 
 # Default provider configurations
 DEFAULT_PROVIDERS: list[dict[str, Any]] = [
@@ -137,8 +116,8 @@ class ProvidersManager:
 
     def _config_path(self) -> str:
         """Get the path to the providers config file."""
-        from .utilities import get_xdg_config_path
-        return get_xdg_config_path(PROVIDERS_FILE, self._user_id)
+        from .utilities import get_cloudbench_config_path
+        return get_cloudbench_config_path(PROVIDERS_FILE, self._user_id)
 
     def _load(self) -> ProvidersConfig:
         """Load providers configuration from disk with file locking."""

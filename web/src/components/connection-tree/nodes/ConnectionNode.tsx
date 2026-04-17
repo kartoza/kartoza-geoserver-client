@@ -7,9 +7,11 @@ import * as api from '../../../api'
 import { TreeNodeRow } from '../TreeNodeRow'
 import { WorkspaceNode } from './WorkspaceNode'
 import type { ConnectionNodeProps } from '../types'
+import { useOnlineStatus } from '../../../hooks/useOnlineStatus'
 
 export function ConnectionNode({ connectionId, name, url, ableToEdit = true, ableToDelete = true }: ConnectionNodeProps) {
   const nodeId = generateNodeId('connection', connectionId)
+  const isOnline = useOnlineStatus(url)
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)
@@ -32,6 +34,7 @@ export function ConnectionNode({ connectionId, name, url, ableToEdit = true, abl
   const isSelected = selectedNode?.id === nodeId
 
   const handleClick = () => {
+    if (isOnline === false) return
     selectNode(node)
     toggleNode(nodeId)
   }
@@ -66,6 +69,7 @@ export function ConnectionNode({ connectionId, name, url, ableToEdit = true, abl
         isSelected={isSelected}
         isLoading={isLoading}
         onClick={handleClick}
+        isOnline={isOnline}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onOpenAdmin={handleOpenAdmin}

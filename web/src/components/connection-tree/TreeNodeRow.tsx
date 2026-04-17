@@ -13,6 +13,7 @@ import {
   MenuList,
   MenuItem,
 } from '@chakra-ui/react'
+import { OnlineStatusIndicator } from '../OnlineStatusIndicator'
 import {
   FiChevronRight,
   FiChevronDown,
@@ -40,6 +41,7 @@ export function TreeNodeRow({
   isSelected,
   isLoading,
   onClick,
+  isOnline,
   onAdd,
   onEdit,
   onDelete,
@@ -71,6 +73,7 @@ export function TreeNodeRow({
   const chevronColor = useColorModeValue('gray.500', 'gray.400')
   const nodeColor = getNodeColor(node.type)
   const NodeIcon = getNodeIconComponent(node.type)
+  const isEnabled = isOnline == undefined ? true : isOnline ?? true;
 
   return (
     <Flex
@@ -78,7 +81,8 @@ export function TreeNodeRow({
       py={2}
       px={2}
       ml={(level-1) * 4}
-      cursor="pointer"
+      cursor={isEnabled ? 'pointer' : 'not-allowed'}
+      opacity={isEnabled ? 1 : 0.4}
       bg={bgColor}
       borderLeft={isSelected ? '3px solid' : '3px solid transparent'}
       borderLeftColor={isSelected ? borderColor : 'transparent'}
@@ -105,6 +109,9 @@ export function TreeNodeRow({
         </Box>
       )}
       {isLeaf && <Box w={4} mr={2} />}
+      {isOnline !== undefined && (
+        <OnlineStatusIndicator isOnline={isOnline} />
+      )}
       <Box
         p={1.5}
         borderRadius="md"
@@ -177,6 +184,7 @@ export function TreeNodeRow({
         opacity={0}
         _groupHover={{ opacity: 1 }}
         transition="opacity 0.15s"
+        display={isEnabled ? 'flex' : 'none'}
       >
         {(onDownloadConfig || onDownloadData) && (
           <Menu isLazy placement="bottom-end">

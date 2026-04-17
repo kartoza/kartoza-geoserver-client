@@ -96,6 +96,7 @@ export interface TreeNodeRowProps {
   isSelected: boolean
   isLoading: boolean
   onClick: () => void
+  isOnline?: boolean | null
   onAdd?: (e: React.MouseEvent) => void
   onEdit?: (e: React.MouseEvent) => void
   onDelete?: (e: React.MouseEvent) => void

@@ -653,3 +653,79 @@ class PGDetectLayersView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class OGR2OGRStatusView(APIView):
+    """Check ogr2ogr and raster2pgsql availability and capabilities."""
+
+    def get(self, request):
+        def run(cmd):
+            try:
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                return r.returncode == 0, r.stdout + r.stderr
+            except FileNotFoundError:
+                return False, ""
+
+        # ogr2ogr version
+        ogr_available, ogr_out = run(["ogr2ogr", "--version"])
+        ogr_version = ogr_out.strip().split("\n")[0] if ogr_available else ""
+
+        # raster2pgsql version
+        raster_available, raster_out = run(["raster2pgsql", "-?"])
+        raster_version = ""
+        if raster_available:
+            for line in raster_out.split("\n"):
+                if "RELEASE" in line or "version" in line.lower():
+                    raster_version = line.strip()
+                    break
+
+        # Supported formats via ogrinfo
+        supported_formats: list[str] = []
+        vector_extensions: dict[str, str] = {}
+        raster_extensions: dict[str, str] = {}
+        supported_extensions: dict[str, str] = {}
+
+        if ogr_available:
+            _, fmt_out = run(["ogrinfo", "--formats"])
+            for line in fmt_out.split("\n"):
+                line = line.strip()
+                if not line or line.startswith("Supported Formats"):
+                    continue
+                supported_formats.append(line)
+
+            # Common vector formats
+            vector_extensions = {
+                ".gpkg": "GeoPackage",
+                ".shp": "ESRI Shapefile",
+                ".geojson": "GeoJSON",
+                ".json": "GeoJSON",
+                ".kml": "KML",
+                ".csv": "CSV",
+                ".gml": "GML",
+                ".sqlite": "SQLite",
+                ".dxf": "DXF",
+            }
+            # Common raster formats
+            raster_extensions = {
+                ".tif": "GeoTIFF",
+                ".tiff": "GeoTIFF",
+                ".png": "PNG",
+                ".jpg": "JPEG",
+                ".jpeg": "JPEG",
+                ".img": "HFA",
+                ".vrt": "VRT",
+                ".nc": "NetCDF",
+                ".asc": "AAIGrid",
+            }
+            supported_extensions = {**vector_extensions, **raster_extensions}
+
+        return Response({
+            "available": ogr_available,
+            "version": ogr_version,
+            "raster_available": raster_available,
+            "raster_version": raster_version,
+            "supported_formats": supported_formats,
+            "supported_extensions": supported_extensions,
+            "vector_extensions": vector_extensions,
+            "raster_extensions": raster_extensions,
+        })

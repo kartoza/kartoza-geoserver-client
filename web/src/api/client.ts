@@ -27,50 +27,50 @@
 
 import { API_BASE, handleResponse } from './common'
 import type {
-  UploadResult,
-  PreviewRequest,
+  ConversionJob,
+  ConversionToolStatus,
+  DashboardData,
+  GeoNodeConnection,
+  GeoNodeConnectionCreate,
+  GeoNodeDashboardsResponse,
+  GeoNodeDatasetsResponse,
+  GeoNodeDocumentsResponse,
+  GeoNodeGeoStoriesResponse,
+  GeoNodeMapsResponse,
+  GeoNodeResourcesResponse,
+  GeoNodeTestResult,
+  GeoServerContact,
+  GWCDiskQuota,
+  GWCGridSet,
   GWCLayer,
   GWCSeedRequest,
   GWCSeedTask,
-  GWCGridSet,
-  GWCDiskQuota,
-  GeoServerContact,
-  SyncConfiguration,
-  SyncTask,
-  StartSyncRequest,
-  DashboardData,
-  ServerStatus,
-  ConversionJob,
-  ConversionToolStatus,
-  QGISProject,
-  QGISProjectCreate,
-  GeoNodeConnection,
-  GeoNodeConnectionCreate,
-  GeoNodeTestResult,
-  GeoNodeDatasetsResponse,
-  GeoNodeMapsResponse,
-  GeoNodeDocumentsResponse,
-  GeoNodeGeoStoriesResponse,
-  GeoNodeDashboardsResponse,
-  GeoNodeResourcesResponse,
+  MerginMapsConnection,
+  MerginMapsConnectionCreate,
+  MerginMapsProjectsResponse,
+  MerginMapsTestResult,
+  PreviewRequest,
+  QFieldCloudCollaborator,
+  QFieldCloudCollaboratorCreate,
   QFieldCloudConnection,
   QFieldCloudConnectionCreate,
-  QFieldCloudTestResult,
-  QFieldCloudProject,
-  QFieldCloudProjectCreate,
-  QFieldCloudProjectUpdate,
+  QFieldCloudDelta,
   QFieldCloudFile,
   QFieldCloudJob,
   QFieldCloudJobCreate,
-  QFieldCloudCollaborator,
-  QFieldCloudCollaboratorCreate,
-  QFieldCloudDelta,
-  MerginMapsConnection,
-  MerginMapsConnectionCreate,
-  MerginMapsTestResult,
-  MerginMapsProjectsResponse,
+  QFieldCloudProject,
+  QFieldCloudProjectCreate,
+  QFieldCloudProjectUpdate,
+  QFieldCloudTestResult,
+  QGISProject,
+  QGISProjectCreate,
+  ServerStatus,
+  StartSyncRequest,
+  SyncConfiguration,
+  SyncTask,
+  UploadResult,
 } from '../types'
-import { getBaseUrl } from "../config/env.ts";
+import { getApiBase } from "../config/env.ts";
 
 // ============================================================================
 // Upload API
@@ -116,7 +116,9 @@ export async function uploadFile(
 // Preview API
 // ============================================================================
 
-export async function startPreview(request: PreviewRequest): Promise<{ url: string }> {
+export async function startPreview(request: PreviewRequest): Promise<{
+  url: string
+}> {
   const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
   const response = await fetch(`${API_BASE}/preview/`, {
     method: 'POST',
@@ -321,14 +323,20 @@ export async function getSyncTaskStatus(taskId: string): Promise<SyncTask> {
   return handleResponse<SyncTask>(response)
 }
 
-export async function stopSyncTask(taskId: string): Promise<{ success: boolean; message: string }> {
+export async function stopSyncTask(taskId: string): Promise<{
+  success: boolean;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/sync/stop/${taskId}`, {
     method: 'POST',
   })
   return handleResponse<{ success: boolean; message: string }>(response)
 }
 
-export async function stopAllSyncs(): Promise<{ success: boolean; message: string }> {
+export async function stopAllSyncs(): Promise<{
+  success: boolean;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/sync/stop`, {
     method: 'POST',
   })
@@ -353,7 +361,13 @@ export async function getServerStatus(connectionId: string): Promise<ServerStatu
 // Download API - Export resource configurations
 // ============================================================================
 
-export type DownloadResourceType = 'workspace' | 'datastore' | 'coveragestore' | 'layer' | 'style' | 'layergroup'
+export type DownloadResourceType =
+  'workspace'
+  | 'datastore'
+  | 'coveragestore'
+  | 'layer'
+  | 'style'
+  | 'layergroup'
 export type DownloadDataType = 'shapefile' | 'geotiff'
 
 export function downloadResource(
@@ -441,7 +455,9 @@ export async function search(query: string, connectionId?: string): Promise<Sear
   return handleResponse<SearchResponse>(response)
 }
 
-export async function getSearchSuggestions(): Promise<{ suggestions: string[] }> {
+export async function getSearchSuggestions(): Promise<{
+  suggestions: string[]
+}> {
   const response = await fetch(`${API_BASE}/search/suggestions`)
   return handleResponse<{ suggestions: string[] }>(response)
 }
@@ -493,7 +509,10 @@ export async function deletePGService(name: string): Promise<void> {
   return handleResponse<void>(response)
 }
 
-export async function testPGService(name: string): Promise<{ success: boolean; message: string }> {
+export async function testPGService(name: string): Promise<{
+  success: boolean;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/pg/services/${encodeURIComponent(name)}/test`, {
     method: 'POST',
   })
@@ -689,7 +708,7 @@ export interface RasterImportRequest {
 }
 
 export async function getOGR2OGRStatus(): Promise<OGR2OGRStatus> {
-  const response = await fetch(`${API_BASE}/pg/ogr2ogr/status`)
+  const response = await fetch(`${getApiBase()}/pg/ogr2ogr/status`)
   return handleResponse<OGR2OGRStatus>(response)
 }
 
@@ -736,22 +755,38 @@ export async function detectLayers(filePath: string): Promise<LayerInfo[]> {
   return handleResponse<LayerInfo[]>(response)
 }
 
-export async function startVectorImport(request: ImportRequest): Promise<{ job_id: string; status: string; message: string }> {
+export async function startVectorImport(request: ImportRequest): Promise<{
+  job_id: string;
+  status: string;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/pg/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   })
-  return handleResponse<{ job_id: string; status: string; message: string }>(response)
+  return handleResponse<{
+    job_id: string;
+    status: string;
+    message: string
+  }>(response)
 }
 
-export async function startRasterImport(request: RasterImportRequest): Promise<{ job_id: string; status: string; message: string }> {
+export async function startRasterImport(request: RasterImportRequest): Promise<{
+  job_id: string;
+  status: string;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/pg/import/raster`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   })
-  return handleResponse<{ job_id: string; status: string; message: string }>(response)
+  return handleResponse<{
+    job_id: string;
+    status: string;
+    message: string
+  }>(response)
 }
 
 export async function getImportJobStatus(jobId: string): Promise<ImportJob> {
@@ -799,7 +834,9 @@ export async function getTableData(
   limit: number = 100,
   offset: number = 0
 ): Promise<ExecuteQueryResponse> {
-  const sql = `SELECT * FROM "${schemaName}"."${tableName}" LIMIT ${limit} OFFSET ${offset}`
+  const sql = `SELECT *
+               FROM "${schemaName}"."${tableName}" LIMIT ${limit}
+               OFFSET ${offset}`
   return executeQuery(serviceName, sql, limit)
 }
 
@@ -836,7 +873,10 @@ export async function getConversionJob(jobId: string): Promise<ConversionJob> {
   return handleResponse<ConversionJob>(response)
 }
 
-export async function cancelConversionJob(jobId: string): Promise<{ success: boolean; message: string }> {
+export async function cancelConversionJob(jobId: string): Promise<{
+  success: boolean;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/s3/conversion/jobs/${jobId}`, {
     method: 'DELETE',
   })
@@ -1112,7 +1152,13 @@ export async function uploadGeoNodeDataset(
   file: File,
   title?: string,
   abstract?: string
-): Promise<{ success: boolean; id?: number; status?: string; message?: string; error?: string }> {
+): Promise<{
+  success: boolean;
+  id?: number;
+  status?: string;
+  message?: string;
+  error?: string
+}> {
   const formData = new FormData()
   formData.append('file', file)
   if (title) formData.append('title', title)

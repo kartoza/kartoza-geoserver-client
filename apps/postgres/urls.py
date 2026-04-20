@@ -80,4 +80,10 @@ urlpatterns = [
         views.PGDetectLayersView.as_view(),
         name="pg-detect-layers",
     ),
+    # OGR2OGR
+    path(
+        "pg/ogr2ogr/status",
+        views.OGR2OGRStatusView.as_view(),
+        name="pg-ogr2ogr-status",
+    ),
 ]

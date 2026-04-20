@@ -23,7 +23,7 @@ from .models import (
     GeoNodeConnection,
     QGISProject, SyncOptions,
 
-    SyncConfiguration, PGServiceState, S3Connection, QFieldCloudConnection,
+    SyncConfiguration, PGService, S3Connection, QFieldCloudConnection,
     MerginMapsConnection, IcebergCatalogConnection
 )
 
@@ -206,24 +206,34 @@ class ConfigManager:
         self.save()
 
     # PostgreSQL service state management
-    def get_pg_service_state(self, name: str) -> PGServiceState | None:
-        """Get PostgreSQL service state by name."""
-        for state in self.config.pg_services:
-            if state.name == name:
-                return state
+    def list_pg_services(self) -> list[PGService]:
+        return list(self.config.pg_services)
+
+    def get_pg_service(self, name: str) -> PGService | None:
+        for svc in self.config.pg_services:
+            if svc.name == name:
+                return svc
         return None
 
-    def set_pg_service_parsed(self, name: str, parsed: bool) -> None:
-        """Set the parsed state for a PostgreSQL service."""
-        for state in self.config.pg_services:
-            if state.name == name:
-                state.is_parsed = parsed
-                self.save()
-                return
-        # Add new entry
-        self.config.pg_services.append(
-            PGServiceState(name=name, is_parsed=parsed))
+    def add_pg_service(self, svc: PGService) -> None:
+        self.config.pg_services.append(svc)
         self.save()
+
+    def update_pg_service(self, svc: PGService) -> bool:
+        for i, s in enumerate(self.config.pg_services):
+            if s.name == svc.name:
+                self.config.pg_services[i] = svc
+                self.save()
+                return True
+        return False
+
+    def delete_pg_service(self, name: str) -> bool:
+        before = len(self.config.pg_services)
+        self.config.pg_services = [s for s in self.config.pg_services if s.name != name]
+        if len(self.config.pg_services) < before:
+            self.save()
+            return True
+        return False
 
     # QFieldCloud connection management
     def list_qfieldcloud_connections(self) -> list[QFieldCloudConnection]:

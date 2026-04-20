@@ -45,11 +45,53 @@ class SyncConfiguration(BaseModel):
     last_synced_at: str | None = None
 
 
-class PGServiceState(BaseModel):
-    """PostgreSQL service state tracking."""
 
+class PGService(BaseModel):
+    """PostgreSQL service configuration (pg_service.conf entry)."""
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    is_parsed: bool = False
+    host: str = "localhost"
+    port: int = 5432
+    dbname: str = ""
+    user: str = ""
+    password: str = ""
+    sslmode: str = ""
+    options: dict[str, str] = Field(default_factory=dict)
+    is_active: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "host": self.host,
+            "port": self.port,
+            "dbname": self.dbname,
+            "user": self.user,
+            "password": self.password,
+            "sslmode": self.sslmode,
+            "options": self.options,
+        }
+
+    def connection_string(self, include_password: bool = False) -> str:
+        parts = [f"host={self.host}", f"port={self.port}"]
+        if self.dbname:
+            parts.append(f"dbname={self.dbname}")
+        if self.user:
+            parts.append(f"user={self.user}")
+        if include_password and self.password:
+            parts.append(f"password={self.password}")
+        if self.sslmode:
+            parts.append(f"sslmode={self.sslmode}")
+        return " ".join(parts)
+
+    def dsn(self, include_password: bool = False) -> str:
+        auth = self.user
+        if include_password and self.password:
+            auth = f"{self.user}:{self.password}"
+        dsn = f"postgresql://{auth}@{self.host}:{self.port}"
+        if self.dbname:
+            dsn += f"/{self.dbname}"
+        return dsn
 
 
 class S3Connection(BaseModel):
@@ -161,7 +203,7 @@ class Config(BaseModel):
     theme: str = "default"
     sync_configs: list[SyncConfiguration] = Field(default_factory=list)
     ping_interval_secs: int = 60
-    pg_services: list[PGServiceState] = Field(default_factory=list)
+    pg_services: list[PGService] = Field(default_factory=list)
     saved_queries: list[SavedQuery] = Field(default_factory=list)
     s3_connections: list[S3Connection] = Field(default_factory=list)
     qgis_projects: list[QGISProject] = Field(default_factory=list)

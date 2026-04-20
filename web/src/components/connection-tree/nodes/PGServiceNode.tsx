@@ -1,4 +1,5 @@
 import { Box, Button, Text, useToast } from '@chakra-ui/react'
+import { getApiBase } from '../../../config/env'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FiDatabase } from 'react-icons/fi'
 import { useTreeStore, generateNodeId } from '../../../stores/treeStore'
@@ -24,7 +25,7 @@ export function PGServiceNode({ service }: PGServiceNodeProps) {
   const { data: schemaData, isLoading: loadingSchemas } = useQuery({
     queryKey: ['pgschemas', service.name],
     queryFn: async () => {
-      const response = await fetch(`/api/pg/services/${encodeURIComponent(service.name)}/schemas`)
+      const response = await fetch(`${getApiBase()}/pg/services/${encodeURIComponent(service.name)}/schemas`)
       if (!response.ok) throw new Error('Failed to fetch schemas')
       return response.json() as Promise<{ schemas: { name: string; tables: { name: string; schema: string; columns: { name: string; type: string; nullable: boolean }[] }[] }[] }>
     },

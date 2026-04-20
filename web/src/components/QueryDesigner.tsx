@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getApiBase } from '../config/env';
 import {
   FiPlay,
   FiSave,
@@ -113,7 +114,7 @@ export const QueryDesigner: React.FC<QueryDesignerProps> = ({ serviceName, onClo
 
   // Load schema info
   useEffect(() => {
-    fetch(`/api/pg/services/${serviceName}/schema`)
+    fetch(`${getApiBase()}/pg/services/${serviceName}/schema`)
       .then(res => res.json())
       .then(data => {
         if (data.schemas) {
@@ -143,7 +144,7 @@ export const QueryDesigner: React.FC<QueryDesignerProps> = ({ serviceName, onClo
     setError('');
 
     try {
-      const res = await fetch('/api/query/build', {
+      const res = await fetch(`${getApiBase()}/query/build`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildDefinition()),
@@ -169,7 +170,7 @@ export const QueryDesigner: React.FC<QueryDesignerProps> = ({ serviceName, onClo
     setResult(null);
 
     try {
-      const res = await fetch('/api/query/execute', {
+      const res = await fetch(`${getApiBase()}/query/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -201,7 +202,7 @@ export const QueryDesigner: React.FC<QueryDesignerProps> = ({ serviceName, onClo
     }
 
     try {
-      const res = await fetch('/api/query/save', {
+      const res = await fetch(`${getApiBase()}/query/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

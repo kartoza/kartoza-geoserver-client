@@ -17,16 +17,10 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.config import get_config, get_cache_dir
+from apps.core.config import get_cache_dir, get_config
+from apps.core.models import PGService
 
-from . import schema
-from .service import (
-    PGService,
-    delete_service,
-    get_service,
-    list_services,
-    write_service,
-)
+from .client import get_pg_client
 
 
 # === PostgreSQL Services ===
@@ -36,51 +30,30 @@ class PGServiceListView(APIView):
     """List and create PostgreSQL services."""
 
     def get(self, request):
-        """List all PostgreSQL services from pg_service.conf."""
-        services = list_services()
-
-        # Include state from config
-        config_manager = get_config(request.user.id)
-        config = config_manager.config
-        state_map = {s.name: s.is_parsed for s in config.pg_services}
-
-        result = []
-        for name in services:
-            svc = get_service(name)
-            if svc:
-                result.append({
-                    "name": svc.name,
-                    "host": svc.host,
-                    "port": svc.port,
-                    "dbname": svc.dbname,
-                    "user": svc.user,
-                    "isParsed": state_map.get(name, False),
-                })
-
-        return Response(result)
+        """List all PostgreSQL services."""
+        config = get_config(request.user.id)
+        return Response([
+            {
+                "name": svc.name,
+                "host": svc.host,
+                "port": svc.port,
+                "dbname": svc.dbname,
+                "user": svc.user,
+                "sslmode": svc.sslmode,
+            }
+            for svc in config.list_pg_services()
+        ])
 
     def post(self, request):
-        """Create a new PostgreSQL service.
-
-        Expected body:
-        {
-            "name": "my_service",
-            "host": "localhost",
-            "port": 5432,
-            "dbname": "mydb",
-            "user": "myuser",
-            "password": "mypassword",
-            "sslmode": "prefer"
-        }
-        """
+        """Create a new PostgreSQL service."""
         name = request.data.get("name")
         if not name:
             return Response(
                 {"error": "name is required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check if service already exists
-        if get_service(name):
+        config = get_config(request.user.id)
+        if config.get_pg_service(name):
             return Response(
                 {"error": f"Service '{name}' already exists"},
                 status=status.HTTP_409_CONFLICT,
@@ -95,17 +68,11 @@ class PGServiceListView(APIView):
             password=request.data.get("password", ""),
             sslmode=request.data.get("sslmode", ""),
         )
-
-        write_service(service)
+        config.add_pg_service(service)
 
         return Response(
-            {
-                "name": service.name,
-                "host": service.host,
-                "port": service.port,
-                "dbname": service.dbname,
-                "user": service.user,
-            },
+            {"name": service.name, "host": service.host, "port": service.port,
+             "dbname": service.dbname, "user": service.user},
             status=status.HTTP_201_CREATED,
         )
 
@@ -115,12 +82,11 @@ class PGServiceDetailView(APIView):
 
     def get(self, request, name):
         """Get service details."""
-        service = get_service(name)
+        service = get_config(request.user.id).get_pg_service(name)
         if not service:
             return Response(
                 {"error": "Service not found"}, status=status.HTTP_404_NOT_FOUND
             )
-
         return Response({
             "name": service.name,
             "host": service.host,
@@ -133,43 +99,33 @@ class PGServiceDetailView(APIView):
 
     def put(self, request, name):
         """Update a service."""
-        service = get_service(name)
+        config = get_config(request.user.id)
+        service = config.get_pg_service(name)
         if not service:
             return Response(
                 {"error": "Service not found"}, status=status.HTTP_404_NOT_FOUND
             )
-
-        # Update fields
-        if "host" in request.data:
-            service.host = request.data["host"]
-        if "port" in request.data:
-            service.port = int(request.data["port"])
-        if "dbname" in request.data:
-            service.dbname = request.data["dbname"]
-        if "user" in request.data:
-            service.user = request.data["user"]
-        if "password" in request.data:
-            service.password = request.data["password"]
-        if "sslmode" in request.data:
-            service.sslmode = request.data["sslmode"]
-
-        write_service(service)
-
+        data = request.data
+        updated = service.model_copy(update={
+            k: (int(data[k]) if k == "port" else data[k])
+            for k in ("host", "port", "dbname", "user", "password", "sslmode")
+            if k in data
+        })
+        config.update_pg_service(updated)
         return Response({
-            "name": service.name,
-            "host": service.host,
-            "port": service.port,
-            "dbname": service.dbname,
-            "user": service.user,
+            "name": updated.name,
+            "host": updated.host,
+            "port": updated.port,
+            "dbname": updated.dbname,
+            "user": updated.user,
         })
 
     def delete(self, request, name):
         """Delete a service."""
-        if not delete_service(name):
+        if not get_config(request.user.id).delete_pg_service(name):
             return Response(
                 {"error": "Service not found"}, status=status.HTTP_404_NOT_FOUND
             )
-
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -178,18 +134,12 @@ class PGServiceTestView(APIView):
 
     def post(self, request, name):
         """Test connection to a service."""
-        service = get_service(name)
-        if not service:
+        if not get_config(request.user.id).get_pg_service(name):
             return Response(
                 {"error": "Service not found"}, status=status.HTTP_404_NOT_FOUND
             )
-
-        success, message = schema.test_connection(name)
-
-        return Response({
-            "success": success,
-            "message": message,
-        })
+        success, message = get_pg_client(name, str(request.user.id)).test_connection()
+        return Response({"success": success, "message": message})
 
 
 # === Schema Browsing ===
@@ -201,7 +151,7 @@ class PGSchemaListView(APIView):
     def get(self, request, service_name):
         """List all schemas."""
         try:
-            schemas = schema.list_schemas(service_name)
+            schemas = get_pg_client(service_name).list_schemas()
             return Response({"schemas": schemas})
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -218,7 +168,7 @@ class PGTableListView(APIView):
     def get(self, request, service_name, schema_name):
         """List all tables in a schema."""
         try:
-            tables = schema.list_tables(service_name, schema_name)
+            tables = get_pg_client(service_name).list_tables(schema_name)
             return Response({"tables": tables})
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -235,9 +185,9 @@ class PGTableDetailView(APIView):
     def get(self, request, service_name, schema_name, table_name):
         """Get table columns and metadata."""
         try:
-            columns = schema.get_table_columns(service_name, schema_name, table_name)
-            row_count = schema.get_table_row_count(service_name, schema_name, table_name)
-
+            client = get_pg_client(service_name)
+            columns = client.get_table_columns(schema_name, table_name)
+            row_count = client.get_table_row_count(schema_name, table_name)
             return Response({
                 "schema": schema_name,
                 "table": table_name,
@@ -269,8 +219,8 @@ class PGTableDataView(APIView):
             offset = int(request.query_params.get("offset", 0))
             order_by = request.query_params.get("orderBy")
 
-            data = schema.get_table_data(
-                service_name, schema_name, table_name, limit, offset, order_by
+            data = get_pg_client(service_name).get_table_data(
+                schema_name, table_name, limit, offset, order_by
             )
 
             return Response(data)
@@ -307,7 +257,7 @@ class PGQueryView(APIView):
         limit = request.data.get("limit", 1000)
 
         try:
-            result = schema.execute_query(service_name, query, limit=limit)
+            result = get_pg_client(service_name).execute_query(query, limit=limit)
             return Response(result)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -354,7 +304,7 @@ class PGImportView(APIView):
             )
 
         # Get service info
-        service = get_service(service_name)
+        service = get_config(request.user.id).get_pg_service(service_name)
         if not service:
             return Response(
                 {"error": f"Service not found: {service_name}"},
@@ -476,7 +426,7 @@ class PGImportRasterView(APIView):
             )
 
         # Get service info
-        service = get_service(service_name)
+        service = get_config(request.user.id).get_pg_service(service_name)
         if not service:
             return Response(
                 {"error": f"Service not found: {service_name}"},

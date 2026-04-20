@@ -38,8 +38,6 @@ urlpatterns = [
     path("health/", health_check, name="health-check"),
     # Admin interface (optional, can be disabled in production)
     path("admin/", admin.site.urls),
-    # API endpoints - versioned auth endpoints
-    path("api/", include("apps.accounts.urls")),
     # API endpoints - matching the existing Go backend paths exactly
     path("api/", include("apps.connections.urls")),
     path("api/", include("apps.geoserver.urls")),

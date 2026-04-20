@@ -224,6 +224,7 @@ export interface UploadResult {
   message: string
   storeName?: string
   storeType?: string
+  published?: boolean
 }
 
 // Preview types

@@ -31,8 +31,6 @@ INSTALLED_APPS = [
     # Third party apps
     "rest_framework",
     "corsheaders",
-    # Local apps - accounts must be first for custom User model
-    "apps.accounts",
     "apps.core",
     "apps.connections",
     "apps.geoserver",
@@ -138,9 +136,6 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Custom User model
-AUTH_USER_MODEL = "accounts.User"
-
 # Django REST Framework settings
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
@@ -153,7 +148,6 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        "apps.accounts.authentication.APITokenAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         # TODO: Change to IsAuthenticated once all endpoints are migrated

@@ -8,8 +8,7 @@ export default defineConfig({
   base: process.env.VITE_BASE_URL ?? '',
   build: {
     outDir: '../static',
-    emptyOutDir: true,
-    assetsDir: 'cloudbench',
+    emptyOutDir: true
   },
   server: {
     allowedHosts: ['webpack_cloudbench', 'localhost'],
@@ -21,3 +20,5 @@ export default defineConfig({
     },
   },
 })
+
+console.log(defineConfig)

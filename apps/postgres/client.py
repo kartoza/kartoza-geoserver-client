@@ -222,3 +222,19 @@ def get_pg_client(service_name: str, user_id: str = "default") -> PGServiceClien
     if not service:
         raise ValueError(f"PostgreSQL service not found: {service_name}")
     return PGServiceClient(service)
+
+
+def list_pg_services(user_id: str = "default"):
+    return get_config(user_id).list_pg_services()
+
+
+def add_pg_service(service: PGService, user_id: str = "default") -> None:
+    get_config(user_id).add_pg_service(service)
+
+
+def update_pg_service(service: PGService, user_id: str = "default") -> None:
+    get_config(user_id).update_pg_service(service)
+
+
+def delete_pg_service(service_name: str, user_id: str = "default") -> bool:
+    return get_config(user_id).delete_pg_service(service_name)

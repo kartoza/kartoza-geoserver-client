@@ -9,7 +9,6 @@ Provides endpoints for:
 """
 
 import subprocess
-import tempfile
 import uuid
 from pathlib import Path
 
@@ -17,10 +16,15 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.config import get_cache_dir, get_config
 from apps.core.models import PGService
 
-from .client import get_pg_client
+from .client import (
+    add_pg_service,
+    delete_pg_service,
+    get_pg_client,
+    list_pg_services,
+    update_pg_service,
+)
 
 
 # === PostgreSQL Services ===
@@ -31,7 +35,6 @@ class PGServiceListView(APIView):
 
     def get(self, request):
         """List all PostgreSQL services."""
-        config = get_config(request.user.id)
         return Response([
             {
                 "name": svc.name,
@@ -41,7 +44,7 @@ class PGServiceListView(APIView):
                 "user": svc.user,
                 "sslmode": svc.sslmode,
             }
-            for svc in config.list_pg_services()
+            for svc in list_pg_services(str(request.user.id))
         ])
 
     def post(self, request):
@@ -52,12 +55,15 @@ class PGServiceListView(APIView):
                 {"error": "name is required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        config = get_config(request.user.id)
-        if config.get_pg_service(name):
+        user_id = str(request.user.id)
+        try:
+            get_pg_client(name, user_id)
             return Response(
                 {"error": f"Service '{name}' already exists"},
                 status=status.HTTP_409_CONFLICT,
             )
+        except ValueError:
+            pass
 
         service = PGService(
             name=name,
@@ -68,7 +74,7 @@ class PGServiceListView(APIView):
             password=request.data.get("password", ""),
             sslmode=request.data.get("sslmode", ""),
         )
-        config.add_pg_service(service)
+        add_pg_service(service, user_id)
 
         return Response(
             {"name": service.name, "host": service.host, "port": service.port,
@@ -82,11 +88,13 @@ class PGServiceDetailView(APIView):
 
     def get(self, request, name):
         """Get service details."""
-        service = get_config(request.user.id).get_pg_service(name)
-        if not service:
+        try:
+            client = get_pg_client(name, str(request.user.id))
+        except ValueError:
             return Response(
                 {"error": "Service not found"}, status=status.HTTP_404_NOT_FOUND
             )
+        service = client.service
         return Response({
             "name": service.name,
             "host": service.host,
@@ -99,19 +107,20 @@ class PGServiceDetailView(APIView):
 
     def put(self, request, name):
         """Update a service."""
-        config = get_config(request.user.id)
-        service = config.get_pg_service(name)
-        if not service:
+        user_id = str(request.user.id)
+        try:
+            client = get_pg_client(name, user_id)
+        except ValueError:
             return Response(
                 {"error": "Service not found"}, status=status.HTTP_404_NOT_FOUND
             )
         data = request.data
-        updated = service.model_copy(update={
+        updated = client.service.model_copy(update={
             k: (int(data[k]) if k == "port" else data[k])
             for k in ("host", "port", "dbname", "user", "password", "sslmode")
             if k in data
         })
-        config.update_pg_service(updated)
+        update_pg_service(updated, user_id)
         return Response({
             "name": updated.name,
             "host": updated.host,
@@ -122,7 +131,7 @@ class PGServiceDetailView(APIView):
 
     def delete(self, request, name):
         """Delete a service."""
-        if not get_config(request.user.id).delete_pg_service(name):
+        if not delete_pg_service(name, str(request.user.id)):
             return Response(
                 {"error": "Service not found"}, status=status.HTTP_404_NOT_FOUND
             )
@@ -132,13 +141,28 @@ class PGServiceDetailView(APIView):
 class PGServiceTestView(APIView):
     """Test a PostgreSQL service connection."""
 
-    def post(self, request, name):
+    def get(self, request, name):
         """Test connection to a service."""
-        if not get_config(request.user.id).get_pg_service(name):
+        try:
+            client = get_pg_client(name, str(request.user.id))
+        except ValueError:
             return Response(
                 {"error": "Service not found"}, status=status.HTTP_404_NOT_FOUND
             )
-        success, message = get_pg_client(name, str(request.user.id)).test_connection()
+        success, message = client.test_connection()
+        if not success:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response({"success": success, "message": message})
+
+    def post(self, request, name):
+        """Test connection to a service."""
+        try:
+            client = get_pg_client(name, str(request.user.id))
+        except ValueError:
+            return Response(
+                {"error": "Service not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        success, message = client.test_connection()
         return Response({"success": success, "message": message})
 
 
@@ -151,7 +175,7 @@ class PGSchemaListView(APIView):
     def get(self, request, service_name):
         """List all schemas."""
         try:
-            schemas = get_pg_client(service_name).list_schemas()
+            schemas = get_pg_client(service_name, str(request.user.id)).list_schemas()
             return Response({"schemas": schemas})
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -168,7 +192,7 @@ class PGTableListView(APIView):
     def get(self, request, service_name, schema_name):
         """List all tables in a schema."""
         try:
-            tables = get_pg_client(service_name).list_tables(schema_name)
+            tables = get_pg_client(service_name, str(request.user.id)).list_tables(schema_name)
             return Response({"tables": tables})
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -185,7 +209,7 @@ class PGTableDetailView(APIView):
     def get(self, request, service_name, schema_name, table_name):
         """Get table columns and metadata."""
         try:
-            client = get_pg_client(service_name)
+            client = get_pg_client(service_name, str(request.user.id))
             columns = client.get_table_columns(schema_name, table_name)
             row_count = client.get_table_row_count(schema_name, table_name)
             return Response({
@@ -219,7 +243,7 @@ class PGTableDataView(APIView):
             offset = int(request.query_params.get("offset", 0))
             order_by = request.query_params.get("orderBy")
 
-            data = get_pg_client(service_name).get_table_data(
+            data = get_pg_client(service_name, str(request.user.id)).get_table_data(
                 schema_name, table_name, limit, offset, order_by
             )
 
@@ -257,7 +281,7 @@ class PGQueryView(APIView):
         limit = request.data.get("limit", 1000)
 
         try:
-            result = get_pg_client(service_name).execute_query(query, limit=limit)
+            result = get_pg_client(service_name, str(request.user.id)).execute_query(query, limit=limit)
             return Response(result)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -304,8 +328,9 @@ class PGImportView(APIView):
             )
 
         # Get service info
-        service = get_config(request.user.id).get_pg_service(service_name)
-        if not service:
+        try:
+            service = get_pg_client(service_name, str(request.user.id)).service
+        except ValueError:
             return Response(
                 {"error": f"Service not found: {service_name}"},
                 status=status.HTTP_404_NOT_FOUND,
@@ -426,8 +451,9 @@ class PGImportRasterView(APIView):
             )
 
         # Get service info
-        service = get_config(request.user.id).get_pg_service(service_name)
-        if not service:
+        try:
+            service = get_pg_client(service_name, str(request.user.id)).service
+        except ValueError:
             return Response(
                 {"error": f"Service not found: {service_name}"},
                 status=status.HTTP_404_NOT_FOUND,

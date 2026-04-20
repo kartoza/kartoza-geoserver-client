@@ -10,6 +10,7 @@ import httpx
 from typing import Any
 
 from django.http import HttpResponse, StreamingHttpResponse
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -285,7 +286,7 @@ class TerriaInitView(APIView):
                 "name": conn.name,
                 "description": f"GeoServer at {conn.url}",
                 "isOpen": False,
-                "url": f"/api/terria/connection/{conn.id}",
+                "url": reverse("terria-connection-catalog", kwargs={"conn_id": conn.id}),
             })
 
         init_config = {

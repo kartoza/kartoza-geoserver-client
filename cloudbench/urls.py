@@ -61,7 +61,7 @@ urlpatterns = [
     path("api/", include("apps.iceberg.urls")),
     path("api/", include("apps.qgis.urls")),
     path("api/", include("apps.core.urls")),
-    path("api/preview/", include("apps.preview.urls")),
+    path("api/", include("apps.preview.urls")),
     # Viewer endpoint (Terria/Cesium)
     path("viewer/", include("apps.terria.viewer_urls")),
 ]

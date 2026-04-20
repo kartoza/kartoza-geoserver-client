@@ -6,10 +6,11 @@ Uses XDG Base Directory specification for config file location.
 
 import json
 import os
+import tempfile
 from pathlib import Path
 
 from .utilities import (
-    file_lock, get_cloudbench_data_path, get_cloudbench_cache_path
+    file_lock, get_cloudbench_data_path
 )
 
 # Config directory names
@@ -420,9 +421,6 @@ def get_qgis_projects_dir(user_id: "str | int" = "default") -> Path:
     return get_cloudbench_data_path("qgis-projects", user_id)
 
 
-def get_cache_dir(user_id: "str | int" = "default") -> Path:
-    """Get the cache directory for temporary files.
-
-    Uses XDG_CACHE_HOME/kartoza-cloudbench/
-    """
-    return get_cloudbench_cache_path("", user_id)
+def get_cache_dir() -> Path:
+    """Get the cache directory for temporary files."""
+    return Path(tempfile.gettempdir())

@@ -76,14 +76,12 @@ export function useQueryExecution(serviceName: string, limit: number) {
     }
 
     try {
-      const response = await fetch(`${getApiBase()}/query/execute`, {
+      const response = await fetch(`${getApiBase()}/pg/services/${encodeURIComponent(serviceName)}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sql,
-          service_name: serviceName,
-          max_rows: limit,
-          offset: appendResults ? (result?.rows.length || 0) : 0,
+          query: sql,
+          limit,
         }),
       })
 

@@ -37,7 +37,285 @@ class PGServiceClient:
         except Exception as e:
             return False, str(e)
 
-    def list_schemas(self) -> list[str]:
+    def get_stats(self) -> dict[str, Any]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT version()")
+                version = cur.fetchone()[0]
+
+                cur.execute("SELECT pg_postmaster_start_time(), now() - pg_postmaster_start_time()")
+                start_time, uptime = cur.fetchone()
+
+                cur.execute("SHOW max_connections")
+                max_connections = int(cur.fetchone()[0])
+
+                cur.execute("""
+                    SELECT
+                        count(*) FILTER (WHERE state IS NOT NULL),
+                        count(*) FILTER (WHERE state = 'active'),
+                        count(*) FILTER (WHERE state = 'idle'),
+                        count(*) FILTER (WHERE state = 'idle in transaction'),
+                        count(*) FILTER (WHERE wait_event_type = 'Lock')
+                    FROM pg_stat_activity
+                    WHERE datname = current_database()
+                """)
+                cur_conn, active, idle, idle_txn, waiting = cur.fetchone()
+
+                cur.execute("""
+                    SELECT
+                        s.datname,
+                        d.oid,
+                        pg_size_pretty(pg_database_size(s.datname)),
+                        s.xact_commit,
+                        s.xact_rollback,
+                        s.blks_read,
+                        s.blks_hit,
+                        s.tup_returned,
+                        s.tup_fetched,
+                        s.tup_inserted,
+                        s.tup_updated,
+                        s.tup_deleted,
+                        s.numbackends,
+                        CASE WHEN s.blks_hit + s.blks_read > 0
+                            THEN round(100.0 * s.blks_hit / (s.blks_hit + s.blks_read), 2)::text || '%'
+                            ELSE 'N/A' END
+                    FROM pg_stat_database s
+                    JOIN pg_database d ON d.datname = s.datname
+                    WHERE s.datname = current_database()
+                """)
+                row = cur.fetchone()
+                (db_name, db_oid, db_size, xact_commit, xact_rollback,
+                 blks_read, blks_hit, tup_returned, tup_fetched,
+                 tup_inserted, tup_updated, tup_deleted, num_backends, cache_hit) = row
+
+                cur.execute("""
+                    SELECT
+                        COALESCE(sum(n_live_tup), 0),
+                        COALESCE(sum(n_dead_tup), 0)
+                    FROM pg_stat_user_tables
+                """)
+                live_tup, dead_tup = cur.fetchone()
+
+                cur.execute("SELECT count(*) FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog','information_schema')")
+                table_count = cur.fetchone()[0]
+
+                cur.execute("SELECT count(*) FROM information_schema.tables WHERE table_type = 'VIEW' AND table_schema NOT IN ('pg_catalog','information_schema')")
+                view_count = cur.fetchone()[0]
+
+                cur.execute("SELECT count(*) FROM pg_indexes WHERE schemaname NOT IN ('pg_catalog','information_schema')")
+                index_count = cur.fetchone()[0]
+
+                cur.execute("SELECT count(*) FROM information_schema.routines WHERE routine_schema NOT IN ('pg_catalog','information_schema')")
+                function_count = cur.fetchone()[0]
+
+                cur.execute("SELECT count(*) FROM information_schema.schemata WHERE schema_name NOT IN ('pg_catalog','information_schema','pg_toast')")
+                schema_count = cur.fetchone()[0]
+
+                cur.execute("SELECT pg_is_in_recovery()")
+                is_in_recovery = cur.fetchone()[0]
+
+                cur.execute("SELECT name FROM pg_available_extensions WHERE installed_version IS NOT NULL ORDER BY name")
+                extensions = [r[0] for r in cur.fetchall()]
+
+                has_postgis = 'postgis' in extensions
+                postgis_version = None
+                geometry_columns = None
+                raster_columns = None
+                if has_postgis:
+                    try:
+                        cur.execute("SELECT PostGIS_Full_Version()")
+                        postgis_version = cur.fetchone()[0]
+                        cur.execute("SELECT count(*) FROM geometry_columns")
+                        geometry_columns = cur.fetchone()[0]
+                        cur.execute("SELECT count(*) FROM raster_columns")
+                        raster_columns = cur.fetchone()[0]
+                    except Exception:
+                        pass
+
+                connection_percent = round(100.0 * cur_conn / max_connections, 1) if max_connections else 0
+
+                uptime_str = str(uptime).split('.')[0] if uptime else 'N/A'
+
+                return {
+                    "version": version,
+                    "server_start_time": start_time.isoformat() if start_time else None,
+                    "uptime": uptime_str,
+                    "host": self.service.host,
+                    "port": str(self.service.port),
+                    "database_name": db_name,
+                    "database_size": db_size,
+                    "database_oid": db_oid,
+                    "max_connections": max_connections,
+                    "current_connections": cur_conn,
+                    "active_connections": active,
+                    "idle_connections": idle,
+                    "idle_in_transaction_connections": idle_txn,
+                    "waiting_connections": waiting,
+                    "connection_percent": connection_percent,
+                    "num_backends": num_backends,
+                    "xact_commit": xact_commit,
+                    "xact_rollback": xact_rollback,
+                    "blks_read": blks_read,
+                    "blks_hit": blks_hit,
+                    "tup_returned": tup_returned,
+                    "tup_fetched": tup_fetched,
+                    "tup_inserted": tup_inserted,
+                    "tup_updated": tup_updated,
+                    "tup_deleted": tup_deleted,
+                    "cache_hit_ratio": cache_hit,
+                    "live_tuples": live_tup,
+                    "dead_tuples": dead_tup,
+                    "table_count": table_count,
+                    "view_count": view_count,
+                    "index_count": index_count,
+                    "function_count": function_count,
+                    "schema_count": schema_count,
+                    "is_in_recovery": is_in_recovery,
+                    "installed_extensions": extensions,
+                    "has_postgis": has_postgis,
+                    "postgis_version": postgis_version,
+                    "geometry_columns": geometry_columns,
+                    "raster_columns": raster_columns,
+                }
+
+    def get_schema_stats(self, schema: str) -> dict[str, Any]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                # Owner
+                cur.execute("""
+                    SELECT pg_catalog.pg_get_userbyid(n.nspowner)
+                    FROM pg_namespace n WHERE n.nspname = %s
+                """, (schema,))
+                row = cur.fetchone()
+                owner = row[0] if row else ''
+
+                # Table stats
+                cur.execute("""
+                    SELECT
+                        t.table_name,
+                        COALESCE(s.n_live_tup, 0),
+                        pg_size_pretty(pg_total_relation_size(quote_ident(%s) || '.' || quote_ident(t.table_name))),
+                        pg_total_relation_size(quote_ident(%s) || '.' || quote_ident(t.table_name)),
+                        COALESCE(s.n_dead_tup, 0),
+                        s.last_vacuum::text,
+                        s.last_autovacuum::text,
+                        (SELECT count(*) FROM pg_indexes i WHERE i.schemaname = %s AND i.tablename = t.table_name),
+                        EXISTS(
+                            SELECT 1 FROM information_schema.table_constraints tc
+                            WHERE tc.table_schema = %s AND tc.table_name = t.table_name
+                            AND tc.constraint_type = 'PRIMARY KEY'
+                        )
+                    FROM information_schema.tables t
+                    LEFT JOIN pg_stat_user_tables s
+                        ON s.schemaname = t.table_schema AND s.relname = t.table_name
+                    WHERE t.table_schema = %s AND t.table_type = 'BASE TABLE'
+                    ORDER BY t.table_name
+                """, (schema, schema, schema, schema, schema))
+                table_rows = cur.fetchall()
+
+                # Geometry info per table
+                geom_map: dict[str, dict] = {}
+                try:
+                    cur.execute("""
+                        SELECT f_table_name, type, srid
+                        FROM geometry_columns WHERE f_table_schema = %s
+                    """, (schema,))
+                    for tname, gtype, srid in cur.fetchall():
+                        geom_map[tname] = {"geometry_type": gtype, "srid": srid}
+                except Exception:
+                    pass
+
+                tables = []
+                for (tname, rows, size, size_bytes, dead, last_vac, last_autovac, idx_count, has_pk) in table_rows:
+                    geom = geom_map.get(tname, {})
+                    tables.append({
+                        "name": tname,
+                        "row_count": rows,
+                        "size": size,
+                        "size_bytes": size_bytes,
+                        "dead_tuples": dead,
+                        "last_vacuum": last_vac,
+                        "last_autovacuum": last_autovac,
+                        "index_count": idx_count,
+                        "has_primary_key": has_pk,
+                        "has_geometry": bool(geom),
+                        "geometry_type": geom.get("geometry_type"),
+                        "srid": geom.get("srid"),
+                    })
+
+                # Views
+                cur.execute("""
+                    SELECT table_name,
+                        EXISTS(SELECT 1 FROM pg_matviews m WHERE m.schemaname = %s AND m.matviewname = table_name)
+                    FROM information_schema.views
+                    WHERE table_schema = %s ORDER BY table_name
+                """, (schema, schema))
+                views = [{"name": r[0], "is_materialized": r[1]} for r in cur.fetchall()]
+
+                # Counts
+                cur.execute("SELECT count(*) FROM pg_indexes WHERE schemaname = %s", (schema,))
+                index_count = cur.fetchone()[0]
+
+                cur.execute("""
+                    SELECT count(*) FROM information_schema.routines
+                    WHERE routine_schema = %s
+                """, (schema,))
+                function_count = cur.fetchone()[0]
+
+                cur.execute("""
+                    SELECT count(*) FROM information_schema.sequences
+                    WHERE sequence_schema = %s
+                """, (schema,))
+                sequence_count = cur.fetchone()[0]
+
+                cur.execute("""
+                    SELECT count(*) FROM information_schema.triggers
+                    WHERE trigger_schema = %s
+                """, (schema,))
+                trigger_count = cur.fetchone()[0]
+
+                total_size_bytes = sum(t["size_bytes"] for t in tables)
+                total_rows = sum(t["row_count"] for t in tables)
+                dead_tuples = sum(t["dead_tuples"] for t in tables)
+
+                geometry_columns = len(geom_map)
+                raster_columns = 0
+                try:
+                    cur.execute("SELECT count(*) FROM raster_columns WHERE r_table_schema = %s", (schema,))
+                    raster_columns = cur.fetchone()[0]
+                except Exception:
+                    pass
+
+                return {
+                    "name": schema,
+                    "owner": owner,
+                    "database_name": self.service.dbname,
+                    "table_count": len(tables),
+                    "view_count": len(views),
+                    "index_count": index_count,
+                    "function_count": function_count,
+                    "sequence_count": sequence_count,
+                    "trigger_count": trigger_count,
+                    "total_size": self._format_bytes(total_size_bytes),
+                    "total_size_bytes": total_size_bytes,
+                    "total_rows": total_rows,
+                    "dead_tuples": dead_tuples,
+                    "tables": tables,
+                    "views": views,
+                    "has_postgis": bool(geom_map) or raster_columns > 0,
+                    "geometry_columns": geometry_columns,
+                    "raster_columns": raster_columns,
+                }
+
+    @staticmethod
+    def _format_bytes(size_bytes: int) -> str:
+        for unit in ('B', 'kB', 'MB', 'GB', 'TB'):
+            if size_bytes < 1024:
+                return f"{size_bytes:.1f} {unit}"
+            size_bytes //= 1024
+        return f"{size_bytes} PB"
+
+    def list_schemas(self) -> list[dict[str, Any]]:
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
@@ -48,7 +326,47 @@ class PGServiceClient:
                     )
                     ORDER BY schema_name
                 """)
-                return [row[0] for row in cur.fetchall()]
+                schema_names = [row[0] for row in cur.fetchall()]
+
+                cur.execute("""
+                    SELECT
+                        t.table_schema,
+                        t.table_name,
+                        t.table_type,
+                        c.column_name,
+                        c.data_type,
+                        c.is_nullable
+                    FROM information_schema.tables t
+                    JOIN information_schema.columns c
+                        ON c.table_schema = t.table_schema
+                        AND c.table_name = t.table_name
+                    WHERE t.table_schema = ANY(%s)
+                        AND t.table_type IN ('BASE TABLE', 'VIEW')
+                    ORDER BY t.table_schema, t.table_name, c.ordinal_position
+                """, (schema_names,))
+
+                schemas: dict[str, dict] = {name: {"name": name, "tables": {}} for name in schema_names}
+                for schema, table, table_type, col_name, col_type, nullable in cur.fetchall():
+                    tables = schemas[schema]["tables"]
+                    if table not in tables:
+                        tables[table] = {
+                            "name": table,
+                            "schema": schema,
+                            "columns": [],
+                        }
+                    tables[table]["columns"].append({
+                        "name": col_name,
+                        "type": col_type,
+                        "nullable": nullable == "YES",
+                    })
+
+                return [
+                    {
+                        "name": s["name"],
+                        "tables": list(s["tables"].values()),
+                    }
+                    for s in schemas.values()
+                ]
 
     def list_tables(self, schema: str = "public") -> list[dict[str, Any]]:
         with self._connect() as conn:

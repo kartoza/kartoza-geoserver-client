@@ -17,6 +17,7 @@ export function PostgreSQLRootNode() {
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const showHiddenPGServices = useUIStore((state) => state.settings.showHiddenPGServices)
+  const createUrl = getCreatePostGISUrl()
 
   // Fetch PostgreSQL services
   const { data: pgServices, isLoading, refetch } = useQuery({
@@ -54,7 +55,6 @@ export function PostgreSQLRootNode() {
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const createUrl = getCreatePostGISUrl()
     if (createUrl) {
       openWindowWithCallback(createUrl, () => refetch())
     } else {
@@ -87,6 +87,7 @@ export function PostgreSQLRootNode() {
               <PGServiceNode
                 key={svc.name}
                 service={svc}
+                ableToDelete={!createUrl}
               />
             ))
           )}

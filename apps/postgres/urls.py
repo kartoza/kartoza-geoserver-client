@@ -21,11 +21,21 @@ urlpatterns = [
         views.PGServiceTestView.as_view(),
         name="pg-service-test",
     ),
+    path(
+        "pg/services/<str:name>/stats",
+        views.PGServiceStatsView.as_view(),
+        name="pg-service-stats",
+    ),
     # Schema and Tables - use service_name to match view parameter
     path(
         "pg/services/<str:service_name>/schemas",
         views.PGSchemaListView.as_view(),
         name="pg-schema-list",
+    ),
+    path(
+        "pg/services/<str:service_name>/schemas/<str:schema_name>/stats",
+        views.PGSchemaStatsView.as_view(),
+        name="pg-schema-stats",
     ),
     path(
         "pg/services/<str:service_name>/schemas/<str:schema_name>/tables",

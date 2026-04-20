@@ -37,6 +37,8 @@ export interface PGServiceNodeProps {
     is_parsed: boolean
     hidden?: boolean
   }
+  ableToEdit?: boolean
+  ableToDelete?: boolean
 }
 
 export interface PGSchemaNodeProps {

@@ -9,6 +9,7 @@ Provides endpoints for:
 """
 
 import subprocess
+import time
 import uuid
 from pathlib import Path
 
@@ -166,6 +167,41 @@ class PGServiceTestView(APIView):
         return Response({"success": success, "message": message})
 
 
+# === Stats ===
+
+
+class PGSchemaStatsView(APIView):
+    """Get statistics for a specific schema."""
+
+    def get(self, request, service_name, schema_name):
+        try:
+            stats = get_pg_client(service_name, str(request.user.id)).get_schema_stats(schema_name)
+            return Response(stats)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {"error": f"Database error: {str(e)}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class PGServiceStatsView(APIView):
+    """Get server statistics for a PostgreSQL service."""
+
+    def get(self, request, name):
+        try:
+            stats = get_pg_client(name, str(request.user.id)).get_stats()
+            return Response(stats)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {"error": f"Database error: {str(e)}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
 # === Schema Browsing ===
 
 
@@ -281,8 +317,19 @@ class PGQueryView(APIView):
         limit = request.data.get("limit", 1000)
 
         try:
+            t0 = time.monotonic()
             result = get_pg_client(service_name, str(request.user.id)).execute_query(query, limit=limit)
-            return Response(result)
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
+            return Response({
+                "success": True,
+                "sql": query,
+                "result": {
+                    "columns": result["columns"],
+                    "rows": result["rows"],
+                    "row_count": result["rowCount"],
+                    "duration_ms": elapsed_ms,
+                },
+            })
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:

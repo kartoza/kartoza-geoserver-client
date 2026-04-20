@@ -70,6 +70,7 @@ import type {
   MerginMapsTestResult,
   MerginMapsProjectsResponse,
 } from '../types'
+import { getBaseUrl } from "../config/env.ts";
 
 // ============================================================================
 // Upload API
@@ -610,7 +611,7 @@ export interface PGSchemaStats {
 
 export async function getPGSchemaStats(serviceName: string, schemaName: string): Promise<PGSchemaStats> {
   const response = await fetch(
-    `${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/schemastats?schema=${encodeURIComponent(schemaName)}`
+    `${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/schemas/${encodeURIComponent(schemaName)}/stats`
   )
   return handleResponse<PGSchemaStats>(response)
 }
@@ -766,7 +767,7 @@ export interface QueryResult {
   columns: string[]
   rows: unknown[][]
   row_count: number
-  execution_time_ms: number
+  duration_ms: number
 }
 
 export interface ExecuteQueryResponse {
@@ -780,13 +781,12 @@ export async function executeQuery(
   sql: string,
   maxRows: number = 100
 ): Promise<ExecuteQueryResponse> {
-  const response = await fetch(`${API_BASE}/query/execute`, {
+  const response = await fetch(`${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/query`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      service_name: serviceName,
-      sql,
-      max_rows: maxRows,
+      query: sql,
+      limit: maxRows,
     }),
   })
   return handleResponse<ExecuteQueryResponse>(response)

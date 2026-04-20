@@ -170,19 +170,32 @@ export const QueryDesigner: React.FC<QueryDesignerProps> = ({ serviceName, onClo
     setResult(null);
 
     try {
-      const res = await fetch(`${getApiBase()}/query/execute`, {
+      let sql = editableSQL && customSQL ? customSQL : generatedSQL;
+
+      if (!sql) {
+        const buildRes = await fetch(`${getApiBase()}/query/build`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildDefinition()),
+        });
+        const buildData = await buildRes.json();
+        if (!buildData.sql) {
+          setError(buildData.error || 'Failed to build query');
+          return;
+        }
+        sql = buildData.sql;
+        setGeneratedSQL(sql);
+        setShowSQL(true);
+      }
+
+      const res = await fetch(`${getApiBase()}/pg/services/${encodeURIComponent(serviceName)}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          definition: buildDefinition(),
-          service_name: serviceName,
-          max_rows: limit,
-        }),
+        body: JSON.stringify({ query: sql, limit }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setGeneratedSQL(data.sql);
         setResult(data.result);
         setShowSQL(true);
       } else {

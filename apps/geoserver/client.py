@@ -3,6 +3,7 @@
 Provides a comprehensive Python client for the GeoServer REST API.
 """
 
+import re
 from typing import Any
 from xml.etree import ElementTree as ET
 
@@ -108,6 +109,11 @@ class GeoServerClient:
             isolated: Whether workspace is isolated
             default: Whether to set as default workspace
         """
+        if not re.match(r"^[A-Za-z0-9_\-]+$", name):
+            raise GeoServerError(
+                "Workspace name must contain only letters, numbers, underscores, and hyphens",
+                status_code=400,
+            )
         payload = {"workspace": {"name": name, "isolated": isolated}}
         response = self._request(
             "POST",

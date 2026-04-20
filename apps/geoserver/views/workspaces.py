@@ -42,6 +42,8 @@ class WorkspaceListView(APIView):
                 status=status.HTTP_201_CREATED,
             )
         except GeoServerError as e:
+
+
             return handle_geoserver_error(e)
 
 

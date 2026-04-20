@@ -165,7 +165,7 @@ export function TreeNodeRow({
         </Tooltip>
       )}
       {/* Admin link - always visible for connections */}
-      {onOpenAdmin && (
+      {isEnabled && onOpenAdmin && (
         <Tooltip label="Open GeoServer Admin" fontSize="xs">
           <IconButton
             aria-label="Open Admin"

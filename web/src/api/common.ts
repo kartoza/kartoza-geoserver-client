@@ -22,7 +22,7 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 export async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(error.error || `HTTP ${response.status}`)
+    throw new Error(error.error || error.detail || `HTTP ${response.status}`)
   }
   if (response.status === 204) {
     return undefined as T

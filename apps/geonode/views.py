@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.config import GeoNodeConnection, get_config
+from apps.upload.views import session_manager
 from .client import GeoNodeClient, get_geonode_client
 from .utilities import (
     RESOURCE_TYPE_DETAIL_REQUEST_MAP, RESOURCE_TYPE_LIST_REQUEST_MAP
@@ -206,6 +207,95 @@ class GeoNodeResourceDetailView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+
+class GeoNodeUploadCompleteView(APIView):
+    """Complete a chunked upload and publish to GeoNode."""
+
+    def post(self, request):
+        """Complete the upload.
+
+        Expected body:
+        {
+            "sessionId": "uuid",
+            "connectionId": "uuid",
+            "title": "My Dataset",       // optional
+            "abstract": "Description"    // optional
+        }
+        """
+        session_id = request.data.get("sessionId")
+        conn_id = request.data.get("connectionId")
+        title = request.data.get("title")
+        abstract = request.data.get("abstract")
+        upload_type = request.data.get("uploadType", "dataset")
+
+        if not session_id:
+            return Response(
+                {"error": "sessionId is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not conn_id:
+            return Response(
+                {"error": "connectionId is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        session = session_manager.get_session(session_id)
+        if not session:
+            return Response(
+                {"error": "Upload session not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not session.is_complete():
+            missing = session.total_chunks - len(session.received_chunks)
+            return Response(
+                {"error": f"Upload incomplete. Missing {missing} chunks."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            file_path = session_manager.assemble_file(session_id)
+
+            with open(file_path, "rb") as f:
+                data = f.read()
+
+            client = get_geonode_client(conn_id, str(request.user.id))
+            if upload_type == "document":
+                upload_result = client.upload_document(
+                    file=data,
+                    filename=session.filename,
+                    title=title,
+                    abstract=abstract,
+                )
+            else:
+                upload_result = client.upload_dataset(
+                    file=data,
+                    filename=session.filename,
+                    title=title,
+                    abstract=abstract,
+                )
+
+            return Response(
+                {
+                    "sessionId": session_id,
+                    "filename": session.filename,
+                    "fileSize": session.file_size,
+                    "published": True,
+                    **upload_result,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to upload to GeoNode: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        finally:
+            session_manager.delete_session(session_id)
 
 
 class GeoNodeCategoryListView(APIView):

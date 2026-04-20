@@ -97,6 +97,29 @@ export async function completeUpload(sessionId: string): Promise<UploadResult> {
   return res.json()
 }
 
+export async function completeGeoNodeUpload(
+  sessionId: string,
+  connectionId: string,
+  title?: string,
+  abstract?: string,
+  uploadType: 'dataset' | 'document' = 'dataset',
+): Promise<{ published: boolean; filename: string; fileSize: number; [key: string]: unknown }> {
+  const res = await fetch(`${API_BASE}/geonode/upload/complete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken(),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ sessionId, connectionId, title, abstract, uploadType }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(err.error || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function cancelUpload(sessionId: string): Promise<void> {
   await fetch(`${API_BASE}/upload/session/${encodeURIComponent(sessionId)}`, {
     method: 'DELETE',

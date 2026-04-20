@@ -2,7 +2,7 @@ import { Box, Text } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
 import { useTreeStore } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
-import type { TreeNode, GeoNodeConnection } from '../../../types'
+import type { GeoNodeConnection, TreeNode } from '../../../types'
 import * as api from '../../../api'
 import { TreeNodeRow } from '../TreeNodeRow'
 import { GeoNodeResourceCategoryNode } from './GeoNodeResourceCategoryNode'
@@ -80,9 +80,16 @@ export function GeoNodeConnectionNode({ connection }: GeoNodeConnectionNodeProps
       mode: 'create',
       data: {
         connectionId: connection.id,
-        connectionName: connection.name,
+        connectionName: connection.name
       },
     })
+  }
+
+  const handleOpenAdmin = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    // GeoServer admin URL is typically the base URL + /web
+    const adminUrl = connection.url
+    window.open(adminUrl, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -94,6 +101,7 @@ export function GeoNodeConnectionNode({ connection }: GeoNodeConnectionNodeProps
         isLoading={isLoading}
         onClick={handleClick}
         isOnline={isOnline}
+        onOpenAdmin={handleOpenAdmin}
         onUpload={handleUpload}
         level={2}
       />
@@ -156,16 +164,16 @@ export function GeoNodeConnectionNode({ connection }: GeoNodeConnectionNodeProps
 
           {!isLoading &&
             (!datasetsData?.datasets?.length &&
-             !mapsData?.maps?.length &&
-             !documentsData?.documents?.length &&
-             !geostoriesData?.geostories?.length &&
-             !dashboardsData?.dashboards?.length) && (
-            <Box px={2} py={2} ml={3 * 4}>
-              <Text color="gray.500" fontSize="sm">
-                No resources found
-              </Text>
-            </Box>
-          )}
+              !mapsData?.maps?.length &&
+              !documentsData?.documents?.length &&
+              !geostoriesData?.geostories?.length &&
+              !dashboardsData?.dashboards?.length) && (
+              <Box px={2} py={2} ml={3 * 4}>
+                <Text color="gray.500" fontSize="sm">
+                  No resources found
+                </Text>
+              </Box>
+            )}
         </>
       )}
     </Box>

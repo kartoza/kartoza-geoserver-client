@@ -199,6 +199,98 @@ class GeoNodeClient:
             "pageSize": data.get("page_size", 20),
         }
 
+    def upload_dataset(
+            self,
+            file: bytes,
+            filename: str,
+            charset: str = "UTF-8",
+            title: str | None = None,
+            abstract: str | None = None,
+    ) -> dict[str, Any]:
+        """Upload a dataset file to GeoNode.
+
+        Args:
+            file: File content as bytes
+            filename: Original filename (e.g. roads.zip, dem.tif)
+            charset: Character encoding of the dataset
+            title: Optional dataset title
+            abstract: Optional dataset abstract/description
+
+        Returns:
+            Upload response dict with execution_id and redirect_to
+        """
+        ext = filename.rsplit(".", 1)[-1].lower()
+        mime_types = {
+            "zip": "application/zip",
+            "shp": "application/octet-stream",
+            "tif": "image/tiff",
+            "tiff": "image/tiff",
+            "gpkg": "application/geopackage+sqlite3",
+            "geojson": "application/geo+json",
+            "json": "application/geo+json",
+            "kml": "application/vnd.google-earth.kml+xml",
+            "csv": "text/csv",
+        }
+        mime = mime_types.get(ext, "application/octet-stream")
+
+        files = {"base_file": (filename, file, mime)}
+        data: dict[str, str] = {"charset": charset}
+        if ext == "zip":
+            data["store_spatial_files"] = "true"
+            files["zip_file"] = (filename, file, mime)
+        if title:
+            data["dataset_title"] = title
+        if abstract:
+            data["abstract"] = abstract
+
+        response = self.client.post(
+            "/uploads/upload",
+            files=files,
+            data=data,
+            timeout=120.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def upload_document(
+            self,
+            file: bytes,
+            filename: str,
+            title: str | None = None,
+            abstract: str | None = None,
+    ) -> dict[str, Any]:
+        """Upload a document to GeoNode.
+
+        Args:
+            file: File content as bytes
+            filename: Original filename (e.g. report.pdf, photo.jpg)
+            title: Optional document title
+            abstract: Optional document abstract/description
+
+        Returns:
+            Upload response dict from GeoNode documents API
+        """
+        import mimetypes
+
+        mime, _ = mimetypes.guess_type(filename)
+        mime = mime or "application/octet-stream"
+
+        files = {"doc_file": (filename, file, mime)}
+        data: dict[str, str] = {}
+        if title:
+            data["title"] = title
+        if abstract:
+            data["abstract"] = abstract
+
+        response = self.client.post(
+            "/documents/",
+            files=files,
+            data=data,
+            timeout=120.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def get_resource(
             self, resource_type: str, resource_id: int
     ) -> GeoNodeResource:

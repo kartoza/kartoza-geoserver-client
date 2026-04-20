@@ -164,21 +164,6 @@ export function TreeNodeRow({
           />
         </Tooltip>
       )}
-      {/* Admin link - always visible for connections */}
-      {isEnabled && onOpenAdmin && (
-        <Tooltip label="Open GeoServer Admin" fontSize="xs">
-          <IconButton
-            aria-label="Open Admin"
-            icon={<FiExternalLink size={14} />}
-            size="xs"
-            variant="ghost"
-            colorScheme="blue"
-            onClick={onOpenAdmin}
-            _hover={{ bg: 'blue.50' }}
-            mr={1}
-          />
-        </Tooltip>
-      )}
       <Flex
         gap={1}
         opacity={0}
@@ -332,6 +317,21 @@ export function TreeNodeRow({
           </Tooltip>
         )}
       </Flex>
+      {/* Admin link - always visible for connections */}
+      {isEnabled && onOpenAdmin && (
+        <Tooltip label="Open Website" fontSize="xs">
+          <IconButton
+            aria-label="Open Admin"
+            icon={<FiExternalLink size={14} />}
+            size="xs"
+            variant="ghost"
+            colorScheme="blue"
+            onClick={onOpenAdmin}
+            _hover={{ bg: 'blue.50' }}
+            mr={1}
+          />
+        </Tooltip>
+      )}
     </Flex>
   )
 }

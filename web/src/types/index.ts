@@ -274,6 +274,8 @@ export type NodeType =
   | 'geonodedocument'     // Single GeoNode document
   | 'geonodegeostory'     // Single GeoNode geostory
   | 'geonodedashboard'    // Single GeoNode dashboard
+  | 'geonoderemoteservices' // GeoNode remote services container
+  | 'geonoderemoteservice'  // Single GeoNode remote service
   | 'icebergconnection'   // Iceberg catalog connection
   | 'icebergnamespace'    // Iceberg namespace (database)
   | 'icebergtable'        // Iceberg table
@@ -877,6 +879,30 @@ export interface GeoNodeDashboardsResponse {
   page_size: number
   total: number
   dashboards: GeoNodeDashboard[]
+}
+
+export interface GeoNodeRemoteService {
+  id: number
+  name: string
+  baseUrl: string
+  type: string
+  method: string
+}
+
+export interface GeoNodeRemoteServicesResponse {
+  services: GeoNodeRemoteService[]
+}
+
+export interface GeoNodeHarvestResource {
+  id: string
+  name: string
+  title: string
+  abstract: string
+  type: string
+}
+
+export interface GeoNodeHarvestResourcesResponse {
+  resources: GeoNodeHarvestResource[]
 }
 
 // ============================================================================

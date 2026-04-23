@@ -27,6 +27,32 @@ urlpatterns = [
         views.GeoNodeUploadCompleteView.as_view(),
         name="geonode-upload-complete",
     ),
+    # Remote services
+    path(
+        "geonode/connections/<str:conn_id>/remote-services",
+        views.GeoNodeRemoteServiceListView.as_view(),
+        name="geonode-remote-service-list",
+    ),
+    path(
+        "geonode/connections/<str:conn_id>/remote-services/<str:geoserver_conn_id>/connect",
+        views.GeoNodeRemoteServiceConnectView.as_view(),
+        name="geonode-remote-service-connect",
+    ),
+    path(
+        "geonode/connections/<str:conn_id>/remote-services/<int:service_id>/resources",
+        views.GeoNodeRemoteServiceResourcesView.as_view(),
+        name="geonode-remote-service-resources",
+    ),
+    path(
+        "geonode/connections/<str:conn_id>/remote-services/<int:service_id>/import",
+        views.GeoNodeRemoteServiceImportView.as_view(),
+        name="geonode-remote-service-import",
+    ),
+    path(
+        "geonode/connections/<str:conn_id>/remote-services/<int:service_id>",
+        views.GeoNodeRemoteServiceDeleteView.as_view(),
+        name="geonode-remote-service-delete",
+    ),
     # Categories
     path(
         "geonode/connections/<str:conn_id>/categories",

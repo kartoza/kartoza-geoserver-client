@@ -16,6 +16,7 @@ import QGISProjectDialog from './QGISProjectDialog'
 import QGISPreviewDialog from './QGISPreviewDialog'
 import GeoNodeConnectionDialog from './GeoNodeConnectionDialog'
 import GeoNodeUploadDialog from './GeoNodeUploadDialog'
+import GeoNodeAddRemoteServiceDialog from './GeoNodeAddRemoteServiceDialog'
 import IcebergConnectionDialog from './IcebergConnectionDialog'
 import IcebergNamespaceDialog from './IcebergNamespaceDialog'
 import IcebergTableDialog from './IcebergTableDialog'
@@ -54,6 +55,7 @@ export default function Dialogs() {
       <QGISPreviewDialog />
       <GeoNodeConnectionDialog />
       <GeoNodeUploadDialog />
+      <GeoNodeAddRemoteServiceDialog />
       <IcebergConnectionDialog />
       <IcebergNamespaceDialog />
       <IcebergTableDialog />

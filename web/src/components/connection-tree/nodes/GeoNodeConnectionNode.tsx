@@ -1,4 +1,4 @@
-import { Box, Text } from '@chakra-ui/react'
+import { Box } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
 import { useTreeStore } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
@@ -6,6 +6,7 @@ import type { GeoNodeConnection, TreeNode } from '../../../types'
 import * as api from '../../../api'
 import { TreeNodeRow } from '../TreeNodeRow'
 import { GeoNodeResourceCategoryNode } from './GeoNodeResourceCategoryNode'
+import { GeoNodeRemoteServicesNode } from './GeoNodeRemoteServicesNode'
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus'
 
 interface GeoNodeConnectionNodeProps {
@@ -57,7 +58,20 @@ export function GeoNodeConnectionNode({ connection }: GeoNodeConnectionNodeProps
     staleTime: 30000,
   })
 
-  const isLoading = datasetsLoading || mapsLoading || documentsLoading || geostoriesLoading || dashboardsLoading
+  const { data: remoteServicesData, isLoading: remoteServicesLoading } = useQuery({
+    queryKey: ['geonoderemoteservices', connection.id],
+    queryFn: () => api.getGeoNodeRemoteServices(connection.id),
+    enabled: isExpanded,
+    staleTime: 30000,
+  })
+
+  const isLoading =
+    datasetsLoading ||
+    mapsLoading ||
+    documentsLoading ||
+    geostoriesLoading ||
+    dashboardsLoading ||
+    remoteServicesLoading
 
   const node: TreeNode = {
     id: nodeId,
@@ -162,18 +176,12 @@ export function GeoNodeConnectionNode({ connection }: GeoNodeConnectionNodeProps
             isLoading={dashboardsLoading}
           />
 
-          {!isLoading &&
-            (!datasetsData?.datasets?.length &&
-              !mapsData?.maps?.length &&
-              !documentsData?.documents?.length &&
-              !geostoriesData?.geostories?.length &&
-              !dashboardsData?.dashboards?.length) && (
-              <Box px={2} py={2} ml={3 * 4}>
-                <Text color="gray.500" fontSize="sm">
-                  No resources found
-                </Text>
-              </Box>
-            )}
+          {/* Remote Services */}
+          <GeoNodeRemoteServicesNode
+            connectionId={connection.id}
+            services={remoteServicesData?.services || []}
+            isLoading={remoteServicesLoading}
+          />
         </>
       )}
     </Box>

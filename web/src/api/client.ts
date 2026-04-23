@@ -36,7 +36,9 @@ import type {
   GeoNodeDatasetsResponse,
   GeoNodeDocumentsResponse,
   GeoNodeGeoStoriesResponse,
+  GeoNodeHarvestResourcesResponse,
   GeoNodeMapsResponse,
+  GeoNodeRemoteServicesResponse,
   GeoNodeResourcesResponse,
   GeoNodeTestResult,
   GeoServerContact,
@@ -1159,6 +1161,68 @@ export async function getGeoNodeDashboards(
   if (params.toString()) url += `?${params.toString()}`
   const response = await fetch(url)
   return handleResponse<GeoNodeDashboardsResponse>(response)
+}
+
+export async function getGeoNodeRemoteServices(
+  connectionId: string
+): Promise<GeoNodeRemoteServicesResponse> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${connectionId}/remote-services`
+  )
+  return handleResponse<GeoNodeRemoteServicesResponse>(response)
+}
+
+export async function createGeoNodeRemoteService(
+  geonodeConnectionId: string,
+  geoserverConnectionId: string,
+  type: string = 'WMS'
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${geonodeConnectionId}/remote-services/${geoserverConnectionId}/connect`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type }),
+    }
+  )
+  return handleResponse<void>(response)
+}
+
+export async function deleteGeoNodeRemoteService(
+  connectionId: string,
+  serviceId: number
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${connectionId}/remote-services/${serviceId}`,
+    { method: 'DELETE' }
+  )
+  return handleResponse<void>(response)
+}
+
+export async function getGeoNodeRemoteServiceResources(
+  connectionId: string,
+  serviceId: number
+): Promise<GeoNodeHarvestResourcesResponse> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${connectionId}/remote-services/${serviceId}/resources`
+  )
+  return handleResponse<GeoNodeHarvestResourcesResponse>(response)
+}
+
+export async function importGeoNodeRemoteServiceResources(
+  connectionId: string,
+  serviceId: number,
+  resourceIds?: string[]
+): Promise<{ resources: Array<{ id: string }> }> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${connectionId}/remote-services/${serviceId}/import`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resourceIds }),
+    }
+  )
+  return handleResponse<{ resources: Array<{ id: string }> }>(response)
 }
 
 export async function uploadGeoNodeDataset(

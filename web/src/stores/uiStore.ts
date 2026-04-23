@@ -32,6 +32,7 @@ export type DialogType =
   | 'qgispreview'
   | 'geonode'
   | 'geonodeupload'
+  | 'geonodeaddremoteservice'
   | 'icebergconnection'
   | 'icebergnamespace'
   | 'icebergtable'

@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from apps.core.config import GeoNodeConnection, get_config
 from apps.upload.views import session_manager
 from .client import GeoNodeClient, get_geonode_client
+from .remote_service import get_remote_service
 from .utilities import (
     RESOURCE_TYPE_DETAIL_REQUEST_MAP, RESOURCE_TYPE_LIST_REQUEST_MAP
 )
@@ -296,6 +297,153 @@ class GeoNodeUploadCompleteView(APIView):
             )
         finally:
             session_manager.delete_session(session_id)
+
+
+class GeoNodeRemoteServiceListView(APIView):
+    """List and create remote services on a GeoNode instance."""
+
+    def get(self, request, conn_id):
+        """Return all remote services from the GeoNode admin."""
+        try:
+            with get_remote_service(conn_id, str(request.user.id)) as svc:
+                services = svc.list_services()
+            return Response({"services": [s.to_dict() for s in services]})
+        except PermissionError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+class GeoNodeRemoteServiceConnectView(APIView):
+    """Connect a GeoServer instance as a remote service in GeoNode."""
+
+    def post(self, request, conn_id, geoserver_conn_id):
+        """Register the GeoServer connection as a WMS remote service.
+
+        Looks up the GeoServer connection by ID, derives its WMS URL,
+        and registers it in GeoNode admin.
+        """
+        from apps.core.config import get_config as get_core_config
+
+        config = get_core_config(str(request.user.id))
+        geoserver_conn = config.get_connection(geoserver_conn_id)
+        if not geoserver_conn:
+            return Response(
+                {"error": "GeoServer connection not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        base = geoserver_conn.url.rstrip("/")
+        wms_url = base if base.endswith("/wms") else f"{base}/wms"
+
+        service_type = request.data.get("type", "WMS")
+
+        try:
+            with get_remote_service(conn_id, str(request.user.id)) as svc:
+                svc.create_service(
+                    base_url=wms_url,
+                    service_type=service_type,
+                )
+            return Response({"status": "created"}, status=status.HTTP_201_CREATED)
+        except PermissionError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class GeoNodeRemoteServiceResourcesView(APIView):
+    """List available resources from a remote service harvest page."""
+
+    def get(self, request, conn_id, service_id):
+        """Return resources available to import from the harvest page."""
+        try:
+            with get_remote_service(conn_id, str(request.user.id)) as svc:
+                resources = svc.list_harvest_resources(int(service_id))
+            return Response({"resources": resources})
+        except PermissionError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class GeoNodeRemoteServiceImportView(APIView):
+    """Import resources from a remote service via the harvest page."""
+
+    def post(self, request, conn_id, service_id):
+        """Rescan and import resources. Pass resourceIds to import a subset."""
+        resource_ids = request.data.get("resourceIds") or None
+        try:
+            with get_remote_service(conn_id, str(request.user.id)) as svc:
+                resources = svc.import_resources(int(service_id), resource_ids)
+            return Response({"resources": resources})
+        except PermissionError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class GeoNodeRemoteServiceDeleteView(APIView):
+    """Delete a remote service from a GeoNode instance."""
+
+    def delete(self, request, conn_id, service_id):
+        """Delete a remote service by ID."""
+        try:
+            with get_remote_service(conn_id, str(request.user.id)) as svc:
+                svc.delete_service(int(service_id))
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except PermissionError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
 
 class GeoNodeCategoryListView(APIView):

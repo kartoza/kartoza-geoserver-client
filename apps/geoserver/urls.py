@@ -23,6 +23,11 @@ urlpatterns = [
         name="datastore-list",
     ),
     path(
+        "datastores/<str:conn_id>/<str:workspace>/connect/<str:pg_conn_id>",
+        views.DataStoreConnectPGView.as_view(),
+        name="datastore-connect-pg",
+    ),
+    path(
         "datastores/<str:conn_id>/<str:workspace>/<str:store>",
         views.DataStoreDetailView.as_view(),
         name="datastore-detail",

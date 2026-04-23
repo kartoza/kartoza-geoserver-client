@@ -43,7 +43,7 @@ interface Props {
   mode: PGEditorModeType
 }
 
-export default function PGDataStorePostGIS({ form, setForm, mode }: Props) {
+export default function DataStorePostGIS({ form, setForm, mode }: Props) {
   const [showPassword, setShowPassword] = useState(false)
   const set = (key: keyof PostGISFormData) =>
     (e: ChangeEvent<HTMLInputElement>) =>

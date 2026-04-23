@@ -28,6 +28,16 @@ urlpatterns = [
     ),
     # Schema and Tables - use service_name to match view parameter
     path(
+        "pg/services/<str:service_name>/database-names",
+        views.PGDatabaseNameListView.as_view(),
+        name="pg-database-names",
+    ),
+    path(
+        "pg/services/<str:service_name>/schema-names/<str:database_name>",
+        views.PGSchemaNameListView.as_view(),
+        name="pg-schema-names",
+    ),
+    path(
         "pg/services/<str:service_name>/schemas",
         views.PGSchemaListView.as_view(),
         name="pg-schema-list",

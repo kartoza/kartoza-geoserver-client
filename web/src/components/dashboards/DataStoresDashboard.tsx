@@ -22,7 +22,7 @@ import { useQuery } from '@tanstack/react-query'
 import * as api from '../../api'
 import { useUIStore } from '../../stores/uiStore'
 import StoreCard from '../cards/StoreCard'
-import { PGEditorMode, PGStore } from "../dialogs/PGStoreEditorDialog/types.ts";
+import { PGEditorMode, PGStore } from "../dialogs/GeoServerDataStoreEditorDialog/types.ts";
 
 interface DataStoresDashboardProps {
   connectionId: string

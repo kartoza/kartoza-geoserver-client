@@ -5,7 +5,7 @@ import UploadDialog from './UploadDialog'
 import LayerGroupDialog from './LayerGroupDialog'
 import CacheDialog from './CacheDialog'
 import LayerDialog from './LayerDialog'
-import PGStoreEditorDialog from './PGStoreEditorDialog'
+import GeoServerDataStoreEditorDialog from './GeoServerDataStoreEditorDialog'
 import AppSettingsDialog from './AppSettingsDialog'
 import DataViewerDialog from './DataViewerDialog'
 import PGServiceDashboardDialog from './PGServiceDashboardDialog'
@@ -24,6 +24,7 @@ import IcebergTableDataDialog from './IcebergTableDataDialog'
 import IcebergQueryDialog from './IcebergQueryDialog'
 import QFieldCloudConnectionDialog from './QFieldCloudConnectionDialog'
 import MerginMapsConnectionDialog from './MerginMapsConnectionDialog'
+import GeoServerDataStorePGConnectDialog from './GeoServerDataStorePGConnectDialog'
 import { SettingsDialog } from './SettingsDialog'
 import { SyncDialog } from './SyncDialog'
 import { StyleDialog } from './StyleDialog'
@@ -39,7 +40,7 @@ export default function Dialogs() {
       <LayerGroupDialog />
       <CacheDialog />
       <LayerDialog />
-      <PGStoreEditorDialog />
+      <GeoServerDataStoreEditorDialog />
       <SyncDialog />
       <StyleDialog />
       <Globe3DDialog />
@@ -61,6 +62,7 @@ export default function Dialogs() {
       <IcebergQueryDialog />
       <QFieldCloudConnectionDialog />
       <MerginMapsConnectionDialog />
+      <GeoServerDataStorePGConnectDialog />
     </>
   )
 }

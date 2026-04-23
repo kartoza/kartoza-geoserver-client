@@ -201,8 +201,36 @@ class PGServiceStatsView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
+class PGDatabaseNameListView(APIView):
+    """List database names for a PostgreSQL service."""
 
-# === Schema Browsing ===
+    def get(self, request, service_name):
+        try:
+            databases = get_pg_client(service_name, str(request.user.id)).list_databases()
+            return Response(databases)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {"error": f"Database error: {str(e)}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class PGSchemaNameListView(APIView):
+    """List schema names for a given database (lightweight, for dropdowns)."""
+
+    def get(self, request, service_name, database_name):
+        try:
+            names = get_pg_client(service_name, str(request.user.id)).list_schema_names(database_name)
+            return Response(names)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {"error": f"Database error: {str(e)}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
 
 class PGSchemaListView(APIView):

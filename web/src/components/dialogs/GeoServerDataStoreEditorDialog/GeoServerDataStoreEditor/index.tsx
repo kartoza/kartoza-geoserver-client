@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
+import { type ChangeEvent, type FormEvent, type RefObject, useEffect, useState } from 'react'
 import {
   Box,
   Button,
@@ -19,9 +19,7 @@ import { FiDatabase } from 'react-icons/fi'
 import * as api from '../../../../api'
 import { PGEditorMode, PGEditorModeType } from '../types.ts'
 import { useUIStore } from '../../../../stores/uiStore'
-import PGDataStorePostGIS, {
-  type PostGISFormData
-} from './PGDataStorePostGIS.tsx'
+import DataStorePostGIS, { type PostGISFormData } from './DataStorePostGIS.tsx'
 import { entriesToObject } from '../utils.ts'
 
 export interface Props {
@@ -29,7 +27,8 @@ export interface Props {
   workspace: string;
   storeName?: string;
   mode: PGEditorModeType
-  onSuccess?: () => void
+  formRef?: RefObject<HTMLFormElement>
+  onPendingChange?: (isPending: boolean) => void
 }
 
 export interface FormData {
@@ -44,8 +43,8 @@ const STORE_TYPES = [
 
 type StoreTypeKey = typeof STORE_TYPES[number]['key']
 
-export default function PGDataStoreEditor(
-  { connectionId, workspace, storeName, mode, onSuccess }: Props
+export default function GeoServerDataStoreEditor(
+  { connectionId, workspace, storeName, mode, formRef, onPendingChange }: Props
 ) {
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -92,7 +91,6 @@ export default function PGDataStoreEditor(
         isClosable: true,
       })
       void queryClient.invalidateQueries({ queryKey: ['datastores', connectionId, workspace] })
-      onSuccess?.()
       closeDialog()
     },
     onError: (err: Error) => {
@@ -105,6 +103,10 @@ export default function PGDataStoreEditor(
       })
     },
   })
+
+  useEffect(() => {
+    onPendingChange?.(mutation.isPending)
+  }, [mutation.isPending])
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -145,7 +147,7 @@ export default function PGDataStoreEditor(
   }
 
   return (
-    <Box as="form" onSubmit={handleSubmit}>
+    <Box as="form" ref={formRef as unknown as RefObject<HTMLDivElement>} onSubmit={handleSubmit}>
       <VStack spacing={6} align="stretch">
         <Box>
           <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={2}>
@@ -212,21 +214,12 @@ export default function PGDataStoreEditor(
             Connection Parameters
           </Text>
           {storeType === 'postgis' && (
-            <PGDataStorePostGIS
+            <DataStorePostGIS
               form={connectionParametersForm}
               setForm={setConnectionParametersForm}
               mode={mode}
             />
           )}
-          <Button
-            type="submit"
-            colorScheme="kartoza"
-            isLoading={mutation.isPending}
-            loadingText="Creating..."
-            mt={2}
-          >
-            Create Data Store
-          </Button>
         </VStack>
       </VStack>
     </Box>

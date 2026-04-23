@@ -1,9 +1,11 @@
+import { useRef, useState } from 'react'
 import {
   Box,
   Button,
   HStack,
   Icon,
   Modal,
+  VStack,
   ModalBody,
   ModalCloseButton,
   ModalContent,
@@ -18,16 +20,18 @@ import {
   PGStoreIcon,
   PGStoreText
 } from "./types.ts";
-import PGDataStoreEditor from "./PGDataStoreEditor";
+import GeoServerDataStoreEditor from "./GeoServerDataStoreEditor";
 import { useUIStore } from '../../../stores/uiStore'
 import { useTreeStore } from '../../../stores/treeStore'
 
-export default function PGStoreDialog() {
+export default function GeoServerDataStoreEditorDialog() {
   const activeDialog = useUIStore((state) => state.activeDialog)
   const dialogData = useUIStore((state) => state.dialogData)
   const closeDialog = useUIStore((state) => state.closeDialog)
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const mode = (dialogData?.mode ?? '') as PGEditorModeType
+  const formRef = useRef<HTMLFormElement>(null)
+  const [isPending, setIsPending] = useState(false)
   const isOpen = [PGStore.DATASTORE, PGStore.COVERAGE_STORE].includes(activeDialog) && [PGEditorMode.CREATE, PGEditorMode.EDIT].includes(mode);
   const connectionId = (dialogData?.data?.connectionId as string) || selectedNode?.connectionId || ''
   const workspace = (dialogData?.data?.workspace as string) || selectedNode?.workspace || ''
@@ -67,11 +71,23 @@ export default function PGStoreDialog() {
 
         <ModalBody py={6} overflowY="auto">
           {
-            activeDialog === PGStore.DATASTORE ? <PGDataStoreEditor
-              connectionId={connectionId}
-              workspace={workspace}
-              storeName={storeName}
-              mode={mode}/> : null
+            activeDialog === PGStore.DATASTORE
+              ? <GeoServerDataStoreEditor
+                connectionId={connectionId}
+                workspace={workspace}
+                storeName={storeName}
+                mode={mode}
+                formRef={formRef}
+                onPendingChange={setIsPending}/>
+              : (
+                <VStack py={10} spacing={2}>
+                  <Icon as={PGStoreIcon[activeDialog]} boxSize={8} color="gray.300"/>
+                  <Text color="gray.500" fontWeight="medium">Work in progress</Text>
+                  <Text fontSize="sm" color="gray.400">
+                    This store type editor is not yet available.
+                  </Text>
+                </VStack>
+              )
           }
         </ModalBody>
 
@@ -81,14 +97,18 @@ export default function PGStoreDialog() {
           borderTopColor="gray.100"
           bg="gray.50"
         >
-          <Button
-            colorScheme="kartoza"
-            onClick={closeDialog}
-            borderRadius="lg"
-            px={6}
-          >
-            Close
-          </Button>
+          {activeDialog === PGStore.DATASTORE && (
+            <Button
+              colorScheme="kartoza"
+              borderRadius="lg"
+              px={6}
+              isLoading={isPending}
+              loadingText="Saving..."
+              onClick={() => formRef.current?.requestSubmit()}
+            >
+              {mode.charAt(0).toUpperCase() + mode.slice(1)} Data Store
+            </Button>
+          )}
         </ModalFooter>
       </ModalContent>
     </Modal>

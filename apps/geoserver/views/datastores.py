@@ -5,9 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.exceptions import GeoServerError
-
-from ..client import get_geoserver_client
+from apps.postgres.client import get_pg_client
 from .base import get_recurse_param, handle_geoserver_error
+from ..client import get_geoserver_client
 
 
 class DataStoreListView(APIView):
@@ -78,8 +78,10 @@ class DataStoreDetailView(APIView):
             # Build update payload
             payload = {"dataStore": {"name": store}}
             if connection_params:
-                entries = [{"@key": k, "$": v} for k, v in connection_params.items()]
-                payload["dataStore"]["connectionParameters"] = {"entry": entries}
+                entries = [{"@key": k, "$": v} for k, v in
+                           connection_params.items()]
+                payload["dataStore"]["connectionParameters"] = {
+                    "entry": entries}
             if description is not None:
                 payload["dataStore"]["description"] = description
             if enabled is not None:
@@ -116,3 +118,52 @@ class DataStoreAvailableView(APIView):
             return Response(available)
         except GeoServerError:
             return Response([])
+
+
+class DataStoreConnectPGView(APIView):
+    """Create a GeoServer data store from an existing PostgreSQL service connection."""
+
+    def post(self, request, conn_id, workspace, pg_conn_id):
+        """Create a data store using credentials from a saved PG service.
+
+        The data store name defaults to the PG service name (pg_conn_id).
+        An optional 'schema' field in the request body overrides the default 'public'.
+        """
+        user_id = str(request.user.id)
+
+        try:
+            pg_client = get_pg_client(pg_conn_id, user_id)
+        except ValueError:
+            return Response(
+                {"error": f"PostgreSQL service '{pg_conn_id}' not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        service = pg_client.service
+        name = request.data.get("name") or service.name
+        database = request.data.get("database") or service.dbname
+        schema = request.data.get("schema", "public")
+        description = request.data.get("description", "")
+        enabled = request.data.get("enabled", True)
+
+        connection_params = {
+            "dbtype": "postgis",
+            "host": service.host,
+            "port": str(service.port),
+            "database": database,
+            "schema": schema,
+            "user": service.user,
+            "passwd": service.password,
+        }
+
+        try:
+            gs_client = get_geoserver_client(conn_id, user_id)
+            gs_client.create_datastore(
+                workspace, name, connection_params, description, enabled
+            )
+            return Response(
+                {"message": f"Data store '{name}' created"},
+                status=status.HTTP_201_CREATED,
+            )
+        except GeoServerError as e:
+            return handle_geoserver_error(e)

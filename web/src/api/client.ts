@@ -493,6 +493,20 @@ export async function getPGServices(): Promise<PGService[]> {
   return handleResponse<PGService[]>(response)
 }
 
+export async function getPGDatabaseNames(serviceName: string): Promise<string[]> {
+  const response = await fetch(
+    `${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/database-names`
+  )
+  return handleResponse<string[]>(response)
+}
+
+export async function getPGSchemaNames(serviceName: string, database: string): Promise<string[]> {
+  const response = await fetch(
+    `${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/schema-names/${encodeURIComponent(database)}`
+  )
+  return handleResponse<string[]>(response)
+}
+
 export async function createPGService(service: PGServiceCreate): Promise<PGService> {
   const response = await fetch(`${API_BASE}/pg/services`, {
     method: 'POST',

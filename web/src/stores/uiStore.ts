@@ -40,6 +40,7 @@ export type DialogType =
   | 'icebergquery'
   | 'qfieldcloud'
   | 'merginmaps'
+  | 'pgconnect'
   | null
 
 export type DialogMode = 'create' | 'edit' | 'delete' | 'view'

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export function useOnlineStatus(url: string): boolean | null {
   const [isOnline, setIsOnline] = useState<boolean | null>(null)
@@ -9,13 +9,13 @@ export function useOnlineStatus(url: string): boolean | null {
     const check = async () => {
       try {
         const isExternal = url.startsWith('http')
-        await fetch(url, {
+        const response = await fetch(url, {
           method: 'HEAD',
           mode: isExternal ? 'no-cors' : 'cors',
           cache: 'no-store',
           credentials: isExternal ? 'omit' : 'include',
         })
-        setIsOnline(true)
+        setIsOnline(isExternal ? true : response.ok)
       } catch {
         setIsOnline(false)
       }

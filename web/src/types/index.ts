@@ -66,8 +66,9 @@ export interface CoverageStore {
 
 export interface DataStoreCreate {
   name: string
-  type: string
-  parameters: Record<string, string>
+  description?: string
+  enabled?: boolean
+  connectionParameters: Record<string, string>
 }
 
 export interface CoverageStoreCreate {

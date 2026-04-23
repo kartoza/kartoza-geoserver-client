@@ -5,7 +5,7 @@ import UploadDialog from './UploadDialog'
 import LayerGroupDialog from './LayerGroupDialog'
 import CacheDialog from './CacheDialog'
 import LayerDialog from './LayerDialog'
-import StoreDialog from './StoreDialog'
+import PGStoreEditorDialog from './PGStoreEditorDialog'
 import AppSettingsDialog from './AppSettingsDialog'
 import DataViewerDialog from './DataViewerDialog'
 import PGServiceDashboardDialog from './PGServiceDashboardDialog'
@@ -39,7 +39,7 @@ export default function Dialogs() {
       <LayerGroupDialog />
       <CacheDialog />
       <LayerDialog />
-      <StoreDialog />
+      <PGStoreEditorDialog />
       <SyncDialog />
       <StyleDialog />
       <Globe3DDialog />

@@ -62,7 +62,7 @@ class DataStoreDetailView(APIView):
         try:
             client = get_geoserver_client(conn_id, str(request.user.id))
             ds = client.get_datastore(workspace, store)
-            return Response({"dataStore": ds})
+            return Response(ds)
         except GeoServerError as e:
             return handle_geoserver_error(e)
 

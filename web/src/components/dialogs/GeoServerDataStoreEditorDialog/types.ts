@@ -3,7 +3,7 @@ import { FiDatabase, FiImage } from 'react-icons/fi'
 export const PGStore = {
   DATASTORE: 'datastore',
   COVERAGE_STORE: 'coveragestore',
-};
+} as const;
 
 export const PGStoreIcon = {
   [PGStore.DATASTORE]: FiDatabase,

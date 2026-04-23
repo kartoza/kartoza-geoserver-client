@@ -51,8 +51,8 @@ export default function GeoServerDataStoreEditor(
   const closeDialog = useUIStore((state) => state.closeDialog)
 
   const [storeType, setStoreType] = useState<StoreTypeKey>('postgis')
-  const [form, setForm] = useState<FormData>({})
-  const [connectionParametersForm, setConnectionParametersForm] = useState<PostGISFormData>({})
+  const [form, setForm] = useState<FormData>({} as FormData)
+  const [connectionParametersForm, setConnectionParametersForm] = useState<PostGISFormData>({} as PostGISFormData)
 
   const isCreateMode = mode === PGEditorMode.CREATE
   const isEditMode = mode === PGEditorMode.EDIT
@@ -63,7 +63,7 @@ export default function GeoServerDataStoreEditor(
     queryFn: () => api.getDataStore(connectionId, workspace, storeName!),
     enabled: isEditMode && !!connectionId && !!workspace && !!storeName,
   })
-  const store = data?.dataStore
+  const store = data
 
   useEffect(() => {
     if (!store) return
@@ -81,7 +81,7 @@ export default function GeoServerDataStoreEditor(
     mutationFn: () =>
       api.createDataStore(connectionId, workspace, {
         ...form,
-        connectionParameters: connectionParametersForm
+        connectionParameters: connectionParametersForm as unknown as Record<string, string>
       }),
     onSuccess: () => {
       toast({

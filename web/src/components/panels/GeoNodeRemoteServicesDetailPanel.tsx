@@ -42,16 +42,16 @@ export default function GeoNodeRemoteServicesDetailPanel(
   }: Props) {
   const toast = useToast()
   const queryClient = useQueryClient()
-  const [selected, setSelected] = useState([])
+  const [selected, setSelected] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const cardBg = useColorModeValue('white', 'gray.800')
   const tableBg = useColorModeValue('gray.50', 'gray.700')
   const headerBg = useColorModeValue('gray.100', 'gray.600')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
-  const { data, isLoading: loading, error } = useQuery({
+  const { data, isFetching: loading, error } = useQuery({
     queryKey: ['geonoderemoteservice', geonodeConnectionId, serviceId],
-    queryFn: () => api.getGeoNodeRemoteServiceResources(geonodeConnectionId, serviceId),
+    queryFn: () => api.getGeoNodeRemoteServiceResources(geonodeConnectionId, Number(serviceId)),
     enabled: true,
     staleTime: 30000,
   })
@@ -61,7 +61,7 @@ export default function GeoNodeRemoteServicesDetailPanel(
 
     setIsSubmitting(true)
     try {
-      await api.importGeoNodeRemoteServiceResources(geonodeConnectionId, serviceId, selected)
+      await api.importGeoNodeRemoteServiceResources(geonodeConnectionId, Number(serviceId), selected)
       toast({ title: 'Resources added', status: 'success', duration: 2000 })
       queryClient.invalidateQueries({ queryKey: ['geonodedatasets', geonodeConnectionId] })
       queryClient.invalidateQueries({ queryKey: ['geonoderemoteservice', geonodeConnectionId, serviceId] })
@@ -94,7 +94,7 @@ export default function GeoNodeRemoteServicesDetailPanel(
       <Center h="400px">
         <VStack spacing={4}>
           <Icon as={FiAlertCircle} boxSize={12} color="red.500"/>
-          <Text color="red.500" fontWeight="medium">{error}</Text>
+          <Text color="red.500" fontWeight="medium">{error.message}</Text>
         </VStack>
       </Center>
     )
@@ -132,7 +132,7 @@ export default function GeoNodeRemoteServicesDetailPanel(
         <CardBody
           p={0} flex="1" minH={0} display="flex"
           flexDirection="column">
-          {data.resources.length === 0 ? (
+          {data?.resources.length === 0 ? (
             <Center h="200px">
               <VStack spacing={2}>
                 <Icon as={FiTable} boxSize={8} color="gray.400"/>
@@ -203,7 +203,7 @@ export default function GeoNodeRemoteServicesDetailPanel(
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {data.resources.map((row, rowIdx) => (
+                  {data?.resources.map((row, rowIdx) => (
                     <Tr
                       key={rowIdx}
                       _hover={{ bg: tableBg }}

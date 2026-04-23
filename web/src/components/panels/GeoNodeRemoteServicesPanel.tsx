@@ -40,7 +40,7 @@ export default function GeoNodeRemoteServicesPanel({ geonodeConnectionId }: Prop
   const borderColor = useColorModeValue('gray.200', 'gray.600')
 
   const openDialog = useUIStore((state) => state.openDialog)
-  const { data, isLoading: loading, error } = useQuery({
+  const { data, isFetching: loading, error } = useQuery({
     queryKey: ['geonoderemoteservices', geonodeConnectionId],
     queryFn: () => api.getGeoNodeRemoteServices(geonodeConnectionId),
     enabled: true,
@@ -63,7 +63,7 @@ export default function GeoNodeRemoteServicesPanel({ geonodeConnectionId }: Prop
       <Center h="400px">
         <VStack spacing={4}>
           <Icon as={FiAlertCircle} boxSize={12} color="red.500"/>
-          <Text color="red.500" fontWeight="medium">{error}</Text>
+          <Text color="red.500" fontWeight="medium">{error.message}</Text>
         </VStack>
       </Center>
     )
@@ -93,7 +93,7 @@ export default function GeoNodeRemoteServicesPanel({ geonodeConnectionId }: Prop
               <Stat textAlign="right">
                 <StatNumber
                   color="whiteAlpha.800"
-                  fontSize="3xl">{data.services.length}</StatNumber>
+                  fontSize="3xl">{data?.services.length}</StatNumber>
                 <StatLabel color="whiteAlpha.800">Services</StatLabel>
               </Stat>
             </VStack>
@@ -105,7 +105,7 @@ export default function GeoNodeRemoteServicesPanel({ geonodeConnectionId }: Prop
         flexDirection="column">
         <CardBody p={0} flex="1" minH={0} display="flex"
                   flexDirection="column">
-          {data.services.length === 0 ? (
+          {data?.services.length === 0 ? (
             <Center h="200px">
               <VStack spacing={2}>
                 <Icon as={FiTable} boxSize={8} color="gray.400"/>
@@ -151,7 +151,7 @@ export default function GeoNodeRemoteServicesPanel({ geonodeConnectionId }: Prop
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {data.services.map((row, rowIdx) => (
+                  {data?.services.map((row, rowIdx) => (
                     <Tr
                       key={rowIdx}
                       _hover={{ bg: tableBg }}

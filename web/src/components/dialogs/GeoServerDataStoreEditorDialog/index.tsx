@@ -21,7 +21,7 @@ import {
   PGStoreText
 } from "./types.ts";
 import GeoServerDataStoreEditor from "./GeoServerDataStoreEditor";
-import { useUIStore } from '../../../stores/uiStore'
+import { useUIStore, type DialogType } from '../../../stores/uiStore'
 import { useTreeStore } from '../../../stores/treeStore'
 
 export default function GeoServerDataStoreEditorDialog() {
@@ -32,7 +32,7 @@ export default function GeoServerDataStoreEditorDialog() {
   const mode = (dialogData?.mode ?? '') as PGEditorModeType
   const formRef = useRef<HTMLFormElement>(null)
   const [isPending, setIsPending] = useState(false)
-  const isOpen = [PGStore.DATASTORE, PGStore.COVERAGE_STORE].includes(activeDialog) && [PGEditorMode.CREATE, PGEditorMode.EDIT].includes(mode);
+  const isOpen = activeDialog !== null && ([PGStore.DATASTORE, PGStore.COVERAGE_STORE] as DialogType[]).includes(activeDialog) && [PGEditorMode.CREATE, PGEditorMode.EDIT].includes(mode);
   const connectionId = (dialogData?.data?.connectionId as string) || selectedNode?.connectionId || ''
   const workspace = (dialogData?.data?.workspace as string) || selectedNode?.workspace || ''
   const storeName = (dialogData?.data?.storeName as string) || selectedNode?.name || ''
@@ -54,14 +54,14 @@ export default function GeoServerDataStoreEditorDialog() {
           <HStack spacing={3}>
             <Box bg="whiteAlpha.200" p={2} borderRadius="lg">
               <Icon
-                as={PGStoreIcon[activeDialog]}
+                as={PGStoreIcon[activeDialog! as keyof typeof PGStoreIcon]}
                 boxSize={5}
                 color="white"
               />
             </Box>
             <Box>
               <Text color="white" fontWeight="600" fontSize="lg">
-                {mode.charAt(0).toUpperCase() + mode.slice(1)} {PGStoreText[activeDialog]}
+                {mode.charAt(0).toUpperCase() + mode.slice(1)} {PGStoreText[activeDialog! as keyof typeof PGStoreText]}
               </Text>
               <Text color="whiteAlpha.800" fontSize="sm">{storeName}</Text>
             </Box>
@@ -81,7 +81,7 @@ export default function GeoServerDataStoreEditorDialog() {
                 onPendingChange={setIsPending}/>
               : (
                 <VStack py={10} spacing={2}>
-                  <Icon as={PGStoreIcon[activeDialog]} boxSize={8} color="gray.300"/>
+                  <Icon as={PGStoreIcon[activeDialog! as keyof typeof PGStoreIcon]} boxSize={8} color="gray.300"/>
                   <Text color="gray.500" fontWeight="medium">Work in progress</Text>
                   <Text fontSize="sm" color="gray.400">
                     This store type editor is not yet available.

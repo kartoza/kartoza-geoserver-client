@@ -54,6 +54,10 @@ export interface DataStore {
   type?: string
   enabled: boolean
   workspace: string
+  description: string
+  connectionParameters: {
+    entry: Array<{ '@key': string; '$': string }>
+  }
 }
 
 export interface CoverageStore {

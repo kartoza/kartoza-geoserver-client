@@ -382,9 +382,9 @@ export default function MainContent() {
     case 'merginmapsproject':
       return <MerginMapsProjectPanel node={selectedNode} />
     case 'geonoderemoteservices':
-      return <GeoNodeRemoteServicesPanel geonodeConnectionId={selectedNode.geonodeConnectionId} />
+      return <GeoNodeRemoteServicesPanel geonodeConnectionId={selectedNode.geonodeConnectionId || ''} />
     case 'geonoderemoteservice':
-      return <GeoNodeRemoteServicesDetailPanel geonodeConnectionId={selectedNode.geonodeConnectionId} serviceId={selectedNode.id} name={selectedNode.name} />
+      return <GeoNodeRemoteServicesDetailPanel geonodeConnectionId={selectedNode.geonodeConnectionId || ''} serviceId={selectedNode.id} name={selectedNode.name} />
     default:
       return <Dashboard />
   }

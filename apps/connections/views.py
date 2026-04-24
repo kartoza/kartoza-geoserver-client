@@ -169,26 +169,23 @@ class ConnectionDetailView(APIView):
 class ConnectionTestExistingView(APIView):
     """Test an existing saved connection."""
 
-    def post(self, request, conn_id):
-        """Test an existing connection."""
+    def _test(self, request, conn_id):
         config_manager = get_config(request.user.id)
         conn = config_manager.get_connection(conn_id)
         if not conn:
             return Response(
                 {"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND
             )
-
         success, message, info = test_geoserver_connection(
             conn.url, conn.username, conn.password
         )
+        return Response({"success": success, "message": message, "info": info})
 
-        return Response(
-            {
-                "success": success,
-                "message": message,
-                "info": info,
-            }
-        )
+    def get(self, request, conn_id):
+        return self._test(request, conn_id)
+
+    def post(self, request, conn_id):
+        return self._test(request, conn_id)
 
 
 class ConnectionInfoView(APIView):

@@ -7,7 +7,8 @@ import * as api from '../../../api'
 import { TreeNodeRow } from '../TreeNodeRow'
 import { GeoNodeResourceCategoryNode } from './GeoNodeResourceCategoryNode'
 import { GeoNodeRemoteServicesNode } from './GeoNodeRemoteServicesNode'
-import { useOnlineStatus } from '../../../hooks/useOnlineStatus'
+import { API_BASE } from "../../../api";
+import { useOnlineStatus } from "../../../hooks/useOnlineStatus.ts";
 
 interface GeoNodeConnectionNodeProps {
   connection: GeoNodeConnection
@@ -15,7 +16,7 @@ interface GeoNodeConnectionNodeProps {
 
 export function GeoNodeConnectionNode({ connection }: GeoNodeConnectionNodeProps) {
   const nodeId = `geonodeconn-${connection.id}`
-  const isOnline = useOnlineStatus(connection.url)
+  const isOnline = useOnlineStatus(`${API_BASE}/geonode/connections/${connection.id}/test`)
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)

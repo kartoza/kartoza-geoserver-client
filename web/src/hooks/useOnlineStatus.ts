@@ -10,9 +10,6 @@ export function useOnlineStatus(url: string): boolean | null {
       try {
         const isExternal = url.startsWith('http')
         const response = await fetch(url, {
-          method: 'HEAD',
-          mode: isExternal ? 'no-cors' : 'cors',
-          cache: 'no-store',
           credentials: isExternal ? 'omit' : 'include',
         })
         setIsOnline(isExternal ? true : response.ok)

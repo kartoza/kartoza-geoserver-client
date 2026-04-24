@@ -8,10 +8,11 @@ import { TreeNodeRow } from '../TreeNodeRow'
 import { WorkspaceNode } from './WorkspaceNode'
 import type { ConnectionNodeProps } from '../types'
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus'
+import { API_BASE } from "../../../api";
 
 export function ConnectionNode({ connectionId, name, url, ableToEdit = true, ableToDelete = true }: ConnectionNodeProps) {
   const nodeId = generateNodeId('connection', connectionId)
-  const isOnline = useOnlineStatus(url)
+  const isOnline = useOnlineStatus(`${API_BASE}/connections/${connectionId}/test`)
   const isExpanded = useTreeStore((state) => state.isExpanded(nodeId))
   const toggleNode = useTreeStore((state) => state.toggleNode)
   const selectNode = useTreeStore((state) => state.selectNode)

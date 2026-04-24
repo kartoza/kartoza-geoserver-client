@@ -9,6 +9,7 @@ Provides endpoints for:
 import uuid
 
 import httpx
+import requests
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,7 +19,7 @@ from apps.upload.views import session_manager
 from .client import GeoNodeClient, get_geonode_client
 from .remote_service import get_remote_service
 from .utilities import (
-    RESOURCE_TYPE_DETAIL_REQUEST_MAP, RESOURCE_TYPE_LIST_REQUEST_MAP
+    RESOURCE_TYPE_DETAIL_REQUEST_MAP
 )
 
 
@@ -289,7 +290,9 @@ class GeoNodeUploadCompleteView(APIView):
             )
 
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": str(e)}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             return Response(
                 {"error": f"Failed to upload to GeoNode: {str(e)}"},
@@ -324,6 +327,7 @@ class GeoNodeRemoteServiceListView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
+
 class GeoNodeRemoteServiceConnectView(APIView):
     """Connect a GeoServer instance as a remote service in GeoNode."""
 
@@ -354,7 +358,9 @@ class GeoNodeRemoteServiceConnectView(APIView):
                     base_url=wms_url,
                     service_type=service_type,
                 )
-            return Response({"status": "created"}, status=status.HTTP_201_CREATED)
+            return Response(
+                {"status": "created"}, status=status.HTTP_201_CREATED
+            )
         except PermissionError as e:
             return Response(
                 {"error": str(e)},
@@ -444,6 +450,34 @@ class GeoNodeRemoteServiceDeleteView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+
+class GeoNodeTestView(APIView):
+    """Test if a URL is reachable and return its HTTP status."""
+
+    def get(self, request, conn_id):
+        """Test if a URL is reachable and return its HTTP status."""
+        config = get_config(request.user.id)
+        conn = config.get_geonode_connection(conn_id)
+        if not conn:
+            return Response(
+                {"error": "Connection not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        url_check = request.data.get("url", conn.url)
+        try:
+            response = requests.head(url_check, allow_redirects=True)
+            if response.status_code in [200]:
+                return Response(
+                    {"status": response.status_code, "ok": True}
+                )
+        except requests.exceptions.ConnectionError:
+            pass
+        return Response(
+            {"error": "Url can't be reached"},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 class GeoNodeCategoryListView(APIView):

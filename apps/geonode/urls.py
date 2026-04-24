@@ -53,6 +53,12 @@ urlpatterns = [
         views.GeoNodeRemoteServiceDeleteView.as_view(),
         name="geonode-remote-service-delete",
     ),
+    # URL test
+    path(
+        "geonode/connections/<str:conn_id>/test",
+        views.GeoNodeTestView.as_view(),
+        name="geonode-connection-url-test",
+    ),
     # Categories
     path(
         "geonode/connections/<str:conn_id>/categories",

@@ -68,6 +68,12 @@ urlpatterns = [
         views.PGQueryView.as_view(),
         name="pg-query",
     ),
+    # Upload complete (assemble only, file kept for detect-layers)
+    path(
+        "pg/upload/complete",
+        views.PGUploadCompleteView.as_view(),
+        name="pg-upload-complete",
+    ),
     # Import
     path(
         "pg/import",

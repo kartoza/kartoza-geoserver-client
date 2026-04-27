@@ -699,28 +699,23 @@ export interface ImportJob {
 }
 
 export interface ImportRequest {
-  source_file: string
-  target_service: string
-  target_schema?: string
-  table_name?: string
+  filePath: string
+  serviceName: string
+  schema?: string
+  tableName?: string
   srid?: number
-  target_srid?: number
   overwrite?: boolean
-  append?: boolean
-  source_layer?: string
+  sourceLayer?: string
 }
 
 export interface RasterImportRequest {
-  source_file: string
-  target_service: string
-  target_schema?: string
-  table_name?: string
+  filePath: string
+  serviceName: string
+  schema?: string
+  tableName?: string
   srid?: number
-  tile_size?: string
+  tileSize?: string
   overwrite?: boolean
-  append?: boolean
-  create_index?: boolean
-  out_of_db?: boolean
 }
 
 export async function getOGR2OGRStatus(): Promise<OGR2OGRStatus> {
@@ -763,10 +758,12 @@ export async function uploadFileForImport(
 }
 
 export async function detectLayers(filePath: string): Promise<LayerInfo[]> {
+  const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
   const response = await fetch(`${API_BASE}/pg/detect-layers`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ file_path: filePath }),
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    credentials: 'include',
+    body: JSON.stringify({ filePath }),
   })
   return handleResponse<LayerInfo[]>(response)
 }
@@ -776,16 +773,14 @@ export async function startVectorImport(request: ImportRequest): Promise<{
   status: string;
   message: string
 }> {
+  const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
   const response = await fetch(`${API_BASE}/pg/import`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    credentials: 'include',
     body: JSON.stringify(request),
   })
-  return handleResponse<{
-    job_id: string;
-    status: string;
-    message: string
-  }>(response)
+  return handleResponse<{ job_id: string; status: string; message: string }>(response)
 }
 
 export async function startRasterImport(request: RasterImportRequest): Promise<{
@@ -793,16 +788,14 @@ export async function startRasterImport(request: RasterImportRequest): Promise<{
   status: string;
   message: string
 }> {
+  const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
   const response = await fetch(`${API_BASE}/pg/import/raster`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    credentials: 'include',
     body: JSON.stringify(request),
   })
-  return handleResponse<{
-    job_id: string;
-    status: string;
-    message: string
-  }>(response)
+  return handleResponse<{ job_id: string; status: string; message: string }>(response)
 }
 
 export async function getImportJobStatus(jobId: string): Promise<ImportJob> {

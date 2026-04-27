@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.models import PGService
+from apps.upload.views import _assemble_file, _get_session
 
 from .client import (
     add_pg_service,
@@ -393,6 +394,7 @@ class PGImportView(APIView):
         file_path = request.data.get("filePath")
         target_schema = request.data.get("schema", "public")
         table_name = request.data.get("tableName")
+        source_layer = request.data.get("sourceLayer")
         srid = request.data.get("srid")
         overwrite = request.data.get("overwrite", False)
 
@@ -438,6 +440,9 @@ class PGImportView(APIView):
 
         if table_name:
             cmd.extend(["-nln", f"{target_schema}.{table_name}"])
+
+        if source_layer:
+            cmd.extend(["-sql", f"SELECT * FROM \"{source_layer}\""])
 
         if srid:
             cmd.extend(["-t_srs", f"EPSG:{srid}"])
@@ -757,3 +762,51 @@ class OGR2OGRStatusView(APIView):
             "vector_extensions": vector_extensions,
             "raster_extensions": raster_extensions,
         })
+
+
+class PGUploadCompleteView(APIView):
+    """Assemble a chunked upload for PG import — file is kept for detect-layers."""
+
+    def post(self, request):
+        """Assemble uploaded chunks and return the file path.
+
+        Expected body:
+        {
+            "sessionId": "uuid"
+        }
+        """
+        session_id = request.data.get("sessionId")
+        if not session_id:
+            return Response(
+                {"error": "sessionId is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        session = _get_session(session_id)
+        if not session:
+            return Response(
+                {"error": "Upload session not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not session.is_complete():
+            missing = session.total_chunks - len(session.received_chunks)
+            return Response(
+                {"error": f"Upload incomplete. Missing {missing} chunks."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            file_path = _assemble_file(session)
+            return Response({
+                "sessionId": session_id,
+                "filename": session.filename,
+                "fileSize": session.file_size,
+                "path": str(file_path),
+            })
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to assemble file: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+

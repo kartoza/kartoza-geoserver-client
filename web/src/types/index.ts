@@ -230,6 +230,10 @@ export interface UploadResult {
   storeName?: string
   storeType?: string
   published?: boolean
+  path?: string
+  filename?: string
+  fileSize?: number
+  sessionId?: string
 }
 
 // Preview types

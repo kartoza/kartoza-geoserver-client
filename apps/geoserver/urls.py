@@ -37,6 +37,11 @@ urlpatterns = [
         views.DataStoreAvailableView.as_view(),
         name="datastore-available",
     ),
+    path(
+        "datastores/<str:conn_id>/<str:workspace>/<str:store>/publish",
+        views.DataStorePublishView.as_view(),
+        name="datastore-publish",
+    ),
     # Coverage Stores
     path(
         "coveragestores/<str:conn_id>/<str:workspace>",

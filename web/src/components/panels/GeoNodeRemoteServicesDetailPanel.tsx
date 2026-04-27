@@ -136,7 +136,8 @@ export default function GeoNodeRemoteServicesDetailPanel(
             <Center h="200px">
               <VStack spacing={2}>
                 <Icon as={FiTable} boxSize={8} color="gray.400"/>
-                <Text color="gray.500">No available resources to be imported.</Text>
+                <Text color="gray.500">No available resources to be
+                  imported.</Text>
               </VStack>
             </Center>
           ) : (
@@ -310,7 +311,7 @@ export default function GeoNodeRemoteServicesDetailPanel(
         py={8}
       >
         Import selected resources {isSubmitting &&
-        <Spinner size="xl" color="teal.500" thickness="4px"/>}
+        <Spinner size="md" color="white" thickness="2px" ml={4}/>}
       </Button>
     </VStack>
   )

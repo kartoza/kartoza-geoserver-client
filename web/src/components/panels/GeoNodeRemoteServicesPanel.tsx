@@ -27,6 +27,7 @@ import { FiAlertCircle, FiGlobe, FiPlus, FiTable } from 'react-icons/fi'
 import { useQuery } from '@tanstack/react-query'
 import * as api from '../../api'
 import { useUIStore } from "../../stores/uiStore.ts";
+import { useTreeStore } from "../../stores/treeStore";
 
 interface Props {
   geonodeConnectionId: string
@@ -40,6 +41,7 @@ export default function GeoNodeRemoteServicesPanel({ geonodeConnectionId }: Prop
   const borderColor = useColorModeValue('gray.200', 'gray.600')
 
   const openDialog = useUIStore((state) => state.openDialog)
+  const selectNode = useTreeStore((state) => state.selectNode)
   const { data, isFetching: loading, error } = useQuery({
     queryKey: ['geonoderemoteservices', geonodeConnectionId],
     queryFn: () => api.getGeoNodeRemoteServices(geonodeConnectionId),
@@ -172,10 +174,16 @@ export default function GeoNodeRemoteServicesPanel({ geonodeConnectionId }: Prop
                         overflow="hidden"
                         textOverflow="ellipsis"
                         whiteSpace="nowrap"
+                        cursor="pointer"
+                        _hover={{ color: 'blue.500', textDecoration: 'underline' }}
+                        onClick={() => selectNode({
+                          id: `${row.id}`,
+                          name: row.name,
+                          type: 'geonoderemoteservice',
+                          geonodeConnectionId,
+                        })}
                       >
-                        <Text
-                          as="span"
-                        >
+                        <Text as="span">
                           {row.name}
                         </Text>
                       </Td>

@@ -80,7 +80,7 @@ export function TreeNodeRow({
       align="center"
       py={2}
       px={2}
-      ml={(level-1) * 4}
+      ml={(level-1) * 2}
       cursor={isEnabled ? 'pointer' : 'not-allowed'}
       opacity={isEnabled ? 1 : 0.4}
       bg={bgColor}

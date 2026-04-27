@@ -10,6 +10,7 @@ from .datastores import (
     DataStoreConnectPGView,
     DataStoreDetailView,
     DataStoreListView,
+    DataStorePublishView,
 )
 from .featuretypes import FeatureTypeDetailView, FeatureTypeListView
 from .layergroups import LayerGroupDetailView, LayerGroupListView
@@ -32,6 +33,7 @@ __all__ = [
     "DataStoreListView",
     "DataStoreDetailView",
     "DataStoreAvailableView",
+    "DataStorePublishView",
     "DataStoreConnectPGView",
     # Coverage Stores
     "CoverageStoreListView",

@@ -71,7 +71,6 @@ export interface DataStoreContentsNodeProps {
   workspace: string
   storeName: string
   featureTypes: { name: string }[]
-  availableFeatureTypes: string[]
 }
 
 export interface CoverageStoreContentsNodeProps {

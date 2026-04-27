@@ -115,9 +115,53 @@ class DataStoreAvailableView(APIView):
         try:
             client = get_geoserver_client(conn_id, str(request.user.id))
             available = client.list_available_featuretypes(workspace, store)
-            return Response(available)
+            return Response({"available": available})
         except GeoServerError:
-            return Response([])
+            return Response({"available": []})
+
+
+class DataStorePublishView(APIView):
+    """Publish (import) feature types from a PostGIS datastore as layers."""
+
+    def post(self, request, conn_id, workspace, store):
+        """Publish selected feature types.
+
+        Expected body:
+        {
+            "featureTypes": ["table1", "table2"],
+            "srs": "EPSG:4326"  // optional
+        }
+        """
+        feature_types = request.data.get("featureTypes", [])
+        srs = request.data.get("srs", "EPSG:4326")
+
+        if not feature_types:
+            return Response(
+                {"error": "featureTypes is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            client = get_geoserver_client(conn_id, str(request.user.id))
+        except GeoServerError as e:
+            return handle_geoserver_error(e)
+
+        published = []
+        errors = []
+
+        for name in feature_types:
+            try:
+                client.create_featuretype(
+                    workspace, store, name, native_name=name, srs=srs
+                )
+                published.append(name)
+            except GeoServerError as e:
+                errors.append({"name": name, "error": str(e.message)})
+
+        response_status = (
+            status.HTTP_201_CREATED if published else status.HTTP_400_BAD_REQUEST
+        )
+        return Response({"published": published, "errors": errors}, status=response_status)
 
 
 class DataStoreConnectPGView(APIView):

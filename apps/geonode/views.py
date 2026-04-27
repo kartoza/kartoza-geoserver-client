@@ -6,7 +6,9 @@ Provides endpoints for:
 - Resource browsing
 """
 
+import shutil
 import uuid
+from pathlib import Path
 
 import httpx
 import requests
@@ -15,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.config import GeoNodeConnection, get_config
-from apps.upload.views import session_manager
+from apps.upload.views import _assemble_file, _get_session
 from .client import GeoNodeClient, get_geonode_client
 from .remote_service import get_remote_service
 from .utilities import (
@@ -242,7 +244,7 @@ class GeoNodeUploadCompleteView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        session = session_manager.get_session(session_id)
+        session = _get_session(session_id)
         if not session:
             return Response(
                 {"error": "Upload session not found"},
@@ -257,7 +259,7 @@ class GeoNodeUploadCompleteView(APIView):
             )
 
         try:
-            file_path = session_manager.assemble_file(session_id)
+            file_path = _assemble_file(session)
 
             with open(file_path, "rb") as f:
                 data = f.read()
@@ -299,7 +301,9 @@ class GeoNodeUploadCompleteView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         finally:
-            session_manager.delete_session(session_id)
+            upload_dir = Path(session.upload_dir)
+            if upload_dir.exists():
+                shutil.rmtree(upload_dir, ignore_errors=True)
 
 
 class GeoNodeRemoteServiceListView(APIView):

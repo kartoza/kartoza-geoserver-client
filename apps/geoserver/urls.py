@@ -23,6 +23,11 @@ urlpatterns = [
         name="datastore-list",
     ),
     path(
+        "datastores/<str:conn_id>/<str:workspace>/connect/<str:pg_conn_id>",
+        views.DataStoreConnectPGView.as_view(),
+        name="datastore-connect-pg",
+    ),
+    path(
         "datastores/<str:conn_id>/<str:workspace>/<str:store>",
         views.DataStoreDetailView.as_view(),
         name="datastore-detail",
@@ -31,6 +36,11 @@ urlpatterns = [
         "datastores/<str:conn_id>/<str:workspace>/<str:store>/available",
         views.DataStoreAvailableView.as_view(),
         name="datastore-available",
+    ),
+    path(
+        "datastores/<str:conn_id>/<str:workspace>/<str:store>/publish",
+        views.DataStorePublishView.as_view(),
+        name="datastore-publish",
     ),
     # Coverage Stores
     path(

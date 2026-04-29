@@ -5,7 +5,13 @@ Imports all view classes for URL routing.
 
 from .coverages import CoverageDetailView, CoverageListView
 from .coveragestores import CoverageStoreDetailView, CoverageStoreListView
-from .datastores import DataStoreAvailableView, DataStoreDetailView, DataStoreListView
+from .datastores import (
+    DataStoreAvailableView,
+    DataStoreConnectPGView,
+    DataStoreDetailView,
+    DataStoreListView,
+    DataStorePublishView,
+)
 from .featuretypes import FeatureTypeDetailView, FeatureTypeListView
 from .layergroups import LayerGroupDetailView, LayerGroupListView
 from .layers import (
@@ -27,6 +33,8 @@ __all__ = [
     "DataStoreListView",
     "DataStoreDetailView",
     "DataStoreAvailableView",
+    "DataStorePublishView",
+    "DataStoreConnectPGView",
     # Coverage Stores
     "CoverageStoreListView",
     "CoverageStoreDetailView",

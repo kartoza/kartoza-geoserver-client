@@ -16,7 +16,7 @@ class UploadShapefileView(APIView):
     def post(self, request, conn_id, workspace):
         """Upload a shapefile ZIP."""
         try:
-            client = get_geoserver_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
             store_name = request.data.get("name")
             charset = request.data.get("charset", "UTF-8")
 
@@ -49,7 +49,7 @@ class UploadGeoTiffView(APIView):
     def post(self, request, conn_id, workspace):
         """Upload a GeoTIFF file."""
         try:
-            client = get_geoserver_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
             store_name = request.data.get("name")
 
             if not store_name:
@@ -81,7 +81,7 @@ class UploadGeoPackageView(APIView):
     def post(self, request, conn_id, workspace):
         """Upload a GeoPackage file."""
         try:
-            client = get_geoserver_client(conn_id)
+            client = get_geoserver_client(conn_id, str(request.user.id))
             store_name = request.data.get("name")
 
             if not store_name:

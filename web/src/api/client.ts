@@ -27,49 +27,52 @@
 
 import { API_BASE, handleResponse } from './common'
 import type {
-  UploadResult,
-  PreviewRequest,
+  ConversionJob,
+  ConversionToolStatus,
+  DashboardData,
+  GeoNodeConnection,
+  GeoNodeConnectionCreate,
+  GeoNodeDashboardsResponse,
+  GeoNodeDatasetsResponse,
+  GeoNodeDocumentsResponse,
+  GeoNodeGeoStoriesResponse,
+  GeoNodeHarvestResourcesResponse,
+  GeoNodeMapsResponse,
+  GeoNodeRemoteServicesResponse,
+  GeoNodeResourcesResponse,
+  GeoNodeTestResult,
+  GeoServerContact,
+  GWCDiskQuota,
+  GWCGridSet,
   GWCLayer,
   GWCSeedRequest,
   GWCSeedTask,
-  GWCGridSet,
-  GWCDiskQuota,
-  GeoServerContact,
-  SyncConfiguration,
-  SyncTask,
-  StartSyncRequest,
-  DashboardData,
-  ServerStatus,
-  ConversionJob,
-  ConversionToolStatus,
-  QGISProject,
-  QGISProjectCreate,
-  GeoNodeConnection,
-  GeoNodeConnectionCreate,
-  GeoNodeTestResult,
-  GeoNodeDatasetsResponse,
-  GeoNodeMapsResponse,
-  GeoNodeDocumentsResponse,
-  GeoNodeGeoStoriesResponse,
-  GeoNodeDashboardsResponse,
-  GeoNodeResourcesResponse,
+  MerginMapsConnection,
+  MerginMapsConnectionCreate,
+  MerginMapsProjectsResponse,
+  MerginMapsTestResult,
+  PreviewRequest,
+  QFieldCloudCollaborator,
+  QFieldCloudCollaboratorCreate,
   QFieldCloudConnection,
   QFieldCloudConnectionCreate,
-  QFieldCloudTestResult,
-  QFieldCloudProject,
-  QFieldCloudProjectCreate,
-  QFieldCloudProjectUpdate,
+  QFieldCloudDelta,
   QFieldCloudFile,
   QFieldCloudJob,
   QFieldCloudJobCreate,
-  QFieldCloudCollaborator,
-  QFieldCloudCollaboratorCreate,
-  QFieldCloudDelta,
-  MerginMapsConnection,
-  MerginMapsConnectionCreate,
-  MerginMapsTestResult,
-  MerginMapsProjectsResponse,
+  QFieldCloudProject,
+  QFieldCloudProjectCreate,
+  QFieldCloudProjectUpdate,
+  QFieldCloudTestResult,
+  QGISProject,
+  QGISProjectCreate,
+  ServerStatus,
+  StartSyncRequest,
+  SyncConfiguration,
+  SyncTask,
+  UploadResult,
 } from '../types'
+import { getApiBase } from "../config/env.ts";
 
 // ============================================================================
 // Upload API
@@ -115,7 +118,9 @@ export async function uploadFile(
 // Preview API
 // ============================================================================
 
-export async function startPreview(request: PreviewRequest): Promise<{ url: string }> {
+export async function startPreview(request: PreviewRequest): Promise<{
+  url: string
+}> {
   const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
   const response = await fetch(`${API_BASE}/preview/`, {
     method: 'POST',
@@ -320,14 +325,20 @@ export async function getSyncTaskStatus(taskId: string): Promise<SyncTask> {
   return handleResponse<SyncTask>(response)
 }
 
-export async function stopSyncTask(taskId: string): Promise<{ success: boolean; message: string }> {
+export async function stopSyncTask(taskId: string): Promise<{
+  success: boolean;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/sync/stop/${taskId}`, {
     method: 'POST',
   })
   return handleResponse<{ success: boolean; message: string }>(response)
 }
 
-export async function stopAllSyncs(): Promise<{ success: boolean; message: string }> {
+export async function stopAllSyncs(): Promise<{
+  success: boolean;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/sync/stop`, {
     method: 'POST',
   })
@@ -352,7 +363,13 @@ export async function getServerStatus(connectionId: string): Promise<ServerStatu
 // Download API - Export resource configurations
 // ============================================================================
 
-export type DownloadResourceType = 'workspace' | 'datastore' | 'coveragestore' | 'layer' | 'style' | 'layergroup'
+export type DownloadResourceType =
+  'workspace'
+  | 'datastore'
+  | 'coveragestore'
+  | 'layer'
+  | 'style'
+  | 'layergroup'
 export type DownloadDataType = 'shapefile' | 'geotiff'
 
 export function downloadResource(
@@ -440,7 +457,9 @@ export async function search(query: string, connectionId?: string): Promise<Sear
   return handleResponse<SearchResponse>(response)
 }
 
-export async function getSearchSuggestions(): Promise<{ suggestions: string[] }> {
+export async function getSearchSuggestions(): Promise<{
+  suggestions: string[]
+}> {
   const response = await fetch(`${API_BASE}/search/suggestions`)
   return handleResponse<{ suggestions: string[] }>(response)
 }
@@ -476,6 +495,20 @@ export async function getPGServices(): Promise<PGService[]> {
   return handleResponse<PGService[]>(response)
 }
 
+export async function getPGDatabaseNames(serviceName: string): Promise<string[]> {
+  const response = await fetch(
+    `${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/database-names`
+  )
+  return handleResponse<string[]>(response)
+}
+
+export async function getPGSchemaNames(serviceName: string, database: string): Promise<string[]> {
+  const response = await fetch(
+    `${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/schema-names/${encodeURIComponent(database)}`
+  )
+  return handleResponse<string[]>(response)
+}
+
 export async function createPGService(service: PGServiceCreate): Promise<PGService> {
   const response = await fetch(`${API_BASE}/pg/services`, {
     method: 'POST',
@@ -492,7 +525,10 @@ export async function deletePGService(name: string): Promise<void> {
   return handleResponse<void>(response)
 }
 
-export async function testPGService(name: string): Promise<{ success: boolean; message: string }> {
+export async function testPGService(name: string): Promise<{
+  success: boolean;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/pg/services/${encodeURIComponent(name)}/test`, {
     method: 'POST',
   })
@@ -610,7 +646,7 @@ export interface PGSchemaStats {
 
 export async function getPGSchemaStats(serviceName: string, schemaName: string): Promise<PGSchemaStats> {
   const response = await fetch(
-    `${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/schemastats?schema=${encodeURIComponent(schemaName)}`
+    `${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/schemas/${encodeURIComponent(schemaName)}/stats`
   )
   return handleResponse<PGSchemaStats>(response)
 }
@@ -663,32 +699,27 @@ export interface ImportJob {
 }
 
 export interface ImportRequest {
-  source_file: string
-  target_service: string
-  target_schema?: string
-  table_name?: string
+  filePath: string
+  serviceName: string
+  schema?: string
+  tableName?: string
   srid?: number
-  target_srid?: number
   overwrite?: boolean
-  append?: boolean
-  source_layer?: string
+  sourceLayer?: string
 }
 
 export interface RasterImportRequest {
-  source_file: string
-  target_service: string
-  target_schema?: string
-  table_name?: string
+  filePath: string
+  serviceName: string
+  schema?: string
+  tableName?: string
   srid?: number
-  tile_size?: string
+  tileSize?: string
   overwrite?: boolean
-  append?: boolean
-  create_index?: boolean
-  out_of_db?: boolean
 }
 
 export async function getOGR2OGRStatus(): Promise<OGR2OGRStatus> {
-  const response = await fetch(`${API_BASE}/pg/ogr2ogr/status`)
+  const response = await fetch(`${getApiBase()}/pg/ogr2ogr/status`)
   return handleResponse<OGR2OGRStatus>(response)
 }
 
@@ -727,27 +758,41 @@ export async function uploadFileForImport(
 }
 
 export async function detectLayers(filePath: string): Promise<LayerInfo[]> {
+  const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
   const response = await fetch(`${API_BASE}/pg/detect-layers`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ file_path: filePath }),
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    credentials: 'include',
+    body: JSON.stringify({ filePath }),
   })
   return handleResponse<LayerInfo[]>(response)
 }
 
-export async function startVectorImport(request: ImportRequest): Promise<{ job_id: string; status: string; message: string }> {
+export async function startVectorImport(request: ImportRequest): Promise<{
+  job_id: string;
+  status: string;
+  message: string
+}> {
+  const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
   const response = await fetch(`${API_BASE}/pg/import`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    credentials: 'include',
     body: JSON.stringify(request),
   })
   return handleResponse<{ job_id: string; status: string; message: string }>(response)
 }
 
-export async function startRasterImport(request: RasterImportRequest): Promise<{ job_id: string; status: string; message: string }> {
+export async function startRasterImport(request: RasterImportRequest): Promise<{
+  job_id: string;
+  status: string;
+  message: string
+}> {
+  const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
   const response = await fetch(`${API_BASE}/pg/import/raster`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    credentials: 'include',
     body: JSON.stringify(request),
   })
   return handleResponse<{ job_id: string; status: string; message: string }>(response)
@@ -766,7 +811,7 @@ export interface QueryResult {
   columns: string[]
   rows: unknown[][]
   row_count: number
-  execution_time_ms: number
+  duration_ms: number
 }
 
 export interface ExecuteQueryResponse {
@@ -780,13 +825,12 @@ export async function executeQuery(
   sql: string,
   maxRows: number = 100
 ): Promise<ExecuteQueryResponse> {
-  const response = await fetch(`${API_BASE}/query/execute`, {
+  const response = await fetch(`${API_BASE}/pg/services/${encodeURIComponent(serviceName)}/query`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      service_name: serviceName,
-      sql,
-      max_rows: maxRows,
+      query: sql,
+      limit: maxRows,
     }),
   })
   return handleResponse<ExecuteQueryResponse>(response)
@@ -799,7 +843,9 @@ export async function getTableData(
   limit: number = 100,
   offset: number = 0
 ): Promise<ExecuteQueryResponse> {
-  const sql = `SELECT * FROM "${schemaName}"."${tableName}" LIMIT ${limit} OFFSET ${offset}`
+  const sql = `SELECT *
+               FROM "${schemaName}"."${tableName}" LIMIT ${limit}
+               OFFSET ${offset}`
   return executeQuery(serviceName, sql, limit)
 }
 
@@ -836,7 +882,10 @@ export async function getConversionJob(jobId: string): Promise<ConversionJob> {
   return handleResponse<ConversionJob>(response)
 }
 
-export async function cancelConversionJob(jobId: string): Promise<{ success: boolean; message: string }> {
+export async function cancelConversionJob(jobId: string): Promise<{
+  success: boolean;
+  message: string
+}> {
   const response = await fetch(`${API_BASE}/s3/conversion/jobs/${jobId}`, {
     method: 'DELETE',
   })
@@ -1107,12 +1156,80 @@ export async function getGeoNodeDashboards(
   return handleResponse<GeoNodeDashboardsResponse>(response)
 }
 
+export async function getGeoNodeRemoteServices(
+  connectionId: string
+): Promise<GeoNodeRemoteServicesResponse> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${connectionId}/remote-services`
+  )
+  return handleResponse<GeoNodeRemoteServicesResponse>(response)
+}
+
+export async function createGeoNodeRemoteService(
+  geonodeConnectionId: string,
+  geoserverConnectionId: string,
+  type: string = 'WMS'
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${geonodeConnectionId}/remote-services/${geoserverConnectionId}/connect`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type }),
+    }
+  )
+  return handleResponse<void>(response)
+}
+
+export async function deleteGeoNodeRemoteService(
+  connectionId: string,
+  serviceId: number
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${connectionId}/remote-services/${serviceId}`,
+    { method: 'DELETE' }
+  )
+  return handleResponse<void>(response)
+}
+
+export async function getGeoNodeRemoteServiceResources(
+  connectionId: string,
+  serviceId: number
+): Promise<GeoNodeHarvestResourcesResponse> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${connectionId}/remote-services/${serviceId}/resources`
+  )
+  return handleResponse<GeoNodeHarvestResourcesResponse>(response)
+}
+
+export async function importGeoNodeRemoteServiceResources(
+  connectionId: string,
+  serviceId: number,
+  resourceIds?: string[]
+): Promise<{ resources: Array<{ id: string }> }> {
+  const response = await fetch(
+    `${API_BASE}/geonode/connections/${connectionId}/remote-services/${serviceId}/import`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resourceIds }),
+    }
+  )
+  return handleResponse<{ resources: Array<{ id: string }> }>(response)
+}
+
 export async function uploadGeoNodeDataset(
   connectionId: string,
   file: File,
   title?: string,
   abstract?: string
-): Promise<{ success: boolean; id?: number; status?: string; message?: string; error?: string }> {
+): Promise<{
+  success: boolean;
+  id?: number;
+  status?: string;
+  message?: string;
+  error?: string
+}> {
   const formData = new FormData()
   formData.append('file', file)
   if (title) formData.append('title', title)

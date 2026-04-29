@@ -5,11 +5,9 @@ import {
   CardBody,
   Center,
   Checkbox,
-  Flex,
   Heading,
   HStack,
   Icon,
-  Spacer,
   Spinner,
   Table,
   Tbody,
@@ -26,6 +24,9 @@ import { FiAlertCircle, FiGlobe, FiPlus, FiTable } from 'react-icons/fi'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as api from '../../api'
 import { useState } from "react";
+import { Panel } from "../Panel";
+import { PanelHeader } from "../Panel/PanelHeader";
+import { PanelBody } from "../Panel/PanelBody";
 
 interface Props {
   geonodeConnectionId: string,
@@ -101,218 +102,211 @@ export default function GeoNodeRemoteServicesDetailPanel(
   }
 
   return (
-    <VStack spacing={6} align="stretch">
-      {/* Header Card */}
-      <Card
-        bg="linear-gradient(135deg, #0a3a50 0%, #175a77 50%, #2d7d9b 100%)"
-        color="white"
-      >
-        <CardBody py={8} px={6}>
-          <Flex align="center" wrap="wrap" gap={4}>
-            <HStack spacing={4}>
-              <Box bg="whiteAlpha.200" p={3} borderRadius="lg">
-                <Icon as={FiGlobe} boxSize={8}/>
-              </Box>
-              <VStack align="start" spacing={1}>
-                <HStack spacing={3}>
-                  <Heading size="lg" color="white">{name}</Heading>
-                </HStack>
-                <HStack spacing={3} opacity={0.9}>
-                  <Text fontSize="sm">Available resources</Text>
-                </HStack>
-              </VStack>
+    <Panel>
+      <PanelHeader>
+        <HStack spacing={4}>
+          <Box bg="whiteAlpha.200" p={3} borderRadius="lg">
+            <Icon as={FiGlobe} boxSize={8}/>
+          </Box>
+          <VStack align="start" spacing={1}>
+            <HStack spacing={3}>
+              <Heading size="lg" color="white">{name}</Heading>
             </HStack>
-            <Spacer/>
-          </Flex>
-        </CardBody>
-      </Card>
-      <Card
-        bg={cardBg} flex="1" overflow="hidden" minH={0} display="flex"
-        flexDirection="column">
-        <CardBody
-          p={0} flex="1" minH={0} display="flex"
+            <HStack spacing={3} opacity={0.9}>
+              <Text fontSize="sm">Available resources</Text>
+            </HStack>
+          </VStack>
+        </HStack>
+      </PanelHeader>
+      <PanelBody>
+        <Card
+          bg={cardBg} flex="1" overflow="hidden" minH={0} display="flex"
           flexDirection="column">
-          {data?.resources.length === 0 ? (
-            <Center h="200px">
-              <VStack spacing={2}>
-                <Icon as={FiTable} boxSize={8} color="gray.400"/>
-                <Text color="gray.500">No available resources to be
-                  imported.</Text>
-              </VStack>
-            </Center>
-          ) : (
-            <Box
-              flex="1"
-              minH={0}
-              overflowY="auto"
-              overflowX="auto"
-            >
-              <Table size="sm" variant="simple">
-                <Thead position="sticky" top={0} bg={headerBg} zIndex={1}>
-                  <Tr>
-                    <Th
-                      borderColor={borderColor}
-                      py={3}
-                      fontSize="xs"
-                      textTransform="none"
-                      color="gray.500"
-                      w="50px"
-                    >
-                      ID
-                    </Th>
-                    <Th
-                      borderColor={borderColor}
-                      py={3}
-                      fontSize="xs"
-                      textTransform="none"
-                      color="gray.500"
-                      w="50px"
-                    >
-                    </Th>
-                    <Th
-                      borderColor={borderColor}
-                      py={3}
-                      fontSize="xs"
-                      whiteSpace="nowrap"
-                    >
-                      Name
-                    </Th>
-                    <Th
-                      borderColor={borderColor}
-                      py={3}
-                      fontSize="xs"
-                      whiteSpace="nowrap"
-                    >
-                      Title
-                    </Th>
-                    <Th
-                      borderColor={borderColor}
-                      py={3}
-                      fontSize="xs"
-                      whiteSpace="nowrap"
-                    >
-                      Abstract
-                    </Th>
-                    <Th
-                      borderColor={borderColor}
-                      py={3}
-                      fontSize="xs"
-                      whiteSpace="nowrap"
-                    >
-                      Type
-                    </Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {data?.resources.map((row, rowIdx) => (
-                    <Tr
-                      key={rowIdx}
-                      _hover={{ bg: tableBg }}
-                    >
-                      <Td
+          <CardBody
+            p={0} flex="1" minH={0} display="flex"
+            flexDirection="column">
+            {data?.resources.length === 0 ? (
+              <Center h="200px">
+                <VStack spacing={2}>
+                  <Icon as={FiTable} boxSize={8} color="gray.400"/>
+                  <Text color="gray.500">No available resources to be
+                    imported.</Text>
+                </VStack>
+              </Center>
+            ) : (
+              <Box
+                flex="1"
+                minH={0}
+                overflowY="auto"
+                overflowX="auto"
+              >
+                <Table size="sm" variant="simple">
+                  <Thead position="sticky" top={0} bg={headerBg} zIndex={1}>
+                    <Tr>
+                      <Th
                         borderColor={borderColor}
+                        py={3}
                         fontSize="xs"
+                        textTransform="none"
                         color="gray.500"
-                        py={2}
+                        w="50px"
                       >
-                        <Checkbox
-                          isChecked={selected.includes(row.id)}
-                          onChange={() =>
-                            setSelected(prev =>
-                              prev.includes(row.id)
-                                ? prev.filter(id => id !== row.id)
-                                : [...prev, row.id]
-                            )
-                          }
-                        />
-                      </Td>
-                      <Td
+                        ID
+                      </Th>
+                      <Th
                         borderColor={borderColor}
+                        py={3}
                         fontSize="xs"
+                        textTransform="none"
                         color="gray.500"
-                        py={2}
+                        w="50px"
                       >
-                        {row.id}
-                      </Td>
-                      <Td
+                      </Th>
+                      <Th
                         borderColor={borderColor}
+                        py={3}
                         fontSize="xs"
-                        py={2}
-                        maxW="300px"
-                        overflow="hidden"
-                        textOverflow="ellipsis"
                         whiteSpace="nowrap"
                       >
-                        <Text
-                          as="span"
-                        >
-                          {row.name}
-                        </Text>
-                      </Td>
-                      <Td
+                        Name
+                      </Th>
+                      <Th
                         borderColor={borderColor}
+                        py={3}
                         fontSize="xs"
-                        py={2}
-                        maxW="300px"
-                        overflow="hidden"
-                        textOverflow="ellipsis"
                         whiteSpace="nowrap"
                       >
-                        <Text
-                          as="span"
-                        >
-                          {row.title}
-                        </Text>
-                      </Td>
-                      <Td
+                        Title
+                      </Th>
+                      <Th
                         borderColor={borderColor}
+                        py={3}
                         fontSize="xs"
-                        py={2}
-                        maxW="300px"
-                        overflow="hidden"
-                        textOverflow="ellipsis"
                         whiteSpace="nowrap"
                       >
-                        <Text
-                          as="span"
-                        >
-                          {row.abstract}
-                        </Text>
-                      </Td>
-                      <Td
+                        Abstract
+                      </Th>
+                      <Th
                         borderColor={borderColor}
+                        py={3}
                         fontSize="xs"
-                        py={2}
-                        maxW="300px"
-                        overflow="hidden"
-                        textOverflow="ellipsis"
                         whiteSpace="nowrap"
                       >
-                        <Text
-                          as="span"
-                        >
-                          {row.type}
-                        </Text>
-                      </Td>
+                        Type
+                      </Th>
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </Box>
-          )}
-        </CardBody>
-      </Card>
-      <Button
-        size="lg"
-        variant="accent"
-        disabled={!selected.length || isSubmitting}
-        leftIcon={<FiPlus/>}
-        onClick={handleSubmit}
-        py={8}
-      >
-        Import selected resources {isSubmitting &&
-        <Spinner size="md" color="white" thickness="2px" ml={4}/>}
-      </Button>
-    </VStack>
+                  </Thead>
+                  <Tbody>
+                    {data?.resources.map((row, rowIdx) => (
+                      <Tr
+                        key={rowIdx}
+                        _hover={{ bg: tableBg }}
+                      >
+                        <Td
+                          borderColor={borderColor}
+                          fontSize="xs"
+                          color="gray.500"
+                          py={2}
+                        >
+                          <Checkbox
+                            isChecked={selected.includes(row.id)}
+                            onChange={() =>
+                              setSelected(prev =>
+                                prev.includes(row.id)
+                                  ? prev.filter(id => id !== row.id)
+                                  : [...prev, row.id]
+                              )
+                            }
+                          />
+                        </Td>
+                        <Td
+                          borderColor={borderColor}
+                          fontSize="xs"
+                          color="gray.500"
+                          py={2}
+                        >
+                          {row.id}
+                        </Td>
+                        <Td
+                          borderColor={borderColor}
+                          fontSize="xs"
+                          py={2}
+                          maxW="300px"
+                          overflow="hidden"
+                          textOverflow="ellipsis"
+                          whiteSpace="nowrap"
+                        >
+                          <Text
+                            as="span"
+                          >
+                            {row.name}
+                          </Text>
+                        </Td>
+                        <Td
+                          borderColor={borderColor}
+                          fontSize="xs"
+                          py={2}
+                          maxW="300px"
+                          overflow="hidden"
+                          textOverflow="ellipsis"
+                          whiteSpace="nowrap"
+                        >
+                          <Text
+                            as="span"
+                          >
+                            {row.title}
+                          </Text>
+                        </Td>
+                        <Td
+                          borderColor={borderColor}
+                          fontSize="xs"
+                          py={2}
+                          maxW="300px"
+                          overflow="hidden"
+                          textOverflow="ellipsis"
+                          whiteSpace="nowrap"
+                        >
+                          <Text
+                            as="span"
+                          >
+                            {row.abstract}
+                          </Text>
+                        </Td>
+                        <Td
+                          borderColor={borderColor}
+                          fontSize="xs"
+                          py={2}
+                          maxW="300px"
+                          overflow="hidden"
+                          textOverflow="ellipsis"
+                          whiteSpace="nowrap"
+                        >
+                          <Text
+                            as="span"
+                          >
+                            {row.type}
+                          </Text>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
+            )}
+          </CardBody>
+        </Card>
+        <Button
+          size="lg"
+          variant="accent"
+          disabled={!selected.length || isSubmitting}
+          leftIcon={<FiPlus/>}
+          onClick={handleSubmit}
+          py={8}
+        >
+          Import selected resources {isSubmitting &&
+          <Spinner size="md" color="white" thickness="2px" ml={4}/>}
+        </Button>
+      </PanelBody>
+    </Panel>
   )
 }

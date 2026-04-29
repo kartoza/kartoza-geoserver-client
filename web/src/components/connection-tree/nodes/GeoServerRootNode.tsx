@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Box, Text } from '@chakra-ui/react'
+import { Box, Text, useToast } from '@chakra-ui/react'
 import { useTreeStore } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
 import { useConnectionStore } from '../../../stores/connectionStore'
@@ -17,6 +17,7 @@ export function GeoServerRootNode() {
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const openDialog = useUIStore((state) => state.openDialog)
   const createUrl = getCreateGeoServerUrl()
+  const toast = useToast()
 
   const connections = useConnectionStore((state) => state.connections)
   const isLoading = useConnectionStore((state) => state.isLoading)
@@ -47,7 +48,7 @@ export function GeoServerRootNode() {
     if (createUrl) {
       openWindowWithCallback(createUrl, () => {
         void fetchConnections()
-      })
+      }, toast)
     } else {
       openDialog('connection', { mode: 'create' })
     }

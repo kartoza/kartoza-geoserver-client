@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Box, Text } from '@chakra-ui/react'
+import { Box, Text, useToast } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
 import { useTreeStore } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
@@ -47,6 +47,7 @@ export function PostgreSQLRootNode() {
   const isSelected = selectedNode?.id === nodeId
 
   const openDialog = useUIStore((state) => state.openDialog)
+  const toast = useToast()
 
   const handleClick = () => {
     selectNode(node)
@@ -56,7 +57,7 @@ export function PostgreSQLRootNode() {
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (createUrl) {
-      openWindowWithCallback(createUrl, () => refetch())
+      openWindowWithCallback(createUrl, () => refetch(), toast)
     } else {
       openDialog('pgdashboard', { mode: 'create' })
     }

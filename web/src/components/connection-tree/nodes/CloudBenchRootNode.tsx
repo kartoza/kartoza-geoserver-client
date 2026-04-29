@@ -58,14 +58,19 @@ export function CloudBenchRootNode() {
   return (
     <Box>
       <>
-        {/* GeoServer Section */}
-        {(isProviderEnabled('geoserver')) && (
-          <GeoServerRootNode />
-        )}
         {/* PostgreSQL Section */}
         {(isProviderEnabled('postgres')) && (
           <PostgreSQLRootNode/>
         )}
+        {/* GeoServer Section */}
+        {(isProviderEnabled('geoserver')) && (
+          <GeoServerRootNode />
+        )}
+        {/* GeoNode Section */}
+        {(isProviderEnabled('geonode')) && (
+          <GeoNodeRootNode/>
+        )}
+
         {/* S3 Storage Section */}
         {(isProviderEnabled('s3')) && (
           <S3StorageRootNode/>
@@ -77,10 +82,6 @@ export function CloudBenchRootNode() {
         {/* QGIS Projects Section */}
         {(isProviderEnabled('qgis')) && (
           <QGISProjectsRootNode/>
-        )}
-        {/* GeoNode Section */}
-        {(isProviderEnabled('geonode')) && (
-          <GeoNodeRootNode/>
         )}
         {/* QFieldCloud Section */}
         {(isProviderEnabled('qfieldcloud')) && (

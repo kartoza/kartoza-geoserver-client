@@ -136,19 +136,6 @@ export function TreeNodeRow({
       >
         {node.name}
       </Text>
-      {count !== undefined && count >= 0 && (
-        <Badge
-          colorScheme={nodeColor.split('.')[0]}
-          variant="subtle"
-          fontSize="xs"
-          borderRadius="full"
-          px={2}
-          mr={2}
-          fontWeight="600"
-        >
-          {count}
-        </Badge>
-      )}
       {/* Add button - always visible for root nodes */}
       {onAdd && (
         <Tooltip label="Add" fontSize="xs">
@@ -331,6 +318,19 @@ export function TreeNodeRow({
             mr={1}
           />
         </Tooltip>
+      )}
+      {count !== undefined && count >= 0 && (
+        <Badge
+          colorScheme={nodeColor.split('.')[0]}
+          variant="subtle"
+          fontSize="xs"
+          borderRadius="full"
+          px={2}
+          mr={2}
+          fontWeight="600"
+        >
+          {count}
+        </Badge>
       )}
     </Flex>
   )

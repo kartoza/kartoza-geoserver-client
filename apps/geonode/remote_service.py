@@ -301,6 +301,9 @@ def _text(element) -> str:
 
 def _raise_if_form_errors(content: bytes) -> None:
     """Raise ValueError if the Django admin response contains form errors."""
+    if b"Could not connect" in content:
+        raise ValueError("Could not connect to the remote service.")
+
     tree = html.fromstring(content)
 
     # A top-level errornote means the form was re-rendered with errors

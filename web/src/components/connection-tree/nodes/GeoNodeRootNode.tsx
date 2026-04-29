@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Box, Text } from '@chakra-ui/react'
+import { Box, Text, useToast } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
 import { useTreeStore } from '../../../stores/treeStore'
 import { useUIStore } from '../../../stores/uiStore'
@@ -17,6 +17,7 @@ export function GeoNodeRootNode() {
   const selectNode = useTreeStore((state) => state.selectNode)
   const selectedNode = useTreeStore((state) => state.selectedNode)
   const openDialog = useUIStore((state) => state.openDialog)
+  const toast = useToast()
 
   // Fetch GeoNode connections
   const { data: connections, isLoading, refetch } = useQuery({
@@ -49,7 +50,7 @@ export function GeoNodeRootNode() {
     e.stopPropagation()
     const createUrl = getCreateGeoNodeUrl()
     if (createUrl) {
-      openWindowWithCallback(createUrl, () => refetch())
+      openWindowWithCallback(createUrl, () => refetch(), toast)
     } else {
       openDialog('geonode', { mode: 'create', data: {} })
     }
